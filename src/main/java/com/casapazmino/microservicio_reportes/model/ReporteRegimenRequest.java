@@ -1,18 +1,17 @@
+// ReporteRegimenRequest.java
 package com.casapazmino.microservicio_reportes.model;
 
 import java.util.List;
 
-public class ReporteGenerosRequest {
+public class ReporteRegimenRequest {
 
     private String usuario;
     private String empresa;
     private String fraseMarcaAgua;
     private String logoBase64;
-    private String colorPrincipal; // ✅ Agregado
-    private List<GeneroDTO> generos;
-
-    public ReporteGenerosRequest() {
-    }
+    private String colorPrincipal;
+    private String colorSecundario;
+    private List<RegimenDTO> regimen;
 
     public String getUsuario() {
         return usuario;
@@ -54,11 +53,19 @@ public class ReporteGenerosRequest {
         this.colorPrincipal = colorPrincipal;
     }
 
-    public List<GeneroDTO> getGeneros() {
-        return generos;
+    public String getColorSecundario() {
+        return colorSecundario;
     }
 
-    public void setGeneros(List<GeneroDTO> generos) {
-        this.generos = generos;
+    public void setColorSecundario(String colorSecundario) {
+        this.colorSecundario = colorSecundario;
+    }
+
+    public List<RegimenDTO> getRegimen() {
+        return regimen;
+    }
+
+    public void setRegimen(List<RegimenDTO> regimen) {
+        this.regimen = regimen;
     }
 }

@@ -2,17 +2,16 @@ package com.casapazmino.microservicio_reportes.model;
 
 import java.util.List;
 
-public class ReporteGenerosRequest {
+public class ReporteCargosRequest {
 
     private String usuario;
     private String empresa;
     private String fraseMarcaAgua;
     private String logoBase64;
-    private String colorPrincipal; // ✅ Agregado
-    private List<GeneroDTO> generos;
+    private String colorPrincipal;
+    private List<CargoDTO> cargos;
 
-    public ReporteGenerosRequest() {
-    }
+    public ReporteCargosRequest() {}
 
     public String getUsuario() {
         return usuario;
@@ -54,11 +53,11 @@ public class ReporteGenerosRequest {
         this.colorPrincipal = colorPrincipal;
     }
 
-    public List<GeneroDTO> getGeneros() {
-        return generos;
+    public List<CargoDTO> getCargos() {
+        return cargos;
     }
 
-    public void setGeneros(List<GeneroDTO> generos) {
-        this.generos = generos;
+    public void setCargos(List<CargoDTO> cargos) {
+        this.cargos = cargos;
     }
 }

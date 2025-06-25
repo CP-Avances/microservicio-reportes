@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.controller;
 
 import com.casapazmino.microservicio_reportes.model.ReporteGenerosRequest;
-import com.casapazmino.microservicio_reportes.service.ReporteService;
+import com.casapazmino.microservicio_reportes.service.ReporteGeneroService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -9,15 +9,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reportes")
-public class ReporteController {
+@RequestMapping("/api/reportes/generos")
+public class ReporteGenerosController {
 
     @Autowired
-    private ReporteService reporteService;
+    private ReporteGeneroService reporteGeneroService;
 
-    @PostMapping("/generos/pdf")
+    @PostMapping("/pdf")
     public ResponseEntity<byte[]> generarReporteGeneros(@RequestBody ReporteGenerosRequest request) {
-        byte[] pdfBytes = reporteService.generarReporteGenerosPDF(request);
+        byte[] pdfBytes = reporteGeneroService.generarReporteGenerosPDF(request);
 
         return ResponseEntity
                 .ok()
