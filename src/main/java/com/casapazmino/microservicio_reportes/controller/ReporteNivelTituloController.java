@@ -1,6 +1,6 @@
 package com.casapazmino.microservicio_reportes.controller;
 
-import com.casapazmino.microservicio_reportes.model.ReporteNivelesTitulosRequest;
+import com.casapazmino.microservicio_reportes.model.NivelTitulo.ReporteNivelesTitulosRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteNivelTituloService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;

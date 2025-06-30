@@ -1,6 +1,6 @@
 package com.casapazmino.microservicio_reportes.controller;
 
-import com.casapazmino.microservicio_reportes.model.ReporteFeriadosRequest;
+import com.casapazmino.microservicio_reportes.model.Feriado.ReporteFeriadosRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteFeriadosService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

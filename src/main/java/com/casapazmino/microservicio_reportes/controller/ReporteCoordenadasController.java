@@ -1,6 +1,6 @@
 package com.casapazmino.microservicio_reportes.controller;
 
-import com.casapazmino.microservicio_reportes.model.ReporteCoordenadasRequest;
+import com.casapazmino.microservicio_reportes.model.Coordenada.ReporteCoordenadasRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteCoordenadasService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;

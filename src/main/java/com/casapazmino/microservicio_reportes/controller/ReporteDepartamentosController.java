@@ -1,6 +1,6 @@
 package com.casapazmino.microservicio_reportes.controller;
 
-import com.casapazmino.microservicio_reportes.model.ReporteDepartamentosRequest;
+import com.casapazmino.microservicio_reportes.model.Departamento.ReporteDepartamentosRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteDepartamentosService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

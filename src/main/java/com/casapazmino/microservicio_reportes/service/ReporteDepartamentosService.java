@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.DepartamentoDTO;
-import com.casapazmino.microservicio_reportes.model.ReporteDepartamentosRequest;
+import com.casapazmino.microservicio_reportes.model.Departamento.DepartamentoDTO;
+import com.casapazmino.microservicio_reportes.model.Departamento.ReporteDepartamentosRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;

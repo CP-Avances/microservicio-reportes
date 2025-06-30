@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.ReporteModalidadLaboralRequest;
-import com.casapazmino.microservicio_reportes.model.ModalidadLaboralDTO;
+import com.casapazmino.microservicio_reportes.model.ModalidadLaboral.ModalidadLaboralDTO;
+import com.casapazmino.microservicio_reportes.model.ModalidadLaboral.ReporteModalidadLaboralRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;

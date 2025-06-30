@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.EstadoCivilDTO;
-import com.casapazmino.microservicio_reportes.model.ReporteEstadosCivilRequest;
+import com.casapazmino.microservicio_reportes.model.EstadoCivil.EstadoCivilDTO;
+import com.casapazmino.microservicio_reportes.model.EstadoCivil.ReporteEstadosCivilRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;

@@ -1,12 +1,13 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.*;
+import com.casapazmino.microservicio_reportes.model.ReporteUsuario.AgrupadorUsuariosDTO;
+import com.casapazmino.microservicio_reportes.model.ReporteUsuario.ReporteUsuariosRequest;
+import com.casapazmino.microservicio_reportes.model.ReporteUsuario.UsuarioDTO;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
-
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.util.List;

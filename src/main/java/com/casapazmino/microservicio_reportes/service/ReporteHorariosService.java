@@ -1,8 +1,8 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.DetalleHorarioDTO;
-import com.casapazmino.microservicio_reportes.model.HorarioDTO;
-import com.casapazmino.microservicio_reportes.model.ReporteHorariosRequest;
+import com.casapazmino.microservicio_reportes.model.Horario.DetalleHorarioDTO;
+import com.casapazmino.microservicio_reportes.model.Horario.HorarioDTO;
+import com.casapazmino.microservicio_reportes.model.Horario.ReporteHorariosRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;

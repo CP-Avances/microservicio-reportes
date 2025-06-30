@@ -1,6 +1,6 @@
 package com.casapazmino.microservicio_reportes.controller;
 
-import com.casapazmino.microservicio_reportes.model.ReporteDiscapacidadesRequest;
+import com.casapazmino.microservicio_reportes.model.Discapacidad.ReporteDiscapacidadesRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteDiscapacidadService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

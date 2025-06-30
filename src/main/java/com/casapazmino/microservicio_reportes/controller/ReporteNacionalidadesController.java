@@ -1,6 +1,6 @@
 package com.casapazmino.microservicio_reportes.controller;
 
-import com.casapazmino.microservicio_reportes.model.ReporteNacionalidadesRequest;
+import com.casapazmino.microservicio_reportes.model.Nacionalidad.ReporteNacionalidadesRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteNacionalidadesService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;

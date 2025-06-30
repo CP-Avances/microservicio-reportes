@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.CoordenadaDTO;
-import com.casapazmino.microservicio_reportes.model.ReporteCoordenadasRequest;
+import com.casapazmino.microservicio_reportes.model.Coordenada.CoordenadaDTO;
+import com.casapazmino.microservicio_reportes.model.Coordenada.ReporteCoordenadasRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;

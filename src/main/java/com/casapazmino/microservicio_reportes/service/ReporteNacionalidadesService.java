@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.NacionalidadDTO;
-import com.casapazmino.microservicio_reportes.model.ReporteNacionalidadesRequest;
+import com.casapazmino.microservicio_reportes.model.Nacionalidad.NacionalidadDTO;
+import com.casapazmino.microservicio_reportes.model.Nacionalidad.ReporteNacionalidadesRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;

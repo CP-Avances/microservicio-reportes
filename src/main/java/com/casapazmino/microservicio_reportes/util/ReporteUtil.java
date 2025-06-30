@@ -8,29 +8,29 @@ import java.util.Base64;
 
 public class ReporteUtil {
 
-    // Convertir código HEX (como "#E5E7E9") a objeto Color
+    // Metodo para convertir código HEX (como "#E5E7E9") a objeto Color
     public static Color convertirHexAColor(String hex) {
         try {
             return Color.decode(hex);
         } catch (Exception e) {
-            return Color.LIGHT_GRAY; // color por defecto
+            return Color.LIGHT_GRAY; 
         }
     }
 
-    // Convertir logo base64 a Image
+    // Metodo para convertir logo base64 a Image
     public static Image obtenerLogo(String base64String) throws Exception {
         if (base64String != null && base64String.contains("base64,")) {
             String base64 = base64String.split(",")[1];
             byte[] imageBytes = Base64.getDecoder().decode(base64);
             Image logo = Image.getInstance(imageBytes);
-            logo.scaleAbsolute(100, 50);
+            logo.scaleAbsolute(100, 100);
             logo.setAlignment(Image.LEFT);
             return logo;
         }
-        return null;
+        return null; //Se podria ingresar un logo por defecto
     }
 
-    // Crear celda personalizada con fondo y alineación
+    // Metodo para crear celda personalizada con fondo y alineación
     public static PdfPCell crearCelda(String texto, Font fuente, Color fondo) {
         PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuente));
         celda.setBackgroundColor(fondo);
@@ -40,12 +40,12 @@ public class ReporteUtil {
         return celda;
     }
 
-    // Fuente estándar pequeña
+    // Metodo para fuente de texto
     public static Font fuenteTexto() {
         return FontFactory.getFont(FontFactory.HELVETICA, 8);
     }
 
-    // Fuente para encabezados
+    // Metodo para fuente para encabezados
     public static Font fuenteEncabezado() {
         return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9);
     }
@@ -68,7 +68,7 @@ public class ReporteUtil {
         return celda;
     }
 
-    // Celda para info de empleado (gris claro)
+    // Celda para info de empleado gris claro
     public static PdfPCell celdaInfoEmpleado(String texto) {
         PdfPCell celda = new PdfPCell(new Phrase(texto, fuenteTexto()));
         celda.setBackgroundColor(new Color(227, 227, 227)); // gris claro

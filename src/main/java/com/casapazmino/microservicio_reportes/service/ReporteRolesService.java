@@ -1,8 +1,8 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.ReporteRolesRequest;
-import com.casapazmino.microservicio_reportes.model.RolDTO;
-import com.casapazmino.microservicio_reportes.model.FuncionDTO;
+import com.casapazmino.microservicio_reportes.model.Rol.FuncionDTO;
+import com.casapazmino.microservicio_reportes.model.Rol.ReporteRolesRequest;
+import com.casapazmino.microservicio_reportes.model.Rol.RolDTO;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;

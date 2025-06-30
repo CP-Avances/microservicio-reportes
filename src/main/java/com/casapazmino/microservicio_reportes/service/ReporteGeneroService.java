@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.ReporteGenerosRequest;
-import com.casapazmino.microservicio_reportes.model.GeneroDTO;
+import com.casapazmino.microservicio_reportes.model.Genero.GeneroDTO;
+import com.casapazmino.microservicio_reportes.model.Genero.ReporteGenerosRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;

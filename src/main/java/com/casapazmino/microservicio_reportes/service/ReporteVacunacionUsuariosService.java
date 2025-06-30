@@ -1,6 +1,9 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.*;
+import com.casapazmino.microservicio_reportes.model.ReporteVacunacion.AgrupadorVacunaUsuarioDTO;
+import com.casapazmino.microservicio_reportes.model.ReporteVacunacion.EmpleadoVacunaUsuarioDTO;
+import com.casapazmino.microservicio_reportes.model.ReporteVacunacion.ReporteVacunacionUsuariosRequest;
+import com.casapazmino.microservicio_reportes.model.ReporteVacunacion.VacunaUsuarioDTO;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;

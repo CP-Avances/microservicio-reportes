@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.RelojDTO;
-import com.casapazmino.microservicio_reportes.model.ReporteRelojesRequest;
+import com.casapazmino.microservicio_reportes.model.Dispositivo.RelojDTO;
+import com.casapazmino.microservicio_reportes.model.Dispositivo.ReporteRelojesRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;

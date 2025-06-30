@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.DiscapacidadDTO;
-import com.casapazmino.microservicio_reportes.model.ReporteDiscapacidadesRequest;
+import com.casapazmino.microservicio_reportes.model.Discapacidad.DiscapacidadDTO;
+import com.casapazmino.microservicio_reportes.model.Discapacidad.ReporteDiscapacidadesRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;

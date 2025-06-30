@@ -1,6 +1,6 @@
 package com.casapazmino.microservicio_reportes.controller;
 
-import com.casapazmino.microservicio_reportes.model.ReporteSucursalesRequest;
+import com.casapazmino.microservicio_reportes.model.Sucursal.ReporteSucursalesRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteSucursalesService;
 
 import org.springframework.beans.factory.annotation.Autowired;

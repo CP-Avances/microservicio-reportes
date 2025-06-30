@@ -1,0 +1,31 @@
+package com.casapazmino.microservicio_reportes.model.Vacuna;
+
+public class VacunaDTO {
+
+    private int id;
+    private String nombre;
+
+    public VacunaDTO() {
+    }
+
+    public VacunaDTO(int id, String nombre) {
+        this.id = id;
+        this.nombre = nombre;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+}

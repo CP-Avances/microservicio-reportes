@@ -1,6 +1,6 @@
 package com.casapazmino.microservicio_reportes.controller;
 
-import com.casapazmino.microservicio_reportes.model.ReporteVacunasRequest;
+import com.casapazmino.microservicio_reportes.model.Vacuna.ReporteVacunasRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteVacunaService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

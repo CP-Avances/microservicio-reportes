@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import com.casapazmino.microservicio_reportes.model.FeriadoDTO;
-import com.casapazmino.microservicio_reportes.model.ReporteFeriadosRequest;
+import com.casapazmino.microservicio_reportes.model.Feriado.FeriadoDTO;
+import com.casapazmino.microservicio_reportes.model.Feriado.ReporteFeriadosRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;
