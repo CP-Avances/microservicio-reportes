@@ -23,7 +23,7 @@ public class ReporteUtil {
             String base64 = base64String.split(",")[1];
             byte[] imageBytes = Base64.getDecoder().decode(base64);
             Image logo = Image.getInstance(imageBytes);
-            logo.scaleAbsolute(100, 100);
+            logo.scaleAbsolute(80, 40);
             logo.setAlignment(Image.LEFT);
             return logo;
         }
@@ -122,5 +122,14 @@ public class ReporteUtil {
         celda.setNoWrap(true); // evita salto de línea
         return celda;
     }
+
+    public static PdfPCell celdaDerecha(String texto, Font fuente) {
+    PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuente));
+    celda.setHorizontalAlignment(Element.ALIGN_RIGHT);
+    celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+    celda.setPadding(4f);
+    return celda;
+}
+
 
 }

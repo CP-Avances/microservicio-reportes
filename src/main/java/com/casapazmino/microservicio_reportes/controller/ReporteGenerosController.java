@@ -26,3 +26,4 @@ public class ReporteGenerosController {
                 .body(pdfBytes);
     }
 }
+ 
