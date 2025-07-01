@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.util.Base64;
 import java.util.List;
 
 @Service
@@ -22,7 +21,11 @@ public class ReporteModalidadLaboralService {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             Document document = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(document, baos);
-            writer.setPageEvent(new ConfiguracionPaginaPDF(request.getUsuario(), request.getFraseMarcaAgua(), request.getColorPrincipal()));
+            writer.setPageEvent(new ConfiguracionPaginaPDF(
+                request.getUsuario(),
+                request.getFraseMarcaAgua(),
+                request.getColorPrincipal()
+            ));
             document.open();
 
             // Logo
@@ -31,24 +34,15 @@ public class ReporteModalidadLaboralService {
                 document.add(logo);
             }
 
-            // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            // Empresa y título
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte("MODALIDAD LABORAL"));
 
-            // Título
-            Paragraph titulo = new Paragraph("MODALIDAD LABORAL", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
-
-            // Color principal
+            // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
-            // Tabla de datos
+            // Tabla
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(65);
             tabla.setWidths(new float[]{1, 5});
@@ -58,7 +52,7 @@ public class ReporteModalidadLaboralService {
             tabla.addCell(ReporteUtil.crearCelda("ITEM", ReporteUtil.fuenteEncabezado(), colorPrincipal));
             tabla.addCell(ReporteUtil.crearCelda("MODALIDAD LABORAL", ReporteUtil.fuenteEncabezado(), colorPrincipal));
 
-            // Filas con efecto zebra
+            // Filas
             boolean zebra = false;
             List<ModalidadLaboralDTO> lista = request.getModalidades();
             for (ModalidadLaboralDTO modalidad : lista) {

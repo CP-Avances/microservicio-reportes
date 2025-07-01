@@ -4,6 +4,7 @@ import com.casapazmino.microservicio_reportes.model.Rol.FuncionDTO;
 import com.casapazmino.microservicio_reportes.model.Rol.ReporteRolesRequest;
 import com.casapazmino.microservicio_reportes.model.Rol.RolDTO;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
+import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 
@@ -11,53 +12,43 @@ import org.springframework.stereotype.Service;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Base64;
 import java.util.List;
 
 @Service
 public class ReporteRolesService {
 
+    //Recibe un objeto ReporteRolesRquest
     public byte[] generarReporteRolesPDF(ReporteRolesRequest request) {
         try {
+
+            //Aqui se guardara el pdf
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             Document document = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(document, baos);
-            writer.setPageEvent(new ConfiguracionPaginaPDF(request.getUsuario(), request.getFraseMarcaAgua()));
+            writer.setPageEvent(new ConfiguracionPaginaPDF(
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()
+            ));
             document.open();
 
-            // LOGO
-            if (request.getLogoBase64() != null && request.getLogoBase64().contains("base64,")) {
-                String base64Image = request.getLogoBase64().split(",")[1];
-                byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-                Image logo = Image.getInstance(imageBytes);
-                logo.scaleAbsolute(100, 50);
-                logo.setAlignment(Image.LEFT);
+            // Logo
+            Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
+            if (logo != null) {
                 document.add(logo);
             }
 
-            // EMPRESA
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingAfter(5f);
-            empresa.setSpacingBefore(-30f);
-            document.add(empresa);
+            // Empresa y Título
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte("PERMISOS O FUNCIONALIDADES DEL ROL"));
 
-            // TÍTULO
-            Paragraph titulo = new Paragraph("PERMISOS O FUNCIONALIDADES DEL ROL", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
+            // Colores
+            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
-            // COLORES desde frontend
-            Color colorPrincipal = Color.decode(request.getColorPrincipal());   // para encabezado de ROL
-            Color colorSecundario = Color.decode(request.getColorSecundario()); // para encabezados de tabla y subtítulos
-            Color colorZebra = new Color(229, 231, 233); // gris claro
-
-            // ROLES
             for (RolDTO rol : request.getRoles()) {
-
-                // Encabezado del ROL
+                // Título del Rol
                 PdfPTable encabezado = new PdfPTable(1);
                 encabezado.setWidthPercentage(100);
                 encabezado.setSpacingBefore(10f);
@@ -88,25 +79,21 @@ public class ReporteRolesService {
                 // Encabezados
                 String[] headers = {"PÁGINA", "FUNCIÓN", "MÓDULO", "APLICACIÓN WEB", "APLICACIÓN MÓVIL"};
                 for (String h : headers) {
-                    PdfPCell header = new PdfPCell(new Phrase(h, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8)));
-                    header.setBackgroundColor(colorSecundario);
-                    header.setHorizontalAlignment(Element.ALIGN_CENTER);
-                    header.setPadding(5f);
-                    tabla.addCell(header);
+                    tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezado(), colorSecundario));
                 }
 
-                // Filas
+                // Filas con efecto zebra, se agrega las funciones de los roles
                 boolean zebra = false;
                 for (FuncionDTO f : rol.getFunciones()) {
-                    Color bg = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(createCell(f.getPagina(), bg));
-                    tabla.addCell(createCell(f.getAccion(), bg));
-                    tabla.addCell(createCell(transformarModulo(f.getNombre_modulo()), bg));
-                    tabla.addCell(createCell(f.isMovil() ? "" : "Sí", bg));
-                    tabla.addCell(createCell(f.isMovil() ? "Sí" : "", bg));
+                    Color fondo = zebra ? colorZebra : Color.WHITE;
                     zebra = !zebra;
-                }
 
+                    tabla.addCell(ReporteUtil.crearCelda(f.getPagina(), ReporteUtil.fuenteTexto(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(f.getAccion(), ReporteUtil.fuenteTexto(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(transformarModulo(f.getNombre_modulo()), ReporteUtil.fuenteTexto(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(f.isMovil() ? "" : "Sí", ReporteUtil.fuenteTexto(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(f.isMovil() ? "Sí" : "", ReporteUtil.fuenteTexto(), fondo));
+                }
                 document.add(tabla);
             }
 
@@ -114,21 +101,13 @@ public class ReporteRolesService {
             writer.close();
             return baos.toByteArray();
 
-        } catch (IOException | DocumentException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    private PdfPCell createCell(String texto, Color bg) {
-        PdfPCell cell = new PdfPCell(new Phrase(texto != null ? texto : "", FontFactory.getFont(FontFactory.HELVETICA, 8)));
-        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        cell.setBackgroundColor(bg);
-        cell.setPadding(4f);
-        return cell;
-    }
-
+    //Metodo para poner los nombre de los modulos
     private String transformarModulo(String nombreModulo) {
         if (nombreModulo == null) return "";
         switch (nombreModulo) {

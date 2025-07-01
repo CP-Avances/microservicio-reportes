@@ -32,34 +32,24 @@ public class ReporteHorariosService {
             // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
-                logo.scaleAbsolute(100, 50);
-                logo.setAlignment(Image.LEFT);
                 document.add(logo);
             }
 
             // Empresa y título
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
-
-            Paragraph titulo = new Paragraph("LISTA DE HORARIOS", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte("LISTA DE HORARIOS"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Color zebraColor = new Color(229, 231, 233); // #E5E7E9
+            Color zebraColor = ReporteUtil.colorZebraClaro();
 
             for (HorarioDTO h : request.getHorarios()) {
-                // Tabla contenedora de todo el bloque
+                // Tabla contenedora
                 PdfPTable bloque = new PdfPTable(1);
                 bloque.setWidthPercentage(100);
                 bloque.setSpacingBefore(10f);
 
-                // Cabecera (tabla 3 columnas)
+                // Cabecera
                 PdfPTable cabecera = new PdfPTable(3);
                 cabecera.setWidthPercentage(100);
                 cabecera.setWidths(new float[]{5, 5, 5});
@@ -99,13 +89,11 @@ public class ReporteHorariosService {
                     tabla.setWidthPercentage(100);
                     tabla.setWidths(new float[]{1.5f, 2.5f, 2.5f, 5, 2, 2.5f, 2.5f});
 
-                    // Encabezados
                     String[] headers = {"ORDEN", "HORA", "TOLERANCIA", "ACCIÓN", "OTRO DÍA", "MINUTOS ANTES", "MINUTOS DESPUÉS"};
                     for (String col : headers) {
                         tabla.addCell(ReporteUtil.crearCelda(col, ReporteUtil.fuenteEncabezado(), colorSecundario));
                     }
 
-                    // Filas con efecto zebra
                     boolean zebra = false;
                     for (DetalleHorarioDTO d : h.getDetalles()) {
                         Color fondo = zebra ? zebraColor : null;

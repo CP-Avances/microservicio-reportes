@@ -34,22 +34,13 @@ public class ReporteTituloService {
                 document.add(logo);
             }
 
-            // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
-
-            // Título
-            Paragraph titulo = new Paragraph("LISTA DE TÍTULOS PROFESIONALES", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
+            // Empresa y Título
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte("LISTA DE TÍTULOS PROFESIONALES"));
 
             // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(3);
@@ -57,16 +48,16 @@ public class ReporteTituloService {
             tabla.setWidths(new float[]{2, 4, 6});
             tabla.setSpacingBefore(10f);
 
-            // Encabezado
-            tabla.addCell(crearCelda("CÓDIGO", colorPrincipal));
-            tabla.addCell(crearCelda("NIVEL", colorPrincipal));
-            tabla.addCell(crearCelda("NOMBRE", colorPrincipal));
+            // Encabezados
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("NIVEL", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("NOMBRE", ReporteUtil.fuenteEncabezado(), colorPrincipal));
 
             // Filas
             List<TituloDTO> lista = request.getTitulos();
             for (int i = 0; i < lista.size(); i++) {
                 TituloDTO t = lista.get(i);
-                Color bgColor = (i % 2 == 0) ? colorZebra : null;
+                Color bgColor = (i % 2 == 0) ? colorZebra : Color.WHITE;
 
                 tabla.addCell(ReporteUtil.crearCelda(String.valueOf(t.getId()), ReporteUtil.fuenteTexto(), bgColor));
                 tabla.addCell(ReporteUtil.crearCelda(t.getNivel(), ReporteUtil.fuenteTexto(), bgColor));
@@ -75,18 +66,12 @@ public class ReporteTituloService {
 
             document.add(tabla);
             document.close();
+            writer.close();
             return baos.toByteArray();
 
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
-    }
-
-    private PdfPCell crearCelda(String texto, Color bgColor) {
-        PdfPCell celda = new PdfPCell(new Phrase(texto, ReporteUtil.fuenteEncabezado()));
-        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
-        celda.setBackgroundColor(bgColor);
-        return celda;
     }
 }

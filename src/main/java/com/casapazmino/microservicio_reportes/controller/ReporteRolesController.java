@@ -17,8 +17,10 @@ public class ReporteRolesController {
 
     @PostMapping("/roles/pdf")
     public ResponseEntity<byte[]> generarReporteRoles(@RequestBody ReporteRolesRequest request) {
+        //El servicio genera el pdf
         byte[] pdfBytes = reporteRolesService.generarReporteRolesPDF(request);
 
+        //Tipo de retorno es un pdf en bytes
         return ResponseEntity
                 .ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=lista_roles.pdf")

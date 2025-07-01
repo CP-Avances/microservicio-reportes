@@ -31,24 +31,16 @@ public class ReporteCoordenadasService {
             // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
-                logo.scaleAbsolute(100, 50);
-                logo.setAlignment(Image.LEFT);
                 document.add(logo);
             }
 
-            // Empresa y Título
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            // Título empresa y del reporte
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte("Lista de coordenadas geográficas"));
 
-            Paragraph titulo = new Paragraph("Lista de coordenadas geográficas", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
-
+            // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color zebraColor = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(4);
@@ -62,12 +54,9 @@ public class ReporteCoordenadasService {
                 tabla.addCell(ReporteUtil.crearCelda(col, ReporteUtil.fuenteEncabezado(), colorPrincipal));
             }
 
-            // Filas
+            // Filas con zebra
             boolean zebra = false;
-            Color zebraColor = new Color(204, 209, 209); // #CCD1D1
-
-            List<CoordenadaDTO> lista = request.getCoordenadas();
-            for (CoordenadaDTO c : lista) {
+            for (CoordenadaDTO c : request.getCoordenadas()) {
                 Color fondo = zebra ? zebraColor : null;
                 zebra = !zebra;
 
@@ -79,7 +68,6 @@ public class ReporteCoordenadasService {
 
             document.add(tabla);
             document.close();
-
             return baos.toByteArray();
 
         } catch (Exception e) {

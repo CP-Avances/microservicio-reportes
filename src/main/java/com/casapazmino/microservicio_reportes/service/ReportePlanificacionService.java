@@ -21,7 +21,7 @@ public class ReportePlanificacionService {
 
     public byte[] generarReportePDF(ReportePlanificacionRequest request) {
         try {
-            Document document = new Document(PageSize.A4.rotate(), 40, 40, 50, 50);
+            Document document = new Document(PageSize.A4.rotate(), 40, 40, 30, 50);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = PdfWriter.getInstance(document, baos);
 
@@ -32,7 +32,6 @@ public class ReportePlanificacionService {
             writer.setPageEvent(evento);
             document.open();
 
-            // LOGO + EMPRESA + TÍTULO
             if (request.getLogoBase64() != null) {
                 Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
                 document.add(logo);
@@ -53,11 +52,21 @@ public class ReportePlanificacionService {
             document.add(periodo);
             document.add(Chunk.NEWLINE);
 
-            // TABLA DE HORARIOS (se inserta dentro de una celda)
-            PdfPTable tablaHorarios = new PdfPTable(5);
-            tablaHorarios.setWidthPercentage(100);
-            tablaHorarios.setWidths(new int[] { 2, 2, 2, 2, 2 });
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+
+            // TABLA DE HORARIOS
+            PdfPTable tablaHorarios = new PdfPTable(5);
+            tablaHorarios.setWidthPercentage(100f);
+            tablaHorarios.setHorizontalAlignment(Element.ALIGN_LEFT);
+            tablaHorarios.setSpacingAfter(0f);
+            tablaHorarios.setWidths(new int[] { 16, 16, 16, 16, 16 });
+
+            PdfPCell tituloHorarios = new PdfPCell(new Phrase("DETALLE DE HORARIOS", ReporteUtil.fuenteEncabezado()));
+            tituloHorarios.setColspan(5);
+            tituloHorarios.setHorizontalAlignment(Element.ALIGN_CENTER);
+            tituloHorarios.setBackgroundColor(colorPrincipal);
+            tablaHorarios.addCell(tituloHorarios);
 
             tablaHorarios.addCell(ReporteUtil.celdaEncabezado("HORARIO", colorPrincipal));
             tablaHorarios.addCell(ReporteUtil.celdaEncabezado("ENTRADA (E)", colorPrincipal));
@@ -75,9 +84,16 @@ public class ReportePlanificacionService {
 
             // TABLA DE NOMENCLATURA
             PdfPTable tablaNomenclatura = new PdfPTable(2);
-            tablaNomenclatura.setWidthPercentage(100);
-            tablaNomenclatura.setWidths(new int[] { 3, 7 });
-            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+            tablaNomenclatura.setWidthPercentage(80f);
+            tablaNomenclatura.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            tablaNomenclatura.setSpacingAfter(100f);
+            tablaNomenclatura.setWidths(new int[] { 5, 7 });
+
+            PdfPCell tituloNomen = new PdfPCell(new Phrase("DEFINICIONES", ReporteUtil.fuenteEncabezado()));
+            tituloNomen.setColspan(2);
+            tituloNomen.setHorizontalAlignment(Element.ALIGN_CENTER);
+            tituloNomen.setBackgroundColor(colorSecundario);
+            tablaNomenclatura.addCell(tituloNomen);
 
             tablaNomenclatura.addCell(ReporteUtil.celdaEncabezado("NOMENCLATURA", colorSecundario));
             tablaNomenclatura.addCell(ReporteUtil.celdaEncabezado("DESCRIPCIÓN", colorSecundario));
@@ -86,28 +102,36 @@ public class ReportePlanificacionService {
                 tablaNomenclatura.addCell(ReporteUtil.celdaNomenclatura(def.get("nombre"), ReporteUtil.fuenteTexto()));
                 tablaNomenclatura.addCell(
                         ReporteUtil.celdaNomenclaturaDescripcion(def.get("descripcion"), ReporteUtil.fuenteTexto()));
-
             }
 
-            // TABLA CONTENEDORA HORIZONTAL
+            // Generar primero la tablaNomenclatura completamente para medir su altura real
+            tablaNomenclatura.setKeepTogether(true);
+            tablaNomenclatura.completeRow(); // asegura filas completas
+            tablaNomenclatura.calculateHeights(true); // o false si ya estaba calculada
+
+            // Tabla contenedora de una fila con dos celdas independientes
             PdfPTable tablaContenedora = new PdfPTable(2);
-            tablaContenedora.setWidthPercentage(100);
-            tablaContenedora.setWidths(new float[] { 65, 35 });
+            tablaContenedora.setWidthPercentage(70f); // reduce el espacio total ocupado (de 100% a 70%)
+            tablaContenedora.setWidths(new float[] { 60, 40 }); // proporción interna: 60% horarios, 40% definiciones
+            tablaContenedora.setSpacingBefore(5f); // opcional: reducir espacio antes
 
-            PdfPCell celdaIzq = new PdfPCell(tablaHorarios);
-            celdaIzq.setBorder(Rectangle.NO_BORDER);
-            celdaIzq.setPaddingRight(10f);
+            // Celda de la tabla de horarios (puede crecer)
+            PdfPCell celdaIzquierda = new PdfPCell();
+            celdaIzquierda.setBorder(Rectangle.NO_BORDER);
+            celdaIzquierda.setVerticalAlignment(Element.ALIGN_TOP);
+            celdaIzquierda.addElement(tablaHorarios);
+            tablaContenedora.addCell(celdaIzquierda);
 
-            PdfPCell celdaDer = new PdfPCell(tablaNomenclatura);
-            celdaDer.setBorder(Rectangle.NO_BORDER);
+            // Celda de la tabla de definiciones (no se estira)
+            PdfPCell celdaDerecha = new PdfPCell();
+            celdaDerecha.setBorder(Rectangle.NO_BORDER);
+            celdaDerecha.setVerticalAlignment(Element.ALIGN_TOP);
+            celdaDerecha.addElement(tablaNomenclatura);
+            tablaContenedora.addCell(celdaDerecha);
 
-            tablaContenedora.addCell(celdaIzq);
-            tablaContenedora.addCell(celdaDer);
+            // Agregar al documento
             document.add(tablaContenedora);
 
-            document.add(Chunk.NEWLINE);
-
-            // BLOQUES POR EMPLEADO
             for (PlanificacionEmpleadoDTO emp : request.getDatos()) {
                 PdfPTable encabezado = new PdfPTable(3);
                 encabezado.setWidthPercentage(100);
@@ -122,7 +146,9 @@ public class ReportePlanificacionService {
                 encabezado.addCell(ReporteUtil.celdaInfoEmpleado("CARGO: " + emp.getCargo()));
                 encabezado.addCell(ReporteUtil.celdaInfoEmpleado(""));
                 document.add(encabezado);
-                document.add(Chunk.NEWLINE);
+                Paragraph espacio = new Paragraph("", new Font());
+                espacio.setSpacingBefore(10f); // o el valor que necesites
+                document.add(espacio);
 
                 for (PlanificacionHorarioMensualDTO mes : emp.getHorarios()) {
                     PdfPTable tablaMes = new PdfPTable(7);
@@ -137,10 +163,16 @@ public class ReportePlanificacionService {
 
                     for (int i = 1; i <= 31; i += 7) {
                         for (int j = i; j < i + 7; j++) {
-                            if (j <= 31)
-                                tablaMes.addCell(ReporteUtil.celdaEncabezadoDia(j));
-                            else
+                            if (j <= 31) {
+                                PdfPCell celdaDia = new PdfPCell(
+                                        new Phrase(String.format("%02d", j), ReporteUtil.fuenteEncabezado()));
+                                celdaDia.setBackgroundColor(colorPrincipal); // o colorSecundario si prefieres
+                                celdaDia.setHorizontalAlignment(Element.ALIGN_CENTER);
+                                celdaDia.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                                tablaMes.addCell(celdaDia);
+                            } else {
                                 tablaMes.addCell("");
+                            }
                         }
 
                         for (int j = i; j < i + 7; j++) {
@@ -155,7 +187,10 @@ public class ReportePlanificacionService {
                     }
 
                     document.add(tablaMes);
-                    document.add(Chunk.NEWLINE);
+                    Paragraph espacioEntreEmpleados = new Paragraph("", new Font());
+                    espacioEntreEmpleados.setSpacingBefore(25f); 
+                    document.add(espacioEntreEmpleados);
+
                 }
             }
 

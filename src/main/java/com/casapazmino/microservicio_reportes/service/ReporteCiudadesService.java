@@ -35,27 +35,18 @@ public class ReporteCiudadesService {
             }
 
             // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(),
-                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
 
             // Título
-            Paragraph titulo = new Paragraph("LISTA DE CIUDADES",
-                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
+            document.add(ReporteUtil.crearTituloReporte("LISTA DE CIUDADES"));
 
             // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(2);
-            tabla.setWidthPercentage(60); // para imitar el estilo centrado del frontend
+            tabla.setWidthPercentage(60);
             tabla.setWidths(new float[]{2, 4});
             tabla.setSpacingBefore(10f);
 
@@ -63,10 +54,9 @@ public class ReporteCiudadesService {
             tabla.addCell(ReporteUtil.crearCelda("Provincia", ReporteUtil.fuenteEncabezado(), colorPrincipal));
             tabla.addCell(ReporteUtil.crearCelda("Ciudad", ReporteUtil.fuenteEncabezado(), colorPrincipal));
 
-            // Filas con estilo zebra
+            // Filas
             boolean zebra = false;
-            List<CiudadDTO> lista = request.getCiudades();
-            for (CiudadDTO ciudad : lista) {
+            for (CiudadDTO ciudad : request.getCiudades()) {
                 Color fondo = zebra ? colorZebra : Color.WHITE;
                 tabla.addCell(ReporteUtil.crearCelda(ciudad.getProvincia(), ReporteUtil.fuenteTexto(), fondo));
                 tabla.addCell(ReporteUtil.crearCelda(ciudad.getNombre(), ReporteUtil.fuenteTexto(), fondo));

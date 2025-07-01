@@ -11,8 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.util.Base64;
-import java.util.List;
 
 @Service
 public class ReporteCargosService {
@@ -22,7 +20,12 @@ public class ReporteCargosService {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             Document document = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(document, baos);
-            writer.setPageEvent(new ConfiguracionPaginaPDF(request.getUsuario(), request.getFraseMarcaAgua(), request.getColorPrincipal()));
+            writer.setPageEvent(new ConfiguracionPaginaPDF(
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()
+            ));
+
             document.open();
 
             // Logo
@@ -31,26 +34,19 @@ public class ReporteCargosService {
                 document.add(logo);
             }
 
-            // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            // Título empresa
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
 
-            // Título
-            Paragraph titulo = new Paragraph("LISTA TIPO DE CARGOS", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
+            // Título del reporte
+            document.add(ReporteUtil.crearTituloReporte("LISTA TIPO DE CARGOS"));
 
-            // Color
+            // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(2);
-            tabla.setWidthPercentage(60); // para replicar el estilo centrado del frontend
+            tabla.setWidthPercentage(60);
             tabla.setWidths(new float[]{1, 4});
             tabla.setSpacingBefore(10f);
 

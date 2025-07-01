@@ -34,22 +34,13 @@ public class ReporteNacionalidadesService {
                 document.add(logo);
             }
 
-            // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
-
-            // Título
-            Paragraph titulo = new Paragraph("LISTA DE NACIONALIDADES", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
+            // Empresa y título
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte("LISTA DE NACIONALIDADES"));
 
             // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(2);
@@ -58,14 +49,14 @@ public class ReporteNacionalidadesService {
             tabla.setSpacingBefore(10f);
 
             // Encabezado
-            tabla.addCell(crearCelda("CÓDIGO", colorPrincipal));
-            tabla.addCell(crearCelda("NACIONALIDAD", colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("NACIONALIDAD", ReporteUtil.fuenteEncabezado(), colorPrincipal));
 
             // Filas
             List<NacionalidadDTO> lista = request.getNacionalidades();
             for (int i = 0; i < lista.size(); i++) {
                 NacionalidadDTO n = lista.get(i);
-                Color bgColor = (i % 2 == 0) ? colorZebra : null;
+                Color bgColor = (i % 2 == 0) ? colorZebra : Color.WHITE;
 
                 tabla.addCell(ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTexto(), bgColor));
                 tabla.addCell(ReporteUtil.crearCelda(n.getNombre(), ReporteUtil.fuenteTexto(), bgColor));
@@ -79,12 +70,5 @@ public class ReporteNacionalidadesService {
             e.printStackTrace();
             return null;
         }
-    }
-
-    private PdfPCell crearCelda(String texto, Color bgColor) {
-        PdfPCell celda = new PdfPCell(new Phrase(texto, ReporteUtil.fuenteEncabezado()));
-        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
-        celda.setBackgroundColor(bgColor);
-        return celda;
     }
 }

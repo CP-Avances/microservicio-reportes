@@ -34,28 +34,17 @@ public class ReporteProvinciasService {
                 document.add(logo);
             }
 
-            // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(),
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
-
-            // Título
-            Paragraph titulo = new Paragraph("LISTA DE PROVINCIAS",
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
+            // Empresa y título
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte("LISTA DE PROVINCIAS"));
 
             // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(2);
-            tabla.setWidthPercentage(60); // centrada
+            tabla.setWidthPercentage(60);
             tabla.setWidths(new float[]{2, 4});
             tabla.setSpacingBefore(10f);
 
@@ -67,7 +56,7 @@ public class ReporteProvinciasService {
             boolean zebra = false;
             List<ProvinciaDTO> lista = request.getProvincias();
             for (ProvinciaDTO provincia : lista) {
-                Color fondo = zebra ? colorZebra : Color.WHITE;
+                Color fondo = zebra ? colorZebra : null;
                 tabla.addCell(ReporteUtil.crearCelda(provincia.getPais(), ReporteUtil.fuenteTexto(), fondo));
                 tabla.addCell(ReporteUtil.crearCelda(provincia.getNombre(), ReporteUtil.fuenteTexto(), fondo));
                 zebra = !zebra;

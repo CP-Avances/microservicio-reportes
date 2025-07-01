@@ -1,18 +1,24 @@
-package com.casapazmino.microservicio_reportes.model.Rol;
+package com.casapazmino.microservicio_reportes.model.ReporteFaltas;
 
 import java.util.List;
 
-public class ReporteRolesRequest {
+public class ReporteFaltasRequest {
 
     private String usuario;
     private String empresa;
     private String fraseMarcaAgua;
     private String logoBase64;
-    private String colorPrincipal;   
-    private String colorSecundario;   
-    private List<RolDTO> roles;
+    private String colorPrincipal;
+    private String colorSecundario;
 
-    public ReporteRolesRequest() {}
+    private String fechaInicio;
+    private String fechaFin;
+    private int opcionBusqueda;
+    private boolean resumen;
+
+    private List<GrupoFaltasDTO> grupos;
+
+    // Getters y Setters
 
     public String getUsuario() {
         return usuario;
@@ -62,11 +68,43 @@ public class ReporteRolesRequest {
         this.colorSecundario = colorSecundario;
     }
 
-    public List<RolDTO> getRoles() {
-        return roles;
+    public String getFechaInicio() {
+        return fechaInicio;
     }
 
-    public void setRoles(List<RolDTO> roles) {
-        this.roles = roles;
+    public void setFechaInicio(String fechaInicio) {
+        this.fechaInicio = fechaInicio;
+    }
+
+    public String getFechaFin() {
+        return fechaFin;
+    }
+
+    public void setFechaFin(String fechaFin) {
+        this.fechaFin = fechaFin;
+    }
+
+    public int getOpcionBusqueda() {
+        return opcionBusqueda;
+    }
+
+    public void setOpcionBusqueda(int opcionBusqueda) {
+        this.opcionBusqueda = opcionBusqueda;
+    }
+
+    public boolean isResumen() {
+        return resumen;
+    }
+
+    public void setResumen(boolean resumen) {
+        this.resumen = resumen;
+    }
+
+    public List<GrupoFaltasDTO> getGrupos() {
+        return grupos;
+    }
+
+    public void setGrupos(List<GrupoFaltasDTO> grupos) {
+        this.grupos = grupos;
     }
 }

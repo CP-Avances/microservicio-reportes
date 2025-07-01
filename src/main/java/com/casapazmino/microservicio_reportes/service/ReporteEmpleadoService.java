@@ -31,22 +31,12 @@ public class ReporteEmpleadoService {
             // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
-                logo.scaleToFit(120, 120);
                 document.add(logo);
             }
 
-            // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-40f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
-
-            // Título
-            Paragraph titulo = new Paragraph("Lista de Empleados", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
+            // Empresa y título
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte("Lista de Empleados"));
 
             // Tabla
             PdfPTable tabla = new PdfPTable(11);
@@ -55,7 +45,7 @@ public class ReporteEmpleadoService {
             tabla.setSpacingBefore(10f);
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Encabezados
             String[] headers = {
@@ -64,7 +54,7 @@ public class ReporteEmpleadoService {
             };
 
             for (String encabezado : headers) {
-                tabla.addCell(crearCelda(encabezado, colorPrincipal));
+                tabla.addCell(ReporteUtil.crearCelda(encabezado, ReporteUtil.fuenteEncabezado(), colorPrincipal));
             }
 
             List<EmpleadoDTO> empleados = request.getEmpleados();
@@ -93,12 +83,5 @@ public class ReporteEmpleadoService {
             e.printStackTrace();
             return null;
         }
-    }
-
-    private PdfPCell crearCelda(String texto, Color bgColor) {
-        PdfPCell celda = new PdfPCell(new Phrase(texto, ReporteUtil.fuenteEncabezado()));
-        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
-        celda.setBackgroundColor(bgColor);
-        return celda;
     }
 }

@@ -36,20 +36,15 @@ public class ReporteRelojesService {
                 document.add(logo);
             }
 
-            // Empresa y título
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            // Empresa y título (usando métodos utilitarios)
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte("LISTA DE DISPOSITIVOS"));
 
-            Paragraph titulo = new Paragraph("LISTA DE DISPOSITIVOS", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
-
+            // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
+            // Tabla
             PdfPTable tabla = new PdfPTable(15);
             tabla.setWidthPercentage(100);
             tabla.setWidths(new float[]{
@@ -63,20 +58,14 @@ public class ReporteRelojesService {
             };
 
             for (String h : headers) {
-                PdfPCell celdaEncabezado = new PdfPCell(new Phrase(h, ReporteUtil.fuenteTexto()));
-                celdaEncabezado.setBackgroundColor(colorPrincipal);
-                celdaEncabezado.setHorizontalAlignment(Element.ALIGN_CENTER);
-                celdaEncabezado.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                celdaEncabezado.setNoWrap(true); // evita salto de línea
-                celdaEncabezado.setPadding(4f);
-                tabla.addCell(celdaEncabezado);
+                tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezado(), colorPrincipal));
             }
 
             boolean zebra = false;
-            Color zebraColor = new Color(204, 209, 209); // #CCD1D1
+            List<RelojDTO> lista = request.getRelojes();
 
-            for (RelojDTO r : request.getRelojes()) {
-                Color fondo = zebra ? zebraColor : null;
+            for (RelojDTO r : lista) {
+                Color fondo = zebra ? colorZebra : Color.WHITE;
                 zebra = !zebra;
 
                 tabla.addCell(ReporteUtil.crearCelda(r.getCodigo(), ReporteUtil.fuenteTexto(), fondo));
