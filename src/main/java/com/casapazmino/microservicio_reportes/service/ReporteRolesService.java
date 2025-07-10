@@ -7,22 +7,18 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
-
 import org.springframework.stereotype.Service;
-
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.util.List;
 
 @Service
 public class ReporteRolesService {
 
-    //Recibe un objeto ReporteRolesRquest
+    // METODO QUE GENERA EL PDF
     public byte[] generarReporteRolesPDF(ReporteRolesRequest request) {
         try {
-
-            //Aqui se guardara el pdf
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            //TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
             Document document = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
@@ -32,71 +28,74 @@ public class ReporteRolesService {
             ));
             document.open();
 
-            // Logo
+            //LOGO
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            // Empresa y Título
+            //TITULO DE EMPRESA (EJM. CASA PAZMIÑO S.A.)
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            
+            //TITULO DE REPORTE (EJM. REPORTE ATRASOS)
             document.add(ReporteUtil.crearTituloReporte("PERMISOS O FUNCIONALIDADES DEL ROL"));
 
-            // Colores
+            //COLORES DE LA EMPRESA USADOS EN EL REPORTE
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
             Color colorZebra = ReporteUtil.colorZebraClaro();
 
             for (RolDTO rol : request.getRoles()) {
-                // Título del Rol
+                // TABLA ENCABEZADO ROL
                 PdfPTable encabezado = new PdfPTable(1);
                 encabezado.setWidthPercentage(100);
                 encabezado.setSpacingBefore(10f);
 
-                PdfPCell celdaRol = new PdfPCell(new Phrase("ROL: " + rol.getNombre(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9)));
+                PdfPCell celdaRol = new PdfPCell(new Phrase("ROL: " + rol.getNombre(), ReporteUtil.fuenteEncabezado()));
                 celdaRol.setBackgroundColor(colorPrincipal);
-                celdaRol.setPadding(5f);
+                celdaRol.setPadding(3f);
                 encabezado.addCell(celdaRol);
+
+                encabezado.setSpacingAfter(5f);
                 document.add(encabezado);
 
-                // Subtítulo
+                //TABLA DE SUBTITULO DE ESTE REPORTE (FUNCIONES DEL SISTEMA ASIGANDAS)
                 PdfPTable subtitulo = new PdfPTable(1);
                 subtitulo.setWidthPercentage(100);
 
-                PdfPCell celdaTitulo = new PdfPCell(new Phrase("FUNCIONES DEL SISTEMA ASIGNADAS", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9)));
+                PdfPCell celdaTitulo = new PdfPCell(new Phrase("FUNCIONES DEL SISTEMA ASIGNADAS", ReporteUtil.fuenteEncabezadoTablaData()));
                 celdaTitulo.setBackgroundColor(colorSecundario);
                 celdaTitulo.setHorizontalAlignment(Element.ALIGN_CENTER);
-                celdaTitulo.setPadding(5f);
+                celdaTitulo.setPadding(3f);
                 subtitulo.addCell(celdaTitulo);
                 document.add(subtitulo);
 
-                // Tabla
+                //TABLA DE INFORMACION DE LOS ROLES
                 PdfPTable tabla = new PdfPTable(5);
                 tabla.setWidthPercentage(100);
                 tabla.setWidths(new float[]{3, 4, 4, 2, 2});
                 tabla.setSpacingBefore(5f);
 
-                // Encabezados
+                //ENCABEZADOS DE TABLA DE INFORMACION
                 String[] headers = {"PÁGINA", "FUNCIÓN", "MÓDULO", "APLICACIÓN WEB", "APLICACIÓN MÓVIL"};
                 for (String h : headers) {
-                    tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezado(), colorSecundario));
+                    tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
                 }
 
-                // Filas con efecto zebra, se agrega las funciones de los roles
+                //FILAS CON EFECTO CEBRA
                 boolean zebra = false;
                 for (FuncionDTO f : rol.getFunciones()) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
                     zebra = !zebra;
 
-                    tabla.addCell(ReporteUtil.crearCelda(f.getPagina(), ReporteUtil.fuenteTexto(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(f.getAccion(), ReporteUtil.fuenteTexto(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(transformarModulo(f.getNombre_modulo()), ReporteUtil.fuenteTexto(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(f.isMovil() ? "" : "Sí", ReporteUtil.fuenteTexto(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(f.isMovil() ? "Sí" : "", ReporteUtil.fuenteTexto(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(f.getPagina(), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(f.getAccion(), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(transformarModulo(f.getNombre_modulo()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(f.isMovil() ? "" : "Sí", ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(f.isMovil() ? "Sí" : "", ReporteUtil.fuenteTablaData(), fondo));
                 }
                 document.add(tabla);
             }
-
             document.close();
             writer.close();
             return baos.toByteArray();
@@ -107,7 +106,7 @@ public class ReporteRolesService {
         }
     }
 
-    //Metodo para poner los nombre de los modulos
+    // METODO AUXILIAR PARA CONVERTIR EL DATO A UN TEXTO MAS AMIGABLE
     private String transformarModulo(String nombreModulo) {
         if (nombreModulo == null) return "";
         switch (nombreModulo) {

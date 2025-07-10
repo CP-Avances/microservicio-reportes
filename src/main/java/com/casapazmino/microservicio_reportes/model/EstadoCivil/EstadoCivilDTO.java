@@ -1,5 +1,10 @@
 package com.casapazmino.microservicio_reportes.model.EstadoCivil;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class EstadoCivilDTO {
 
     private int id;
@@ -13,19 +18,4 @@ public class EstadoCivilDTO {
         this.estadoCivil = estadoCivil;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getEstadoCivil() {
-        return estadoCivil;
-    }
-
-    public void setEstadoCivil(String estadoCivil) {
-        this.estadoCivil = estadoCivil;
-    }
 }

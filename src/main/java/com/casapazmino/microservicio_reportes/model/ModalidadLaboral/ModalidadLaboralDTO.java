@@ -1,5 +1,10 @@
 package com.casapazmino.microservicio_reportes.model.ModalidadLaboral;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class ModalidadLaboralDTO {
 
     private Long id;
@@ -12,19 +17,4 @@ public class ModalidadLaboralDTO {
         this.descripcion = descripcion;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
 }

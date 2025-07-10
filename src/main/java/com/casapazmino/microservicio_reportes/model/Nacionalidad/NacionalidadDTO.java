@@ -1,5 +1,10 @@
 package com.casapazmino.microservicio_reportes.model.Nacionalidad;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class NacionalidadDTO {
 
     private int id;
@@ -12,20 +17,5 @@ public class NacionalidadDTO {
         this.id = id;
         this.nombre = nombre;
     }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
+    
 }

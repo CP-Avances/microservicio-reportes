@@ -18,7 +18,7 @@ public class ReporteAsistenciaController {
 
     @PostMapping("/pdf")
     public ResponseEntity<byte[]> generarReporteAsistencia(@RequestBody ReporteAsistenciaRequest request) {
-        byte[] pdfBytes = reporteAsistenciaService.generarReportePDF(request);
+        byte[] pdfBytes = reporteAsistenciaService.generarReporteResumenAsistenciaPDF(request);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);

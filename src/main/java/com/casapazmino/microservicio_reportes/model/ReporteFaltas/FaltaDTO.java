@@ -1,15 +1,13 @@
 package com.casapazmino.microservicio_reportes.model.ReporteFaltas;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class FaltaDTO {
 
     private String fecha;
 
-    public String getFecha() {
-        return fecha;
-    }
-
-    public void setFecha(String fecha) {
-        this.fecha = fecha;
-    }
 }
 

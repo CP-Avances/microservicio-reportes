@@ -1,10 +1,15 @@
 package com.casapazmino.microservicio_reportes.util;
 
+import com.casapazmino.microservicio_reportes.model.ReporteFaltas.GrupoFaltasDTO;
+import com.casapazmino.microservicio_reportes.model.ReporteFaltas.ReporteFaltasRequest;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 
 import java.awt.Color;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Date;
+import java.util.Locale;
 
 public class ReporteUtil {
 
@@ -15,18 +20,6 @@ public class ReporteUtil {
         } catch (Exception e) {
             return Color.LIGHT_GRAY;
         }
-    }
-
-    // Convertir logo base64 a Image
-    public static Image obtenerLogo(String base64String) throws Exception {
-        if (base64String != null && base64String.contains("base64,")) {
-            String base64 = base64String.split(",")[1];
-            byte[] imageBytes = Base64.getDecoder().decode(base64);
-            Image logo = Image.getInstance(imageBytes);
-            aplicarEstiloLogo(logo);
-            return logo;
-        }
-        return null;
     }
 
     // Aplicar tamaño y alineación al logo
@@ -47,35 +40,11 @@ public class ReporteUtil {
 
     // Fuente de texto general
     public static Font fuenteTexto() {
-        return FontFactory.getFont(FontFactory.HELVETICA, 8);
+        return FontFactory.getFont(FontFactory.HELVETICA, 6.5f);
     }
 
-    // Fuente para encabezados
-    public static Font fuenteEncabezado() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9);
-    }
-
-    // Fuente para título de empresa
-    public static Font fuenteTituloEmpresa() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
-    }
-
-    // Fuente para título del reporte
-    public static Font fuenteTituloReporte() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
-    }
-
-    // Crear título de empresa
-    public static Paragraph crearTituloEmpresa(String texto) {
-        Paragraph p = new Paragraph(texto, fuenteTituloEmpresa());
-        p.setAlignment(Element.ALIGN_CENTER);
-        p.setSpacingBefore(-30f);
-        p.setSpacingAfter(5f);
-        return p;
-    }
-
-    // Crear título del reporte
-    public static Paragraph crearTituloReporte(String texto) {
+    // Crear titulo del periodo
+    public static Paragraph crearTituloPeriodo(String texto) {
         Paragraph p = new Paragraph(texto, fuenteTituloReporte());
         p.setAlignment(Element.ALIGN_CENTER);
         p.setSpacingAfter(10f);
@@ -84,7 +53,7 @@ public class ReporteUtil {
 
     // Color zebra claro reutilizable
     public static Color colorZebraClaro() {
-        return new Color(204, 209, 209); // #CCD1D1
+        return new Color(212, 212, 212); //rgb(212, 212, 212)
     }
 
     // Celda alineada al centro
@@ -160,4 +129,133 @@ public class ReporteUtil {
         celda.setNoWrap(true);
         return celda;
     }
+
+    // FormatearFecha
+    public static String formatearFechaConDia(String fechaOriginal) {
+        try {
+            SimpleDateFormat entrada = new SimpleDateFormat("yyyy-MM-dd");
+            SimpleDateFormat salida = new SimpleDateFormat("EEE. dd/MM/yyyy", new Locale("es", "ES"));
+            Date fecha = entrada.parse(fechaOriginal);
+            String resultado = salida.format(fecha);
+
+            return resultado.substring(0, 1).toUpperCase() + resultado.substring(1);
+        } catch (Exception e) {
+            return fechaOriginal;
+        }
+    }
+
+    // Celda centrada con fondo personalizado
+    public static PdfPCell celdaCentro(String texto, Color fondo) {
+        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuenteTexto()));
+        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celda.setBackgroundColor(fondo);
+        celda.setPadding(4f);
+        return celda;
+    }
+
+    // Celda izquierda con fondo personalizado
+    public static PdfPCell celdaIzquierda(String texto, Color fondo) {
+        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuenteTexto()));
+        celda.setHorizontalAlignment(Element.ALIGN_LEFT);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celda.setBackgroundColor(fondo);
+        celda.setPadding(4f);
+        return celda;
+    }
+
+    public static PdfPCell celdaInfoMixta(String etiqueta, String valor, Color fondo) {
+        Phrase contenido = new Phrase();
+        contenido.add(new Chunk(etiqueta + " ", ReporteUtil.fuenteEncabezado()));
+        contenido.add(new Chunk(valor != null ? valor : "", ReporteUtil.fuenteEncabezado()));
+
+        PdfPCell celda = new PdfPCell(contenido);
+        celda.setBackgroundColor(fondo);
+        celda.setPadding(5f);
+        celda.setBorder(Rectangle.NO_BORDER);
+        return celda;
+    }
+
+    public static String traducirAccion(String codigo) {
+        if (codigo == null)
+            return "";
+
+        switch (codigo.trim().toUpperCase()) {
+            case "E":
+                return "Entrada";
+            case "S":
+                return "Salida";
+            case "I/A":
+                return "Inicio alimentación";
+            case "F/A":
+                return "Fin alimentación";
+            case "D":
+                return "Desconocido";
+            default:
+                return codigo;
+        }
+    }
+
+    // METODO PARA TABLA DE RESUMEN DE ASISTENCIA
+    public static PdfPCell crearCelda(String texto, Font fuente, Color fondo, int rowspan, int colspan) {
+        PdfPCell celda = crearCelda(texto, fuente, fondo);
+        celda.setRowspan(rowspan);
+        celda.setColspan(colspan);
+        return celda;
+    }
+
+    ///////////////////////////////////////////////////////
+    // ORDENAMIENTO DE METODOS PARA REPORTES//
+
+    // METODO USADO PARA OBTENER LOGO (Convertir logo base64 a Image)
+    public static Image obtenerLogo(String base64String) throws Exception {
+        if (base64String != null && base64String.contains("base64,")) {
+            String base64 = base64String.split(",")[1];
+            byte[] imageBytes = Base64.getDecoder().decode(base64);
+            Image logo = Image.getInstance(imageBytes);
+            aplicarEstiloLogo(logo);
+            return logo;
+        }
+        return null;
+    }
+
+    // METODO USADO PARA CREA TITULO EMPRESA DEL REPORTE (Estilos)
+    public static Paragraph crearTituloEmpresa(String texto) {
+        Font fuente = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
+        Paragraph p = new Paragraph(texto, fuente);
+        p.setAlignment(Element.ALIGN_CENTER);
+        p.setSpacingBefore(-35f);
+        p.setSpacingAfter(2f);
+        return p;
+    }
+
+    // METODO PARA CREAR TITULO DEL REPORTE(ESTILOS)
+    public static Paragraph crearTituloReporte(String texto) {
+        Font fuente = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
+        Paragraph p = new Paragraph(texto, fuente);
+        p.setAlignment(Element.ALIGN_CENTER);
+        p.setSpacingAfter(0f);
+        return p;
+    }
+
+    // METODO PARA FUENTE DE TABLA ENCABEZADO
+    public static Font fuenteEncabezado() {
+        return FontFactory.getFont(FontFactory.HELVETICA, 9);
+    }
+
+    // METODO PARA FUENTE DE ENCABEZADO DE TABLA DATA
+    public static Font fuenteEncabezadoTablaData() {
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8);
+    }
+
+    // METODO PARA FUENTE DE ENCABEZADO DE TABLA DATA
+    public static Font fuenteTablaData() {
+        return FontFactory.getFont(FontFactory.HELVETICA, 8);
+    }
+
+    // Fuente para título del reporte
+    public static Font fuenteTituloReporte() {
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
+    }
+
 }

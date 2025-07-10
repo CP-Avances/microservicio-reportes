@@ -1,7 +1,11 @@
 package com.casapazmino.microservicio_reportes.model.ReporteVacunacion;
 
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 public class EmpleadoVacunaUsuarioDTO {
 
     private String identificacion;

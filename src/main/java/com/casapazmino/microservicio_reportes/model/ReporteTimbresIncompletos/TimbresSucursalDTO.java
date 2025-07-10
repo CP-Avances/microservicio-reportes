@@ -9,7 +9,7 @@ import java.util.List;
 public class TimbresSucursalDTO {
     private String sucursal;
     private String ciudad;
-    private String nombre; // puede ser régimen, cargo o departamento
+    private String nombre; 
     private String departamento;
     private List<EmpleadoDTO> empleados;
 }

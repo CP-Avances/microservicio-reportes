@@ -59,7 +59,7 @@ public class ReportePlanificacionService {
             PdfPTable tablaHorarios = new PdfPTable(5);
             tablaHorarios.setWidthPercentage(100f);
             tablaHorarios.setHorizontalAlignment(Element.ALIGN_LEFT);
-            tablaHorarios.setSpacingAfter(0f);
+            tablaHorarios.setSpacingAfter(20f);
             tablaHorarios.setWidths(new int[] { 16, 16, 16, 16, 16 });
 
             PdfPCell tituloHorarios = new PdfPCell(new Phrase("DETALLE DE HORARIOS", ReporteUtil.fuenteEncabezado()));
@@ -77,8 +77,8 @@ public class ReportePlanificacionService {
             for (PlanificacionDetalleDTO d : request.getDetalle_acciones()) {
                 tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getHorario()));
                 tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getEntrada_()));
-                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getInicioComida()));
-                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getFinComida()));
+                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getInicio_comida()));
+                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getFin_comida()));
                 tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getSalida_()));
             }
 
