@@ -16,9 +16,12 @@ import java.util.List;
 @Service
 public class ReporteSucursalesService {
 
+    //METODO QUE GENERA EL REPORTE PDF
     public byte[] generarReportePDF(ReporteSucursalesRequest request) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+            //TIPO Y TAMAÑO DE LA APGINA DEL REPORTE
             Document document = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
@@ -28,50 +31,41 @@ public class ReporteSucursalesService {
             ));
             document.open();
 
-            // Logo
+            //LOGO DE EMPRESA
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(),
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            //TITULO DE EMPRESA
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
 
-            // Título
-            Paragraph titulo = new Paragraph("LISTA DE SUCURSALES",
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
+            //TITULO DE REPORTE
+            document.add(ReporteUtil.crearTituloReporte("LISTA DE SUCURSALES"));
 
-            // Colores
+            //COLORES DE LA EMPRESA USADOS EN EL REPORTE
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
-            // Tabla
+            //TABLA DE SUCURSALES
             PdfPTable tabla = new PdfPTable(3);
-            tabla.setWidthPercentage(80); // más amplio por tener 3 columnas
-            tabla.setWidths(new float[]{1.5f, 4, 3});
+            tabla.setWidthPercentage(50); 
+            tabla.setWidths(new float[]{1.5f, 5, 2});
             tabla.setSpacingBefore(10f);
 
-            // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL / ESTABLECIMIENTO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("CIUDAD", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+            //ENCABEZADOS DE LA TABLA
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL / ESTABLECIMIENTO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("CIUDAD", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
-            // Filas con zebra
+            //FILAS DE LA TABLA CON DATOS
             boolean zebra = false;
             List<SucursalDTO> lista = request.getSucursales();
             for (SucursalDTO sucursal : lista) {
                 Color fondo = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(sucursal.getId()), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(sucursal.getNombre(), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(sucursal.getDescripcion(), ReporteUtil.fuenteTexto(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(sucursal.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(sucursal.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(sucursal.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
                 zebra = !zebra;
             }
 

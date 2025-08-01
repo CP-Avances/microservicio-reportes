@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/reportes/generos")
+@CrossOrigin(origins = "http://localhost:51871") //TEMA A INVESTIGAR
 public class ReporteGenerosController {
 
     @Autowired

@@ -7,63 +7,68 @@ import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
-
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
 public class ReporteFeriadosService {
 
+    //METODO QUE GENERA EL PDF
     public byte[] generarReporteFeriadosPDF(ReporteFeriadosRequest request) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Document document = new Document(PageSize.A4.rotate());
+
+            //TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
+            Document document = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
                     request.getColorPrincipal()
             ));
-
             document.open();
 
-            // Logo
+            //LOGO DE EMPRESA
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            // Empresa y Título
+            //TITULO DE EMPRESA
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            
+            //TITULO DE REPORTE
             document.add(ReporteUtil.crearTituloReporte("LISTA DE FERIADOS"));
 
-            // Colores
+            //COLORES DE LA EMPRESA USADOS EN EL REPORTE
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorZebra = ReporteUtil.colorZebraClaro();
 
-            // Tabla
+            //TABLA
             PdfPTable tabla = new PdfPTable(4);
-            tabla.setWidthPercentage(65);
-            tabla.setWidths(new float[]{2, 6, 4, 4});
+            tabla.setWidthPercentage(70);
+            tabla.setWidths(new float[]{2.3f, 6, 3.7f, 4});
             tabla.setSpacingBefore(10f);
 
-            // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("DESCRIPCIÓN", ReporteUtil.fuenteEncabezado(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("RECUPERACIÓN", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+            //ENCABEZADOS DE LA TABLA
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("DESCRIPCIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("RECUPERACIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
-            // Filas
+            //FILAS DE LA TABLA (CUERPO)
             List<FeriadoDTO> lista = request.getFeriados();
-            for (int i = 0; i < lista.size(); i++) {
-                FeriadoDTO f = lista.get(i);
-                Color bgColor = (i % 2 == 0) ? colorZebra : null;
-
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(f.getId()), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(f.getDescripcion(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(f.getFecha(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(f.getFechaRecuperacion(), ReporteUtil.fuenteTexto(), bgColor));
+            lista.sort(Comparator.comparing(FeriadoDTO::getId));
+            boolean zebra= false;
+            for (FeriadoDTO f: lista) {
+                Color bgColor = zebra ? colorZebra : Color.WHITE;
+                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(f.getId()), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(f.getDescripcion(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(f.getFecha(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(f.getFechaRecuperacion(), ReporteUtil.fuenteTablaData(), bgColor));
+                zebra = !zebra;
             }
 
             document.add(tabla);

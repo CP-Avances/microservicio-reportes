@@ -28,16 +28,6 @@ public class ReporteUtil {
         logo.setAlignment(Image.LEFT);
     }
 
-    // Crear celda con texto, fuente y fondo personalizado
-    public static PdfPCell crearCelda(String texto, Font fuente, Color fondo) {
-        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuente));
-        celda.setBackgroundColor(fondo);
-        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
-        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        celda.setPadding(4f);
-        return celda;
-    }
-
     // Fuente de texto general
     public static Font fuenteTexto() {
         return FontFactory.getFont(FontFactory.HELVETICA, 6.5f);
@@ -53,7 +43,7 @@ public class ReporteUtil {
 
     // Color zebra claro reutilizable
     public static Color colorZebraClaro() {
-        return new Color(212, 212, 212); //rgb(212, 212, 212)
+        return new Color(212, 212, 212); // rgb(212, 212, 212)
     }
 
     // Celda alineada al centro
@@ -144,16 +134,6 @@ public class ReporteUtil {
         }
     }
 
-    // Celda centrada con fondo personalizado
-    public static PdfPCell celdaCentro(String texto, Color fondo) {
-        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuenteTexto()));
-        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
-        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        celda.setBackgroundColor(fondo);
-        celda.setPadding(4f);
-        return celda;
-    }
-
     // Celda izquierda con fondo personalizado
     public static PdfPCell celdaIzquierda(String texto, Color fondo) {
         PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuenteTexto()));
@@ -161,18 +141,6 @@ public class ReporteUtil {
         celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
         celda.setBackgroundColor(fondo);
         celda.setPadding(4f);
-        return celda;
-    }
-
-    public static PdfPCell celdaInfoMixta(String etiqueta, String valor, Color fondo) {
-        Phrase contenido = new Phrase();
-        contenido.add(new Chunk(etiqueta + " ", ReporteUtil.fuenteEncabezado()));
-        contenido.add(new Chunk(valor != null ? valor : "", ReporteUtil.fuenteEncabezado()));
-
-        PdfPCell celda = new PdfPCell(contenido);
-        celda.setBackgroundColor(fondo);
-        celda.setPadding(5f);
-        celda.setBorder(Rectangle.NO_BORDER);
         return celda;
     }
 
@@ -196,16 +164,9 @@ public class ReporteUtil {
         }
     }
 
-    // METODO PARA TABLA DE RESUMEN DE ASISTENCIA
-    public static PdfPCell crearCelda(String texto, Font fuente, Color fondo, int rowspan, int colspan) {
-        PdfPCell celda = crearCelda(texto, fuente, fondo);
-        celda.setRowspan(rowspan);
-        celda.setColspan(colspan);
-        return celda;
-    }
-
     ///////////////////////////////////////////////////////
     // ORDENAMIENTO DE METODOS PARA REPORTES//
+    ///////////////////////////////////////////////////////
 
     // METODO USADO PARA OBTENER LOGO (Convertir logo base64 a Image)
     public static Image obtenerLogo(String base64String) throws Exception {
@@ -253,9 +214,51 @@ public class ReporteUtil {
         return FontFactory.getFont(FontFactory.HELVETICA, 8);
     }
 
-    // Fuente para título del reporte
+    // METODO PARA NECABEZADOS QUE TIENEN CABEZERA Y SU INFOMRACION CORRESPONDIENTE
+    // (PAIS: ECUADOR)
+    public static PdfPCell celdaInfoMixta(String etiqueta, String valor, Color fondo) {
+        Phrase contenido = new Phrase();
+        contenido.add(new Chunk(etiqueta + " ", ReporteUtil.fuenteEncabezado()));
+        contenido.add(new Chunk(valor != null ? valor : "", ReporteUtil.fuenteEncabezado()));
+
+        PdfPCell celda = new PdfPCell(contenido);
+        celda.setBackgroundColor(fondo);
+        celda.setPadding(2f);
+        celda.setBorder(Rectangle.NO_BORDER);
+        return celda;
+    }
+
+    // FUENTE PARA TITULO DEL REPORTE
     public static Font fuenteTituloReporte() {
         return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
+    }
+
+    // METODO CON LA CAPACIDAD DE UNIR VARIAS FILAS Y COLUMNAS
+    public static PdfPCell crearCelda(String texto, Font fuente, Color fondo, int rowspan, int colspan) {
+        PdfPCell celda = crearCelda(texto, fuente, fondo);
+        celda.setRowspan(rowspan);
+        celda.setColspan(colspan);
+        return celda;
+    }
+
+    // METODO PARA CREAR CELDA CON DATOS CENTRADOS A LA CELDA
+    public static PdfPCell celdaCentro(String texto, Color fondo) {
+        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuenteTablaData()));
+        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celda.setBackgroundColor(fondo);
+        celda.setPadding(3f);
+        return celda;
+    }
+
+    // Crear celda con texto, fuente y fondo personalizado
+    public static PdfPCell crearCelda(String texto, Font fuente, Color fondo) {
+        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuente));
+        celda.setBackgroundColor(fondo);
+        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celda.setPadding(4f);
+        return celda;
     }
 
 }

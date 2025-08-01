@@ -28,7 +28,7 @@ public class ReporteParametrosService {
                     request.getColorPrincipal()));
             document.open();
 
-            //LOGO
+            //LOGO DE EMPRESA
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
