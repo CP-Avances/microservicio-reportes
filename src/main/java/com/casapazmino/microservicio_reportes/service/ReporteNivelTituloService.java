@@ -15,9 +15,12 @@ import java.util.List;
 @Service
 public class ReporteNivelTituloService {
 
+    //METODO QUE GENER EL PDF
     public byte[] generarReporteNivelTituloPDF(ReporteNivelesTitulosRequest request) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+            //TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
             Document document = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
@@ -25,50 +28,42 @@ public class ReporteNivelTituloService {
                     request.getFraseMarcaAgua(),
                     request.getColorPrincipal()
             ));
-
             document.open();
 
-            // Logo
+            //LOGO DE EMPRESA
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            //TITULO DE EMPRESA
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            
+            //TITULO DEL REPORTE
+            document.add(ReporteUtil.crearTituloReporte("LISTA DE NIVELES DE TÍTULOS PROFESIONALES"));
 
-            // Título
-            Paragraph titulo = new Paragraph("LISTA DE NIVELES DE TÍTULOS PROFESIONALES", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
-
-            // Colores
+            //COLORES DE LA EMPRESA USADOS EN EL REPORTE
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
-            // Tabla
+            //TABLA
             PdfPTable tabla = new PdfPTable(2);
-            tabla.setWidthPercentage(70);
+            tabla.setWidthPercentage(40);
             tabla.setWidths(new float[]{2, 6});
             tabla.setSpacingBefore(10f);
 
-            // Encabezado
-            tabla.addCell(crearCelda("CÓDIGO", colorPrincipal));
-            tabla.addCell(crearCelda("NIVEL", colorPrincipal));
+            //ENCABEZADOS DE LA TABLA
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("NIVEL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
-            // Filas
-            List<NivelTituloDTO> lista = request.getNivelesTitulos(); // ← Corrección aquí
-            for (int i = 0; i < lista.size(); i++) {
-                NivelTituloDTO n = lista.get(i);
-                Color bgColor = (i % 2 == 0) ? colorZebra : null;
-
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(n.getNombre(), ReporteUtil.fuenteTexto(), bgColor));
+            //FILAS DE LA TABLA (CUERPO)
+            List<NivelTituloDTO> lista = request.getNivelesTitulos();
+            boolean zebra= false;
+            for (NivelTituloDTO n : lista) {
+                Color bgColor = zebra ? colorZebra : Color.WHITE;
+                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(n.getNombre(), ReporteUtil.fuenteTablaData(), bgColor));
+                zebra = !zebra;
             }
 
             document.add(tabla);
@@ -79,12 +74,5 @@ public class ReporteNivelTituloService {
             e.printStackTrace();
             return null;
         }
-    }
-
-    private PdfPCell crearCelda(String texto, Color bgColor) {
-        PdfPCell celda = new PdfPCell(new Phrase(texto, ReporteUtil.fuenteEncabezado()));
-        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
-        celda.setBackgroundColor(bgColor);
-        return celda;
     }
 }

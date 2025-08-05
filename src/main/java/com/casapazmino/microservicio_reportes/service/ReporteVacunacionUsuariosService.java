@@ -36,8 +36,6 @@ public class ReporteVacunacionUsuariosService {
 
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
-                logo.scaleAbsoluteWidth(100);
-                logo.setAlignment(Image.ALIGN_LEFT);
                 document.add(logo);
             }
 

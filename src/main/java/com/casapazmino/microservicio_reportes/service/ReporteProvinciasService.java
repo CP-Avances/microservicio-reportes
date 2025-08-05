@@ -16,9 +16,12 @@ import java.util.List;
 @Service
 public class ReporteProvinciasService {
 
+    //METODO QUE GENERA EL PDF
     public byte[] generarReportePDF(ReporteProvinciasRequest request) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+            //TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
             Document document = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
@@ -28,48 +31,39 @@ public class ReporteProvinciasService {
             ));
             document.open();
 
-            // Logo
+            //LOGO DE EMPRESA
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(),
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            //TITULO DE EMPRESA
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            
+            //TITULO DE REPORTE
+            document.add(ReporteUtil.crearTituloReporte("LISTA DE PROVINCIAS"));
 
-            // Título
-            Paragraph titulo = new Paragraph("LISTA DE PROVINCIAS",
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
-
-            // Colores
+            //COLORES DE LA EMPRESA USADOS EN EL REPORTE
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
-            // Tabla
+            //TABLA DE LAS PROVINCIAS
             PdfPTable tabla = new PdfPTable(2);
-            tabla.setWidthPercentage(60); // centrada
+            tabla.setWidthPercentage(50);
             tabla.setWidths(new float[]{2, 4});
             tabla.setSpacingBefore(10f);
 
-            // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("PAÍS", ReporteUtil.fuenteEncabezado(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("PROVINCIAS", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+            //ENCABEZADOS DE LA TABLA
+            tabla.addCell(ReporteUtil.crearCelda("PAÍS", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("PROVINCIAS", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
-            // Filas
+            //FILAS CON LA DATA
             boolean zebra = false;
             List<ProvinciaDTO> lista = request.getProvincias();
             for (ProvinciaDTO provincia : lista) {
-                Color fondo = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(ReporteUtil.crearCelda(provincia.getPais(), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(provincia.getNombre(), ReporteUtil.fuenteTexto(), fondo));
+                Color fondo = zebra ? colorZebra : null;
+                tabla.addCell(ReporteUtil.crearCelda(provincia.getPais(), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(provincia.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
                 zebra = !zebra;
             }
 

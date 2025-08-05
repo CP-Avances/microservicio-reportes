@@ -2,52 +2,45 @@ package com.casapazmino.microservicio_reportes.util;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
-
 import java.awt.Color;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Date;
+import java.util.Locale;
 
 public class ReporteUtil {
 
-    // Metodo para convertir código HEX (como "#E5E7E9") a objeto Color
+    // Convertir código HEX (como "#E5E7E9") a objeto Color
     public static Color convertirHexAColor(String hex) {
         try {
             return Color.decode(hex);
         } catch (Exception e) {
-            return Color.LIGHT_GRAY; 
+            return Color.LIGHT_GRAY;
         }
     }
 
-    // Metodo para convertir logo base64 a Image
-    public static Image obtenerLogo(String base64String) throws Exception {
-        if (base64String != null && base64String.contains("base64,")) {
-            String base64 = base64String.split(",")[1];
-            byte[] imageBytes = Base64.getDecoder().decode(base64);
-            Image logo = Image.getInstance(imageBytes);
-            logo.scaleAbsolute(80, 40);
-            logo.setAlignment(Image.LEFT);
-            return logo;
-        }
-        return null; //Se podria ingresar un logo por defecto
+    // Aplicar tamaño y alineación al logo
+    public static void aplicarEstiloLogo(Image logo) {
+        logo.scaleToFit(120, 120);
+        logo.setAlignment(Image.LEFT);
     }
 
-    // Metodo para crear celda personalizada con fondo y alineación
-    public static PdfPCell crearCelda(String texto, Font fuente, Color fondo) {
-        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuente));
-        celda.setBackgroundColor(fondo);
-        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
-        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        celda.setPadding(4f);
-        return celda;
-    }
-
-    // Metodo para fuente de texto
+    // Fuente de texto general
     public static Font fuenteTexto() {
-        return FontFactory.getFont(FontFactory.HELVETICA, 8);
+        return FontFactory.getFont(FontFactory.HELVETICA, 6.5f);
     }
 
-    // Metodo para fuente para encabezados
-    public static Font fuenteEncabezado() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9);
+    // Crear titulo del periodo
+    public static Paragraph crearTituloPeriodo(String texto) {
+        Paragraph p = new Paragraph(texto, fuenteTituloReporte());
+        p.setAlignment(Element.ALIGN_CENTER);
+        p.setSpacingAfter(10f);
+        return p;
+    }
+
+    // Color zebra claro reutilizable
+    public static Color colorZebraClaro() {
+        return new Color(212, 212, 212); // rgb(212, 212, 212)
     }
 
     // Celda alineada al centro
@@ -59,6 +52,10 @@ public class ReporteUtil {
         return celda;
     }
 
+    public static PdfPCell celdaCentro(String texto) {
+        return celdaCentro(texto, fuenteTexto());
+    }
+
     // Celda alineada a la izquierda
     public static PdfPCell celdaIzquierda(String texto, Font fuente) {
         PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuente));
@@ -68,15 +65,19 @@ public class ReporteUtil {
         return celda;
     }
 
-    // Celda para info de empleado gris claro
+    public static PdfPCell celdaIzquierda(String texto) {
+        return celdaIzquierda(texto, fuenteTexto());
+    }
+
+    // Celda gris para info de empleado
     public static PdfPCell celdaInfoEmpleado(String texto) {
         PdfPCell celda = new PdfPCell(new Phrase(texto, fuenteTexto()));
-        celda.setBackgroundColor(new Color(227, 227, 227)); // gris claro
+        celda.setBackgroundColor(new Color(227, 227, 227));
         celda.setPadding(5);
         return celda;
     }
 
-    // Celda de encabezado con color de fondo
+    // Celda de encabezado con fondo
     public static PdfPCell celdaEncabezado(String texto, Color fondo) {
         PdfPCell celda = new PdfPCell(new Phrase(texto, fuenteEncabezado()));
         celda.setHorizontalAlignment(Element.ALIGN_CENTER);
@@ -86,7 +87,7 @@ public class ReporteUtil {
         return celda;
     }
 
-    // Celda de encabezado para número de día
+    // Celda especial para número de día (horario)
     public static PdfPCell celdaEncabezadoDia(int dia) {
         PdfPCell celda = new PdfPCell(new Phrase(String.format("%02d", dia), fuenteEncabezado()));
         celda.setHorizontalAlignment(Element.ALIGN_CENTER);
@@ -95,21 +96,14 @@ public class ReporteUtil {
         return celda;
     }
 
-    public static PdfPCell celdaCentro(String texto) {
-        return celdaCentro(texto, fuenteTexto());
-    }
-
-    public static PdfPCell celdaIzquierda(String texto) {
-        return celdaIzquierda(texto, fuenteTexto());
-    }
-
+    // Celdas para nomenclatura
     public static PdfPCell celdaNomenclatura(String texto, Font fuente) {
         PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuente));
         celda.setHorizontalAlignment(Element.ALIGN_CENTER);
         celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
         celda.setPadding(4f);
-        celda.setMinimumHeight(20f); // altura constante
-        celda.setNoWrap(true); // evita salto de línea
+        celda.setMinimumHeight(20f);
+        celda.setNoWrap(true);
         return celda;
     }
 
@@ -118,18 +112,150 @@ public class ReporteUtil {
         celda.setHorizontalAlignment(Element.ALIGN_LEFT);
         celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
         celda.setPadding(4f);
-        celda.setMinimumHeight(20f); // igual altura que nombre
-        celda.setNoWrap(true); // evita salto de línea
+        celda.setMinimumHeight(20f);
+        celda.setNoWrap(true);
         return celda;
     }
 
-    public static PdfPCell celdaDerecha(String texto, Font fuente) {
-    PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuente));
-    celda.setHorizontalAlignment(Element.ALIGN_RIGHT);
-    celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
-    celda.setPadding(4f);
-    return celda;
-}
+    // FormatearFecha
+    public static String formatearFechaConDia(String fechaOriginal) {
+        try {
+            SimpleDateFormat entrada = new SimpleDateFormat("yyyy-MM-dd");
+            SimpleDateFormat salida = new SimpleDateFormat("EEE. dd/MM/yyyy", new Locale("es", "ES"));
+            Date fecha = entrada.parse(fechaOriginal);
+            String resultado = salida.format(fecha);
 
+            return resultado.substring(0, 1).toUpperCase() + resultado.substring(1);
+        } catch (Exception e) {
+            return fechaOriginal;
+        }
+    }
+
+    // Celda izquierda con fondo personalizado
+    public static PdfPCell celdaIzquierda(String texto, Color fondo) {
+        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuenteTexto()));
+        celda.setHorizontalAlignment(Element.ALIGN_LEFT);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celda.setBackgroundColor(fondo);
+        celda.setPadding(4f);
+        return celda;
+    }
+
+    public static String traducirAccion(String codigo) {
+        if (codigo == null)
+            return "";
+
+        switch (codigo.trim().toUpperCase()) {
+            case "E":
+                return "Entrada";
+            case "S":
+                return "Salida";
+            case "I/A":
+                return "Inicio alimentación";
+            case "F/A":
+                return "Fin alimentación";
+            case "D":
+                return "Desconocido";
+            default:
+                return codigo;
+        }
+    }
+
+    ///////////////////////////////////////////////////////
+    // ORDENAMIENTO DE METODOS PARA REPORTES//
+    ///////////////////////////////////////////////////////
+
+    // METODO USADO PARA OBTENER LOGO (Convertir logo base64 a Image)
+    public static Image obtenerLogo(String base64String) throws Exception {
+        if (base64String != null && base64String.contains("base64,")) {
+            String base64 = base64String.split(",")[1];
+            byte[] imageBytes = Base64.getDecoder().decode(base64);
+            Image logo = Image.getInstance(imageBytes);
+            aplicarEstiloLogo(logo);
+            return logo;
+        }
+        return null;
+    }
+
+    // METODO USADO PARA CREA TITULO EMPRESA DEL REPORTE (Estilos)
+    public static Paragraph crearTituloEmpresa(String texto) {
+        Font fuente = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
+        Paragraph p = new Paragraph(texto, fuente);
+        p.setAlignment(Element.ALIGN_CENTER);
+        p.setSpacingBefore(-35f);
+        p.setSpacingAfter(2f);
+        return p;
+    }
+
+    // METODO PARA CREAR TITULO DEL REPORTE(ESTILOS)
+    public static Paragraph crearTituloReporte(String texto) {
+        Font fuente = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
+        Paragraph p = new Paragraph(texto, fuente);
+        p.setAlignment(Element.ALIGN_CENTER);
+        p.setSpacingAfter(0f);
+        return p;
+    }
+
+    // METODO PARA FUENTE DE TABLA ENCABEZADO
+    public static Font fuenteEncabezado() {
+        return FontFactory.getFont(FontFactory.HELVETICA, 9);
+    }
+
+    // METODO PARA FUENTE DE ENCABEZADO DE TABLA DATA
+    public static Font fuenteEncabezadoTablaData() {
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8);
+    }
+
+    // METODO PARA FUENTE DE ENCABEZADO DE TABLA DATA
+    public static Font fuenteTablaData() {
+        return FontFactory.getFont(FontFactory.HELVETICA, 8);
+    }
+
+    // METODO PARA NECABEZADOS QUE TIENEN CABEZERA Y SU INFOMRACION CORRESPONDIENTE
+    // (PAIS: ECUADOR)
+    public static PdfPCell celdaInfoMixta(String etiqueta, String valor, Color fondo) {
+        Phrase contenido = new Phrase();
+        contenido.add(new Chunk(etiqueta + " ", ReporteUtil.fuenteEncabezado()));
+        contenido.add(new Chunk(valor != null ? valor : "", ReporteUtil.fuenteEncabezado()));
+
+        PdfPCell celda = new PdfPCell(contenido);
+        celda.setBackgroundColor(fondo);
+        celda.setPadding(2f);
+        celda.setBorder(Rectangle.NO_BORDER);
+        return celda;
+    }
+
+    // FUENTE PARA TITULO DEL REPORTE
+    public static Font fuenteTituloReporte() {
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
+    }
+
+    // METODO CON LA CAPACIDAD DE UNIR VARIAS FILAS Y COLUMNAS
+    public static PdfPCell crearCelda(String texto, Font fuente, Color fondo, int rowspan, int colspan) {
+        PdfPCell celda = crearCelda(texto, fuente, fondo);
+        celda.setRowspan(rowspan);
+        celda.setColspan(colspan);
+        return celda;
+    }
+
+    // METODO PARA CREAR CELDA CON DATOS CENTRADOS A LA CELDA
+    public static PdfPCell celdaCentro(String texto, Color fondo) {
+        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuenteTablaData()));
+        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celda.setBackgroundColor(fondo);
+        celda.setPadding(3f);
+        return celda;
+    }
+
+    // Crear celda con texto, fuente y fondo personalizado
+    public static PdfPCell crearCelda(String texto, Font fuente, Color fondo) {
+        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuente));
+        celda.setBackgroundColor(fondo);
+        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celda.setPadding(4f);
+        return celda;
+    }
 
 }

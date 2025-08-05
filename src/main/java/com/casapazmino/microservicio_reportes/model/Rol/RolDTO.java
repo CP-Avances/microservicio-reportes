@@ -1,7 +1,11 @@
 package com.casapazmino.microservicio_reportes.model.Rol;
 
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 public class RolDTO {
     private String nombre;
     private List<FuncionDTO> funciones;
@@ -13,19 +17,4 @@ public class RolDTO {
         this.funciones = funciones;
     }
 
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public List<FuncionDTO> getFunciones() {
-        return funciones;
-    }
-
-    public void setFunciones(List<FuncionDTO> funciones) {
-        this.funciones = funciones;
-    }
 }

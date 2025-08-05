@@ -1,5 +1,10 @@
 package com.casapazmino.microservicio_reportes.model.Titulo;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class TituloDTO {
 
     private int id;
@@ -15,27 +20,4 @@ public class TituloDTO {
         this.nombre = nombre;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getNivel() {
-        return nivel;
-    }
-
-    public void setNivel(String nivel) {
-        this.nivel = nivel;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
 }

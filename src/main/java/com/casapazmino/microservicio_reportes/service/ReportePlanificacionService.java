@@ -21,7 +21,7 @@ public class ReportePlanificacionService {
 
     public byte[] generarReportePDF(ReportePlanificacionRequest request) {
         try {
-            Document document = new Document(PageSize.A4.rotate(), 40, 40, 50, 50);
+            Document document = new Document(PageSize.A4.rotate(), 40, 40, 30, 50);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = PdfWriter.getInstance(document, baos);
 
@@ -57,10 +57,10 @@ public class ReportePlanificacionService {
 
             // TABLA DE HORARIOS
             PdfPTable tablaHorarios = new PdfPTable(5);
-            tablaHorarios.setWidthPercentage(60f);
+            tablaHorarios.setWidthPercentage(100f);
             tablaHorarios.setHorizontalAlignment(Element.ALIGN_LEFT);
-            tablaHorarios.setSpacingAfter(0f);
-            tablaHorarios.setWidths(new int[] { 2, 2, 2, 2, 2 });
+            tablaHorarios.setSpacingAfter(20f);
+            tablaHorarios.setWidths(new int[] { 16, 16, 16, 16, 16 });
 
             PdfPCell tituloHorarios = new PdfPCell(new Phrase("DETALLE DE HORARIOS", ReporteUtil.fuenteEncabezado()));
             tituloHorarios.setColspan(5);
@@ -77,14 +77,14 @@ public class ReportePlanificacionService {
             for (PlanificacionDetalleDTO d : request.getDetalle_acciones()) {
                 tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getHorario()));
                 tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getEntrada_()));
-                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getInicioComida()));
-                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getFinComida()));
+                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getInicio_comida()));
+                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getFin_comida()));
                 tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getSalida_()));
             }
 
             // TABLA DE NOMENCLATURA
             PdfPTable tablaNomenclatura = new PdfPTable(2);
-            tablaNomenclatura.setWidthPercentage(35f);
+            tablaNomenclatura.setWidthPercentage(80f);
             tablaNomenclatura.setHorizontalAlignment(Element.ALIGN_RIGHT);
             tablaNomenclatura.setSpacingAfter(100f);
             tablaNomenclatura.setWidths(new int[] { 5, 7 });
@@ -108,9 +108,31 @@ public class ReportePlanificacionService {
             document.add(tablaNomenclatura);
             document.add(Chunk.NEWLINE);
 
+            // Tabla contenedora de una fila con dos celdas independientes
+            PdfPTable tablaContenedora = new PdfPTable(2);
+            tablaContenedora.setWidthPercentage(70f); // reduce el espacio total ocupado (de 100% a 70%)
+            tablaContenedora.setWidths(new float[] { 60, 40 }); // proporción interna: 60% horarios, 40% definiciones
+            tablaContenedora.setSpacingBefore(5f); // opcional: reducir espacio antes
+
+            // Celda de la tabla de horarios (puede crecer)
+            PdfPCell celdaIzquierda = new PdfPCell();
+            celdaIzquierda.setBorder(Rectangle.NO_BORDER);
+            celdaIzquierda.setVerticalAlignment(Element.ALIGN_TOP);
+            celdaIzquierda.addElement(tablaHorarios);
+            tablaContenedora.addCell(celdaIzquierda);
+
+            // Celda de la tabla de definiciones (no se estira)
+            PdfPCell celdaDerecha = new PdfPCell();
+            celdaDerecha.setBorder(Rectangle.NO_BORDER);
+            celdaDerecha.setVerticalAlignment(Element.ALIGN_TOP);
+            celdaDerecha.addElement(tablaNomenclatura);
+            tablaContenedora.addCell(celdaDerecha);
+
+            // Agregar al documento
+            document.add(tablaContenedora);
+
             for (PlanificacionEmpleadoDTO emp : request.getDatos()) {
                 PdfPTable encabezado = new PdfPTable(3);
-                encabezado.setWidthPercentage(100);
                 encabezado.setWidths(new int[] { 5, 3, 3 });
 
                 encabezado.addCell(
@@ -164,9 +186,7 @@ public class ReportePlanificacionService {
 
                     document.add(tablaMes);
                     Paragraph espacioEntreEmpleados = new Paragraph("", new Font());
-                    espacioEntreEmpleados.setSpacingBefore(25f); // Ajusta el valor a lo que necesites (puede ser 3f,
-                                                                 // 2f,
-                                                                 // etc.)
+                    espacioEntreEmpleados.setSpacingBefore(25f); 
                     document.add(espacioEntreEmpleados);
 
                 }

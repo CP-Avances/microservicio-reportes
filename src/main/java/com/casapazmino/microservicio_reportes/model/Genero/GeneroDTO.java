@@ -1,5 +1,10 @@
 package com.casapazmino.microservicio_reportes.model.Genero;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class GeneroDTO {
 
     private int id;
@@ -12,22 +17,5 @@ public class GeneroDTO {
         this.id=id;
         this.genero=genero;
     }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getGenero() {
-        return genero;
-    }
-
-    public void setGenero(String genero) {
-        this.genero = genero;
-    }
-
 
 }

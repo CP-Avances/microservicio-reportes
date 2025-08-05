@@ -1,5 +1,10 @@
 package com.casapazmino.microservicio_reportes.model.Discapacidad;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class DiscapacidadDTO {
 
     private Long id;
@@ -13,19 +18,4 @@ public class DiscapacidadDTO {
         this.nombre = nombre;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
 }

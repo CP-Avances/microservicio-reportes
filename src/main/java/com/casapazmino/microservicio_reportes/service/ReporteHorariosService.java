@@ -8,58 +8,51 @@ import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
-
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.util.List;
 
 @Service
 public class ReporteHorariosService {
 
+    //METODO QUE GENERA EL PDF
     public byte[] generarReportePDF(ReporteHorariosRequest request) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Document document = new Document(PageSize.A4, 40, 40, 50, 50);
+
+            //TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
+            Document document = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
                     request.getColorPrincipal()
             ));
-
             document.open();
 
-            // Logo
+            //LOGO DE EMPRESA
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
-                logo.scaleAbsolute(100, 50);
-                logo.setAlignment(Image.LEFT);
                 document.add(logo);
             }
 
-            // Empresa y título
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-30f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            //TITULO DE EMPRESA
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            
+            //TITULO DE REPORTE
+            document.add(ReporteUtil.crearTituloReporte("LISTA DE HORARIOS"));
 
-            Paragraph titulo = new Paragraph("LISTA DE HORARIOS", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
-
+            //COLORES DE LA EMPRESA USADOS EN EL REPORTE
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Color zebraColor = new Color(229, 231, 233); // #E5E7E9
+            Color zebraColor = ReporteUtil.colorZebraClaro();
 
             for (HorarioDTO h : request.getHorarios()) {
-                // Tabla contenedora de todo el bloque
+                // Tabla contenedora
                 PdfPTable bloque = new PdfPTable(1);
                 bloque.setWidthPercentage(100);
                 bloque.setSpacingBefore(10f);
 
-                // Cabecera (tabla 3 columnas)
+                //TABLA CABEZERA DE CADA HORARIO
                 PdfPTable cabecera = new PdfPTable(3);
                 cabecera.setWidthPercentage(100);
                 cabecera.setWidths(new float[]{5, 5, 5});
@@ -81,11 +74,10 @@ public class ReporteHorariosService {
                     // Título "DETALLES"
                     PdfPTable tituloDetalles = new PdfPTable(1);
                     tituloDetalles.setWidthPercentage(100);
-                    PdfPCell celdaDetalles = new PdfPCell(new Phrase("DETALLES", ReporteUtil.fuenteEncabezado()));
+                    PdfPCell celdaDetalles = new PdfPCell(new Phrase("DETALLES", ReporteUtil.fuenteEncabezadoTablaData()));
                     celdaDetalles.setBackgroundColor(colorSecundario);
                     celdaDetalles.setHorizontalAlignment(Element.ALIGN_CENTER);
-                    celdaDetalles.setPaddingTop(5f);
-                    celdaDetalles.setPaddingBottom(5f);
+                    celdaDetalles.setPadding(5);
                     celdaDetalles.setBorder(Rectangle.BOX);
                     tituloDetalles.addCell(celdaDetalles);
 
@@ -97,27 +89,24 @@ public class ReporteHorariosService {
                     // Tabla de detalles
                     PdfPTable tabla = new PdfPTable(7);
                     tabla.setWidthPercentage(100);
-                    tabla.setWidths(new float[]{1.5f, 2.5f, 2.5f, 5, 2, 2.5f, 2.5f});
+                    tabla.setWidths(new float[]{1.5f, 1.5f, 2.5f, 4.4f, 2, 3, 3});
 
-                    // Encabezados
                     String[] headers = {"ORDEN", "HORA", "TOLERANCIA", "ACCIÓN", "OTRO DÍA", "MINUTOS ANTES", "MINUTOS DESPUÉS"};
                     for (String col : headers) {
-                        tabla.addCell(ReporteUtil.crearCelda(col, ReporteUtil.fuenteEncabezado(), colorSecundario));
+                        tabla.addCell(ReporteUtil.crearCelda(col, ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
                     }
 
-                    // Filas con efecto zebra
                     boolean zebra = false;
                     for (DetalleHorarioDTO d : h.getDetalles()) {
                         Color fondo = zebra ? zebraColor : null;
+                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getOrden()), ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.crearCelda(d.getHora(), ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.crearCelda(d.getTolerancia() != null ? d.getTolerancia().toString() : "", ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.crearCelda(d.getTipoAccionShow(), ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.crearCelda(d.isSegundoDia() ? "Sí" : "No", ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getMinutosAntes()), ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getMinutosDespues()), ReporteUtil.fuenteTablaData(), fondo));
                         zebra = !zebra;
-
-                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getOrden()), ReporteUtil.fuenteTexto(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(d.getHora(), ReporteUtil.fuenteTexto(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(d.getTolerancia() != null ? d.getTolerancia().toString() : "", ReporteUtil.fuenteTexto(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(d.getTipoAccionShow(), ReporteUtil.fuenteTexto(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(d.isSegundoDia() ? "Sí" : "No", ReporteUtil.fuenteTexto(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getMinutosAntes()), ReporteUtil.fuenteTexto(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getMinutosDespues()), ReporteUtil.fuenteTexto(), fondo));
                     }
 
                     PdfPCell celdaTabla = new PdfPCell(tabla);

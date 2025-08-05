@@ -7,7 +7,6 @@ import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
-
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
@@ -15,9 +14,12 @@ import java.util.List;
 @Service
 public class ReporteEmpleadoService {
 
+    //METODO QU GENERA EL REPORTE PDF
     public byte[] generarReporteEmpleadosPDF(ReporteEmpleadosRequest request) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+            //TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
             Document document = new Document(PageSize.A4.rotate());
             PdfWriter writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
@@ -25,64 +27,56 @@ public class ReporteEmpleadoService {
                     request.getFraseMarcaAgua(),
                     request.getColorPrincipal()
             ));
-
             document.open();
 
-            // Logo
+            //LOGO DE EMPRESA
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
-                logo.scaleToFit(120, 120);
                 document.add(logo);
             }
 
-            // Empresa
-            Paragraph empresa = new Paragraph(request.getEmpresa(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingBefore(-40f);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            //TITULO DE EMPRESA
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            
+            //TITULO DE REPORTE
+            document.add(ReporteUtil.crearTituloReporte("Lista de Empleados"));
 
-            // Título
-            Paragraph titulo = new Paragraph("Lista de Empleados", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16));
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
-
-            // Tabla
+            //TABLA
             PdfPTable tabla = new PdfPTable(11);
             tabla.setWidthPercentage(100);
-            tabla.setWidths(new float[]{2, 4, 4, 3, 5, 3, 3, 4, 3, 3, 4});
+            tabla.setWidths(new float[]{1.8f, 5.5f, 3.7f, 3, 7.3f, 2.7f, 3, 3, 3, 2, 3});
             tabla.setSpacingBefore(10f);
 
+            //COLORES DE LA EMPRESA USADOS EN EL REPORTE
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = new Color(204, 209, 209); // #CCD1D1
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
-            // Encabezados
+            //ENCABEZADOS
             String[] headers = {
                 "Código", "Nombre", "Identificación", "Fecha Nacimiento", "Correo",
                 "Género", "Estado Civil", "Domicilio", "Teléfono", "Estado", "Nacionalidad"
             };
 
             for (String encabezado : headers) {
-                tabla.addCell(crearCelda(encabezado, colorPrincipal));
+                tabla.addCell(ReporteUtil.crearCelda(encabezado, ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
             }
 
             List<EmpleadoDTO> empleados = request.getEmpleados();
-            for (int i = 0; i < empleados.size(); i++) {
-                EmpleadoDTO e = empleados.get(i);
-                Color bgColor = (i % 2 == 0) ? colorZebra : null;
-
-                tabla.addCell(ReporteUtil.crearCelda(e.getCodigo(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getNombreCompleto(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getIdentificacion(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getFechaNacimiento(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getCorreo(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getGenero(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getEstadoCivil(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getDomicilio(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getTelefono(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getEstadoTexto(), ReporteUtil.fuenteTexto(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getNacionalidad(), ReporteUtil.fuenteTexto(), bgColor));
+            boolean zebra = false;
+            for (EmpleadoDTO e: empleados) {
+                Color bgColor = zebra ? colorZebra : Color.WHITE;
+                tabla.addCell(ReporteUtil.crearCelda(e.getCodigo(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(e.getNombreCompleto(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(e.getIdentificacion(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(e.getFechaNacimiento(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(e.getCorreo(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(e.getGenero(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(e.getEstadoCivil(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(e.getDomicilio(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(e.getTelefono(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(e.getEstadoTexto(), ReporteUtil.fuenteTablaData(), bgColor));
+                tabla.addCell(ReporteUtil.crearCelda(e.getNacionalidad(), ReporteUtil.fuenteTablaData(), bgColor));
+                zebra = !zebra;
             }
 
             document.add(tabla);
@@ -93,12 +87,5 @@ public class ReporteEmpleadoService {
             e.printStackTrace();
             return null;
         }
-    }
-
-    private PdfPCell crearCelda(String texto, Color bgColor) {
-        PdfPCell celda = new PdfPCell(new Phrase(texto, ReporteUtil.fuenteEncabezado()));
-        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
-        celda.setBackgroundColor(bgColor);
-        return celda;
     }
 }
