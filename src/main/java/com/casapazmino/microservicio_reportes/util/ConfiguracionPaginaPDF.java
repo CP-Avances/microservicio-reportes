@@ -22,7 +22,7 @@ public class ConfiguracionPaginaPDF extends PdfPageEventHelper {
     }
 
     public ConfiguracionPaginaPDF(String nombreUsuario, String textoMarcaAgua) {
-        this(nombreUsuario, textoMarcaAgua, "#C8C8FF"); 
+        this(nombreUsuario, textoMarcaAgua, "#C8C8FF");
     }
 
     @Override
@@ -32,21 +32,31 @@ public class ConfiguracionPaginaPDF extends PdfPageEventHelper {
 
     @Override
     public void onStartPage(PdfWriter writer, Document document) {
-        if (textoMarcaAgua != null && !textoMarcaAgua.isEmpty()) {
-            PdfContentByte canvas = writer.getDirectContentUnder();
-            Font fuenteMarca = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 160, Font.NORMAL, colorPrincipal);
-            Phrase marcaAgua = new Phrase(textoMarcaAgua, fuenteMarca);
-
-            float x = document.getPageSize().getWidth() / 2 + 40;
-            float y = (document.top() + document.bottom()) / 2;
-
-            ColumnText.showTextAligned(canvas, Element.ALIGN_CENTER, marcaAgua, x, y, 50);
-        }
     }
 
     @Override
     public void onEndPage(PdfWriter writer, Document document) {
         PdfContentByte canvas = writer.getDirectContent();
+
+        if (textoMarcaAgua != null && !textoMarcaAgua.isEmpty()) {
+            PdfGState gstate = new PdfGState();
+            boolean landscape = document.getPageSize().getWidth() > document.getPageSize().getHeight();
+            float angulo = landscape ? 30f : 55f; 
+            float fontSize = landscape ? 180f : 160f; 
+
+            gstate.setFillOpacity(0.1f);
+            canvas.saveState();
+            canvas.setGState(gstate);
+            Font fuenteMarca = FontFactory.getFont(FontFactory.HELVETICA_BOLD, fontSize, Font.NORMAL, Color.blue);
+            Phrase marcaAgua = new Phrase(textoMarcaAgua, fuenteMarca);
+
+            float x = document.getPageSize().getWidth() / 2 + 40;
+            float y = (document.top() + document.bottom()) / 2;
+
+            ColumnText.showTextAligned(canvas, Element.ALIGN_CENTER, marcaAgua, x, y, angulo);
+            canvas.restoreState();
+        }
+
         BaseFont baseFont;
         try {
             baseFont = BaseFont.createFont();
@@ -55,38 +65,64 @@ public class ConfiguracionPaginaPDF extends PdfPageEventHelper {
             return;
         }
 
+        float pageWidth = document.getPageSize().getWidth();
+        float pageHeight = document.getPageSize().getHeight();
+
         Font fuentePie = new Font(baseFont, 9, Font.NORMAL, new Color(120, 120, 120));
 
-        // Fecha y hora
+        PdfGState gstate = new PdfGState();
+        gstate.setFillOpacity(0.5f); 
+        canvas.saveState();
+        canvas.setGState(gstate);
+
         String fecha = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         String hora = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
         String textoIzquierdo = "Fecha: " + fecha + "  Hora: " + hora;
-        ColumnText.showTextAligned(canvas, Element.ALIGN_LEFT, new Phrase(textoIzquierdo, fuentePie),
-                document.left(), document.bottom() - 10, 0);
 
-        // Página actual
+        ColumnText.showTextAligned(
+                canvas,
+                Element.ALIGN_LEFT,
+                new Phrase(textoIzquierdo, fuentePie),
+                20, 
+                20,
+                0);
+
         int pageNum = writer.getPageNumber();
-        String texto = "© Pag " + pageNum + " de ";
+        String textoPagina = "© Pag " + pageNum + " de ";
+        float textSize = baseFont.getWidthPoint(textoPagina, 9);
 
-        float textBase = document.bottom() - 10;
-        float textSize = baseFont.getWidthPoint(texto, 9);
-        float adjustX = document.right() - textSize - 20;
+        float xPagina = pageWidth - textSize - 30;
+        float yPagina = 20;
 
-        // Escribir "© Pag X of "
         canvas.beginText();
         canvas.setFontAndSize(baseFont, 9);
-        canvas.setTextMatrix(adjustX, textBase);
+        canvas.setTextMatrix(xPagina, yPagina);
         canvas.setColorFill(new Color(120, 120, 120));
-        canvas.showText(texto);
+        canvas.showText(textoPagina);
         canvas.endText();
 
-        // Insertar plantilla del total justo después del texto
-        canvas.addTemplate(total, adjustX + textSize, textBase);
+        canvas.addTemplate(total, xPagina + textSize, yPagina);
 
-        // Encabezado: usuario
+        canvas.restoreState();
+
         Font fuenteEncabezado = new Font(baseFont, 9, Font.NORMAL, new Color(120, 120, 120));
         Phrase encabezado = new Phrase("Impreso por: " + nombreUsuario, fuenteEncabezado);
-        ColumnText.showTextAligned(canvas, Element.ALIGN_RIGHT, encabezado, document.right(), document.top() + 10, 0);
+
+        gstate.setFillOpacity(0.5f); 
+
+        canvas.saveState();
+        canvas.setGState(gstate);
+
+        ColumnText.showTextAligned(
+                canvas,
+                Element.ALIGN_RIGHT,
+                encabezado,
+                pageWidth - 15, 
+                pageHeight - 20, 
+                0);
+
+        canvas.restoreState(); 
+
     }
 
     @Override

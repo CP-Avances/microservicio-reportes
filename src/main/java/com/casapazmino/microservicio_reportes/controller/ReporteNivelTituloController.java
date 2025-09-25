@@ -25,4 +25,34 @@ public class ReporteNivelTituloController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
+
+    // XLSX
+    @PostMapping("/niveles-titulos/xlsx")
+    public ResponseEntity<byte[]> generarReporteNivelTitulosXLSX(@RequestBody ReporteNivelesTitulosRequest request) {
+        byte[] bin = reporteService.generarReporteNivelTituloXLSX(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=niveles_titulos.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(bin);
+    }
+
+    // CSV
+    @PostMapping("/niveles-titulos/csv")
+    public ResponseEntity<byte[]> generarReporteNivelTitulosCSV(@RequestBody ReporteNivelesTitulosRequest request) {
+        byte[] bin = reporteService.generarReporteNivelTituloCSV(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=niveles_titulos.csv")
+                .contentType(MediaType.valueOf("text/csv"))
+                .body(bin);
+    }
+
+    // XML
+    @PostMapping("/niveles-titulos/xml")
+    public ResponseEntity<byte[]> generarReporteNivelTitulosXML(@RequestBody ReporteNivelesTitulosRequest request) {
+        byte[] bin = reporteService.generarReporteNivelTituloXML(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=niveles_titulos.xml")
+                .contentType(MediaType.APPLICATION_XML)
+                .body(bin);
+    }
 }

@@ -9,13 +9,14 @@ public class DepartamentoDTO {
 
     private Long id;
     private String nomsucursal;
+    private Integer id_sucursal;
     private String nombre;
-    private int nivel;
+    private Integer nivel;
     private String departamento_padre;
 
     public DepartamentoDTO() {}
 
-    public DepartamentoDTO(Long id, String nomsucursal, String nombre, int nivel, String departamento_padre) {
+    public DepartamentoDTO(Long id, String nomsucursal, String nombre, Integer nivel, String departamento_padre) {
         this.id = id;
         this.nomsucursal = nomsucursal;
         this.nombre = nombre;

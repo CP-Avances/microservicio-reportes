@@ -7,7 +7,7 @@ import lombok.Setter;
 @Setter
 public class NivelTituloDTO {
 
-    private int id;
+    private Integer id;
     private String nombre;
 
     public NivelTituloDTO() {

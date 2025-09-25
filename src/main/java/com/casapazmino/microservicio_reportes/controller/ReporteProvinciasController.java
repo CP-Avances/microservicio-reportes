@@ -25,4 +25,34 @@ public class ReporteProvinciasController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
+
+    // XLSX
+    @PostMapping("/provincias/xlsx")
+    public ResponseEntity<byte[]> generarReporteXLSX(@RequestBody ReporteProvinciasRequest request) {
+        byte[] bin = reporteService.generarReporteXLSX(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=provincias.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(bin);
+    }
+
+    // CSV
+    @PostMapping("/provincias/csv")
+    public ResponseEntity<byte[]> generarReporteCSV(@RequestBody ReporteProvinciasRequest request) {
+        byte[] bin = reporteService.generarReporteCSV(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=provincias.csv")
+                .contentType(MediaType.valueOf("text/csv"))
+                .body(bin);
+    }
+
+    // XML
+    @PostMapping("/provincias/xml")
+    public ResponseEntity<byte[]> generarReporteXML(@RequestBody ReporteProvinciasRequest request) {
+        byte[] bin = reporteService.generarReporteXML(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=provincias.xml")
+                .contentType(MediaType.APPLICATION_XML)
+                .body(bin);
+    }
 }

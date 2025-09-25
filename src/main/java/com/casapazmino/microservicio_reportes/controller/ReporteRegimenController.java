@@ -27,4 +27,35 @@ public class ReporteRegimenController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
+
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarReporteXLSX(@RequestBody ReporteRegimenesRequest request) throws Exception {
+        byte[] xlsx = reporteRegimenService.generarReporteRegimenesXLSX(request);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=RegimenEXCEL.xlsx")
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(xlsx);
+    }
+
+    @PostMapping("/csv")
+    public ResponseEntity<byte[]> generarReporteCSV(@RequestBody ReporteRegimenesRequest request) throws Exception {
+        byte[] csv = reporteRegimenService.generarReporteRegimenesCSV(request);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=RegimenCSV.csv")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csv);
+    }
+
+    @PostMapping("/xml")
+    public ResponseEntity<byte[]> generarReporteXML(@RequestBody ReporteRegimenesRequest request) throws Exception {
+        byte[] xml = reporteRegimenService.generarReporteRegimenesXML(request);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Regimen_laboral.xml")
+                .contentType(MediaType.APPLICATION_XML)
+                .body(xml);
+    }
 }

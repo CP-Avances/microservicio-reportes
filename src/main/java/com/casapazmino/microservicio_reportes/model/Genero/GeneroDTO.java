@@ -7,7 +7,7 @@ import lombok.Setter;
 @Setter
 public class GeneroDTO {
 
-    private int id;
+    private Integer id;
     private String genero;
 
     public GeneroDTO(){

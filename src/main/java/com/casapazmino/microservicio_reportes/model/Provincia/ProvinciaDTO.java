@@ -7,8 +7,11 @@ import lombok.Setter;
 @Setter
 public class ProvinciaDTO {
 
+    private Integer id;       
+    private Integer id_pais;  
     private String pais;
     private String nombre;
+    
 
     public ProvinciaDTO() {}
 

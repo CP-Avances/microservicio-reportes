@@ -7,7 +7,7 @@ import lombok.Setter;
 @Setter
 public class EstadoCivilDTO {
 
-    private int id;
+    private Integer id;
     private String estadoCivil;
 
     public EstadoCivilDTO() {
