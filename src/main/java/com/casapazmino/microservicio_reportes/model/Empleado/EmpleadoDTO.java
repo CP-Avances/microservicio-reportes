@@ -18,6 +18,8 @@ public class EmpleadoDTO {
     private String telefono;
     private String estadoTexto;
     private String nacionalidad;
+    private String nombre;
+    private String apellido;
 
     public EmpleadoDTO() {}
 

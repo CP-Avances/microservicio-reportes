@@ -11,6 +11,13 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 @Service
 public class ReporteAsistenciaService {
 
@@ -313,6 +320,219 @@ public class ReporteAsistenciaService {
             e.printStackTrace();
             return null;
         }
+    }
+
+    
+    // ===== XLSX (nuevo) =====
+    public byte[] generarReporteResumenAsistenciaXLSX(ReporteAsistenciaRequest request) {
+        try (XSSFWorkbook libro = new XSSFWorkbook();
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            XSSFSheet hoja = libro.createSheet("Resumen_asistencia");
+
+            // 1) Logo estándar A1:B5
+            byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
+            UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+
+            // 2) Merges B1:W5 (B=1 .. W=22 en 0-based)
+            for (int row = 0; row <= 4; row++) {
+                UtilExcel.combinarCeldas(hoja, row, row, 1, 22);
+            }
+
+            // 3) Títulos
+            CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
+            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 1, 1, "RESUMEN DE ASISTENCIA", estiloTitulo);
+            String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL " + safe(request.getFechaFin());
+            UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
+
+            // 4) Encabezados + anchos (fila 6 → idx 5)
+            final int filaEnc = 5;
+            String[] headers = {
+                "ITEM","IDENTIFICACIÓN","CÓDIGO","APELLIDO NOMBRE","CIUDAD","SUCURSAL","RÉGIMEN",
+                "DEPARTAMENTO","CARGO","FECHA","HORARIO ENTRADA","TIMBRE ENTRADA",
+                "HORARIO INICIO ALIMENTACIÓN","TIMBRE INICIO ALIMENTACIÓN",
+                "HORARIO FIN ALIMENTACIÓN","TIMBRE FIN ALIMENTACIÓN",
+                "HORARIO SALIDA","TIMBRE SALIDA",
+                "ATRASO","SALIDA ANTICIPADA",
+                "TIEMPO ALIMENTACIÓN ASIGNADO","TIEMPO ALIMENTACIÓN HH:MM:SS",
+                "TIEMPO LABORADO HH:MM:SS"
+            };
+            int[] anchos = {
+                10,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,40,40,40,40
+            };
+
+            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEnc);
+            for (int c = 0; c < headers.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, headers[c], null);
+            }
+            CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+            UtilExcel.aplicarEstiloAFila(filaHeader, headers.length, estiloHeader);
+            UtilExcel.establecerAnchosColumnas(hoja, anchos);
+            hoja.getRow(filaEnc).setHeightInPoints(18f);
+
+            // 5) Cuerpo (aplanado grupos → empleados → tLaborado)
+            int filaDatosIni = filaEnc + 1;
+            int filaAct = filaDatosIni;
+            int item = 1;
+
+            if (request.getGrupos() != null) {
+                for (GrupoAsistenciaDTO grupo : request.getGrupos()) {
+                    if (grupo.getEmpleados() == null) continue;
+
+                    for (EmpleadoAsistenciaDTO usu : grupo.getEmpleados()) {
+                        String apenom = (safe(usu.getApellido()) + " " + safe(usu.getNombre())).trim();
+
+                        if (usu.getTLaborado() == null) continue;
+
+                        for (RegistroAsistenciaDTO t : usu.getTLaborado()) {
+                        Row r = UtilExcel.asegurarFila(hoja, filaAct++);
+                        int col = 0;
+
+                        // Cálculos (replica TS)
+                        String entradaHorario = hora(horaDe(t.getEntrada() != null ? t.getEntrada().getFecha_hora_horario() : null));
+                        String salidaHorario  = hora(horaDe(t.getSalida()  != null ? t.getSalida().getFecha_hora_horario()  : null));
+                        String iniAliHorario  = "EAS".equals(safe(t.getTipo()))
+                                ? hora(horaDe(t.getInicioAlimentacion() != null ? t.getInicioAlimentacion().getFecha_hora_horario() : null))
+                                : "";
+                        String finAliHorario  = "EAS".equals(safe(t.getTipo()))
+                                ? hora(horaDe(t.getFinAlimentacion() != null ? t.getFinAlimentacion().getFecha_hora_horario() : null))
+                                : "";
+
+                        boolean control = t.isControl();
+
+                        String entrada = timbreValor(
+                                t.getEntrada() != null ? t.getEntrada().getFecha_hora_horario() : null,
+                                t.getEntrada() != null ? t.getEntrada().getFecha_hora_timbre()  : null,
+                                safe(t.getOrigen()), control);
+
+                        String salida = timbreValor(
+                                t.getSalida() != null ? t.getSalida().getFecha_hora_horario() : null,
+                                t.getSalida() != null ? t.getSalida().getFecha_hora_timbre()  : null,
+                                safe(t.getOrigen()), control);
+
+                        String iniAli = "EAS".equals(safe(t.getTipo()))
+                                ? timbreValor(
+                                        t.getInicioAlimentacion() != null ? t.getInicioAlimentacion().getFecha_hora_horario() : null,
+                                        t.getInicioAlimentacion() != null ? t.getInicioAlimentacion().getFecha_hora_timbre()  : null,
+                                        safe(t.getOrigen()), control)
+                                : "";
+
+                        String finAli = "EAS".equals(safe(t.getTipo()))
+                                ? timbreValor(
+                                        t.getFinAlimentacion() != null ? t.getFinAlimentacion().getFecha_hora_horario() : null,
+                                        t.getFinAlimentacion() != null ? t.getFinAlimentacion().getFecha_hora_timbre()  : null,
+                                        safe(t.getOrigen()), control)
+                                : "";
+
+                        Double asignMin = "EAS".equals(safe(t.getTipo())) && t.getInicioAlimentacion() != null
+                                ? t.getInicioAlimentacion().getMinutos_alimentacion()
+                                : 0d;
+                        String alimentacionAsignada = convertirMinutosATiempo(asignMin);
+
+                        String tiempoAlimentacion = convertirMinutosATiempo(t.getMinAlimentacion());
+                        Double minsLaborados = control ? t.getMinLaborados() : t.getMinPlanificados();
+                        String tiempoLaborado = convertirMinutosATiempo(minsLaborados);
+
+                        String tiempoAtraso = convertirMinutosATiempo(t.getMinAtrasos());
+                        String tiempoSalidaAnt = convertirMinutosATiempo(t.getMinSalidasAnticipadas());
+
+                        // Escritura de fila
+                        UtilExcel.establecerValor(r, col++, item++, null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getIdentificacion()), null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getCodigo()), null);
+                        UtilExcel.establecerTexto(r, col++, apenom, null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getCiudad()), null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getSucursal()), null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getRegimen()), null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getDepartamento()), null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getCargo()), null);
+
+                        UtilExcel.establecerTexto(r, col++, safe(t.getEntrada() != null ? t.getEntrada().getFecha_hora_horario() : null), null); // FECHA (ISO completa)
+                        UtilExcel.establecerTexto(r, col++, entradaHorario, null);
+                        UtilExcel.establecerTexto(r, col++, entrada, null);
+                        UtilExcel.establecerTexto(r, col++, iniAliHorario, null);
+                        UtilExcel.establecerTexto(r, col++, iniAli, null);
+                        UtilExcel.establecerTexto(r, col++, finAliHorario, null);
+                        UtilExcel.establecerTexto(r, col++, finAli, null);
+                        UtilExcel.establecerTexto(r, col++, salidaHorario, null);
+                        UtilExcel.establecerTexto(r, col++, salida, null);
+
+                        UtilExcel.establecerTexto(r, col++, tiempoAtraso, null);
+                        UtilExcel.establecerTexto(r, col++, tiempoSalidaAnt, null);
+                        UtilExcel.establecerTexto(r, col++, alimentacionAsignada, null);
+                        UtilExcel.establecerTexto(r, col++, tiempoAlimentacion, null);
+                        UtilExcel.establecerTexto(r, col++, tiempoLaborado, null);
+                        }
+
+                    }
+                }
+            }
+
+            int ultimaFila = (filaAct == filaDatosIni) ? filaEnc : (filaAct - 1);
+
+            // 6) Estilos de cuerpo
+            CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+
+            // Header centrado
+            UtilExcel.aplicarEstiloARegion(hoja, filaEnc, filaEnc, 0, headers.length - 1, estiloCentroBorde, true);
+
+            if (ultimaFila >= filaDatosIni) {
+                // ITEM centrado
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
+                // resto izquierda
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, headers.length - 1, estiloIzqBorde, true);
+            }
+
+            // 7) Tabla estilizada + filtros (ITEM sin filtro)
+            if (ultimaFila >= filaDatosIni) {
+                boolean[] filtros = new boolean[headers.length];
+                for (int i = 0; i < filtros.length; i++) filtros[i] = true;
+                filtros[0] = false;
+
+                UtilExcel.crearTablaEstilizada(
+                        hoja,
+                        "ResumenGeneralReporteTabla",
+                        filaEnc, 0,
+                        ultimaFila, headers.length - 1,
+                        true,
+                        filtros
+                );
+            }
+
+            // 8) Terminar
+            libro.write(baos);
+            return baos.toByteArray();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // ===== Utilidades privadas =====
+    private String hora(String hhmmss) {
+        return (hhmmss == null) ? "" : hhmmss;
+    }
+    private String horaDe(String fechaHora) {
+        if (fechaHora == null || !fechaHora.contains(" ")) return "";
+        String[] p = fechaHora.split(" ");
+        return (p.length > 1) ? p[1] : "";
+    }
+    private String timbreValor(String horario, String timbre, String origen, Boolean control) {
+        String hhHorario = horaDe(horario);
+        if (hhHorario == null || hhHorario.isEmpty()) return "";
+        if (timbre != null && !timbre.trim().isEmpty()) {
+            return horaDe(timbre);
+        }
+        if ("L".equals(origen) || "FD".equals(origen)) return origen;
+        return (control != null && control) ? "FT" : "SCA";
+    }
+    private String safe(Object v) {
+        if (v == null) return "";
+        String s = String.valueOf(v).trim();
+        return "null".equalsIgnoreCase(s) ? "" : s;
     }
 
     private String convertirMinutosATiempo(Double minutos) {

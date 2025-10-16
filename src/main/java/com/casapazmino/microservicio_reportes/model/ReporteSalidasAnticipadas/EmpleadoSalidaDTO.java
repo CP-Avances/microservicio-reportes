@@ -15,6 +15,8 @@ public class EmpleadoSalidaDTO {
     private String regimen;
     private String departamento;
     private String cargo;
+    private String ciudad;
+    private String sucursal;
     private List<SalidaDTO> salidas;
 
 }

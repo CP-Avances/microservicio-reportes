@@ -9,8 +9,8 @@ public class RegistroAlimentacionDTO {
     private String fecha;
     private String inicioAlimentacion;
     private String finAlimentacion;
-    private double minutosPermitidos;
-    private double minutosTomados;
-    private double minutosExceso;
+    private Double minutosPermitidos;
+    private Double minutosTomados;
+    private Double minutosExceso;
 
 }

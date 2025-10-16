@@ -6,7 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class FeriadoDTO {
-    private Long id;
+    private Integer id;
     private String descripcion;
     private String fecha;
     private String fechaRecuperacion;

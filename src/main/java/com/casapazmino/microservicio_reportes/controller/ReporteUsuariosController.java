@@ -24,4 +24,14 @@ public class ReporteUsuariosController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
+
+    // === XLSX ===
+    @PostMapping("/usuarios/xlsx")
+    public ResponseEntity<byte[]> generarReporteUsuariosXLSX(@RequestBody ReporteUsuariosRequest request) {
+        byte[] bin = reporteService.generarReporteXLSX(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Usuarios.xlsx")
+                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(bin);
+    }
 }

@@ -7,13 +7,13 @@ import lombok.Setter;
 @Setter
 public class DiscapacidadDTO {
 
-    private Long id;
+    private Integer id;
     private String nombre;
 
     public DiscapacidadDTO() {
     }
 
-    public DiscapacidadDTO(Long id, String nombre) {
+    public DiscapacidadDTO(Integer id, String nombre) {
         this.id = id;
         this.nombre = nombre;
     }

@@ -14,6 +14,8 @@ public class EmpleadoDTO {
     private String regimen;
     private String departamento;
     private String cargo;
+    private String ciudad;
+    private String sucursal;
     private List<TimbreDTO> timbres;
 }
 

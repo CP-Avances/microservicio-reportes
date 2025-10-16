@@ -26,4 +26,34 @@ public class ReporteFeriadoController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
+
+    // XLSX
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarXLSX(@RequestBody ReporteFeriadosRequest request) {
+        byte[] xlsx = reporteFeriadosService.generarReporteFeriadosXLSX(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=FeriadosEXCEL.xlsx")
+                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(xlsx);
+    }
+
+    // CSV
+    @PostMapping("/csv")
+    public ResponseEntity<byte[]> generarCSV(@RequestBody ReporteFeriadosRequest request) {
+        byte[] csv = reporteFeriadosService.generarReporteFeriadosCSV(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=feriados.csv")
+                .contentType(MediaType.valueOf("text/csv"))
+                .body(csv);
+    }
+
+    // XML
+    @PostMapping("/xml")
+    public ResponseEntity<byte[]> generarXML(@RequestBody ReporteFeriadosRequest request) {
+        byte[] xml = reporteFeriadosService.generarReporteFeriadosXML(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=feriados.xml")
+                .contentType(MediaType.APPLICATION_XML)
+                .body(xml);
+    }
 }

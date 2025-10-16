@@ -25,4 +25,34 @@ public class ReporteVacunaController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
+
+        // XLSX
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarReporteXLSX(@RequestBody ReporteVacunasRequest request) {
+        byte[] bin = reporteService.generarReporteVacunasXLSX(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=vacunas.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(bin);
+    }
+
+    // CSV
+    @PostMapping("/csv")
+    public ResponseEntity<byte[]> generarReporteCSV(@RequestBody ReporteVacunasRequest request) {
+        byte[] bin = reporteService.generarReporteVacunasCSV(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=vacunas.csv")
+                .contentType(MediaType.valueOf("text/csv"))
+                .body(bin);
+    }
+
+    // XML
+    @PostMapping("/xml")
+    public ResponseEntity<byte[]> generarReporteXML(@RequestBody ReporteVacunasRequest request) {
+        byte[] bin = reporteService.generarReporteVacunasXML(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=vacunas.xml")
+                .contentType(MediaType.APPLICATION_XML)
+                .body(bin);
+    }
 }

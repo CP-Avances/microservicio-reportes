@@ -7,7 +7,7 @@ import lombok.Setter;
 @Setter
 public class VacunaDTO {
 
-    private int id;
+    private Integer id;
     private String nombre;
 
     public VacunaDTO() {

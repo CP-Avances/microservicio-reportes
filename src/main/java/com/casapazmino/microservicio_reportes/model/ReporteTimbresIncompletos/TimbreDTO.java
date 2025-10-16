@@ -8,5 +8,6 @@ import lombok.Setter;
 public class TimbreDTO {
     private String fechaHora;
     private String accion;
+    private String horaTimbre;
 }
  

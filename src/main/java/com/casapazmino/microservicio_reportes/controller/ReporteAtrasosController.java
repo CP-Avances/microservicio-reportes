@@ -28,4 +28,17 @@ public class ReporteAtrasosController {
                 .headers(headers)
                 .body(pdfBytes);
     }
+
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarReporteAtrasosExcel(@RequestBody ReporteAtrasosRequest request) {
+        byte[] excelBytes = reporteAtrasosService.generarReporteAtrasosExcel(request);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", "reporte_atrasos.xlsx");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelBytes);
+    }
 }

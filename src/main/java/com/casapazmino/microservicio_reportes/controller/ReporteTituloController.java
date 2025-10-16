@@ -24,7 +24,7 @@ public class ReporteTituloController {
                 .body(pdf);
     }
 
-        // XLSX
+    // XLSX
     @PostMapping("/titulos/xlsx")
     public ResponseEntity<byte[]> generarReporteTitulosXLSX(@RequestBody ReporteTitulosRequest request) {
         byte[] bin = reporteService.generarReporteTitulosXLSX(request);

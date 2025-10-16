@@ -28,4 +28,16 @@ public class ReporteTiempoAlimentacionController {
                 .headers(headers)
                 .body(pdfBytes);
     }
+
+    // === XLSX ===
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarReporteTiempoAlimentacionXLSX(@RequestBody ReporteTiempoAlimentacionRequest request) {
+        System.out.println("Recibida solicitud para generar reporte XLSX de Tiempo de Alimentación");
+        byte[] bin = reporteTiempoAlimentacionService.generarReporteTiempoAlimentacionXLSX(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Tiempo_Alimentacion.xlsx")
+                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(bin);
+    }
+    
 }

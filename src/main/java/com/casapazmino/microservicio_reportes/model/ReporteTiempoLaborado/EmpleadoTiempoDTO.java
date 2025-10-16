@@ -16,6 +16,8 @@ public class EmpleadoTiempoDTO {
     private String regimen;
     private String departamento;
     private String cargo;
+    private String ciudad;
+    private String sucursal;
     @JsonProperty("tLaborado")
     private List<RegistroTiempoDTO> tLaborado;
 }

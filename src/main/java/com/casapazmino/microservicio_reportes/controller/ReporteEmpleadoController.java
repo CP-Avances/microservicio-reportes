@@ -26,4 +26,34 @@ public class ReporteEmpleadoController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
+
+        // XLSX
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarReporteEmpleadoXLSX(@RequestBody ReporteEmpleadosRequest request) {
+        byte[] bin = reporteEmpleadoService.generarReporteEmpleadosXLSX(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(bin);
+    }
+
+    // CSV
+    @PostMapping("/csv")
+    public ResponseEntity<byte[]> generarReporteEmpleadoCSV(@RequestBody ReporteEmpleadosRequest request) {
+        byte[] bin = reporteEmpleadoService.generarReporteEmpleadosCSV(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.csv")
+                .contentType(MediaType.valueOf("text/csv"))
+                .body(bin);
+    }
+
+    // XML
+    @PostMapping("/xml")
+    public ResponseEntity<byte[]> generarReporteEmpleadoXML(@RequestBody ReporteEmpleadosRequest request) {
+        byte[] bin = reporteEmpleadoService.generarReporteEmpleadosXML(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.xml")
+                .contentType(MediaType.APPLICATION_XML)
+                .body(bin);
+    }
 }

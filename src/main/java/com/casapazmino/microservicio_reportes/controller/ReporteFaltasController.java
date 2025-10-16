@@ -24,10 +24,20 @@ public class ReporteFaltasController {
         if (pdfBytes == null) {
             return ResponseEntity.internalServerError().build();
         }
-
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=FaltasUsuarios.pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
+
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarExcel(@RequestBody ReporteFaltasRequest request) {
+        byte[] excelBytes = reporteFaltasService.generarReporteFaltasExcel(request);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=reporte_faltas.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(excelBytes);
+    }
+
 }

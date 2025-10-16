@@ -29,4 +29,19 @@ public class ReporteTimbresVirtualesMovilController {
             return ResponseEntity.status(500).build();
         }
     }
+
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarExcel(@RequestBody ReporteTimbresVirtualesMovilRequest request) {
+        try {
+            byte[] excel = reporteService.generarReporteXLSX(request);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Timbres_virtuales_movil.xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(excel);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
 }

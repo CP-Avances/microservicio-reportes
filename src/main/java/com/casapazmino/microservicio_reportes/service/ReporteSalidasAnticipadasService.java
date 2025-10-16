@@ -14,6 +14,13 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 @Service
 public class ReporteSalidasAnticipadasService {
 
@@ -216,4 +223,173 @@ public class ReporteSalidasAnticipadasService {
             return null;
         }
     }
+
+    // =========================
+// XLSX (nuevo)
+// =========================
+public byte[] generarReporteXLSX(ReporteSalidasAnticipadasRequest request) {
+    try (XSSFWorkbook libro = new XSSFWorkbook();
+         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+        XSSFSheet hoja = libro.createSheet("Salidas_Anticipadas");
+
+        // 1) Logo estándar A1:B5
+        byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
+        UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+
+        // 2) Merges B1:O5  (B=1 .. O=14 en 0-based)
+        for (int row = 0; row <= 4; row++) {
+            UtilExcel.combinarCeldas(hoja, row, row, 1, 14);
+        }
+
+        // 3) Títulos
+        CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
+        UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
+        UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE SALIDAS ANTICIPADAS", estiloTitulo);
+        String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL " + safe(request.getFechaFin());
+        UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
+
+        // 4) Encabezados (fila 6 -> idx 5) + anchos
+        final int filaEnc = 5;
+        String[] headers = {
+                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
+                "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
+                "FECHA HORARIO", "HORA HORARIO",
+                "FECHA TIMBRE", "HORA TIMBRE",
+                "SALIDA ANTICIPADA HH:MM:SS", "SALIDA ANTICIPADA MINUTOS"
+        };
+        int[] anchos = { 10,20,20,20, 20,20,20,20,20, 20,20, 20,20, 20,20 };
+
+        Row filaHeader = UtilExcel.asegurarFila(hoja, filaEnc);
+        for (int c = 0; c < headers.length; c++) {
+            UtilExcel.establecerTexto(filaHeader, c, headers[c], null);
+        }
+        CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+        UtilExcel.aplicarEstiloAFila(filaHeader, headers.length, estiloHeader);
+        UtilExcel.establecerAnchosColumnas(hoja, anchos);
+        hoja.getRow(filaEnc).setHeightInPoints(18f);
+
+        // 5) Cuerpo (aplanado grupos → empleados → salidas)
+        int filaDatosIni = filaEnc + 1;
+        int filaAct = filaDatosIni;
+        int item = 1;
+
+        if (request.getGrupos() != null) {
+            for (GrupoSalidasDTO grupo : request.getGrupos()) {
+                if (grupo.getEmpleados() == null) continue;
+
+                for (EmpleadoSalidaDTO usu : grupo.getEmpleados()) {
+                    String apenom = (safe(usu.getApellido()) + " " + safe(usu.getNombre())).trim();
+
+                    if (usu.getSalidas() == null) continue;
+
+                    for (SalidaDTO sal : usu.getSalidas()) {
+                        Row r = UtilExcel.asegurarFila(hoja, filaAct++);
+                        int col = 0;
+
+                        // === Cálculos (como en TS) ===
+                        String[] ph = splitFechaHora(sal.getFecha_hora_horario());
+                        String[] pt = splitFechaHora(sal.getFecha_hora_timbre());
+
+                        String horaHorario = ph[1];
+                        String horaTimbre  = pt[1];
+
+                        double minutos = segundosAMinutosConDecimales(sal.getDiferencia());
+                        String tiempo   = convertirMinutosATiempo(minutos);
+
+                        // === Escritura ===
+                        UtilExcel.establecerValor(r, col++, item++, null);                // ITEM
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getIdentificacion()), null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getCodigo()), null);
+                        UtilExcel.establecerTexto(r, col++, apenom, null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getCiudad()), null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getSucursal()), null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getRegimen()), null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getDepartamento()), null);
+                        UtilExcel.establecerTexto(r, col++, safe(usu.getCargo()), null);
+
+                        UtilExcel.establecerTexto(r, col++, ph[0], null);                 // FECHA HORARIO
+                        UtilExcel.establecerTexto(r, col++, horaHorario, null);           // HORA HORARIO
+                        UtilExcel.establecerTexto(r, col++, pt[0], null);                 // FECHA TIMBRE
+                        UtilExcel.establecerTexto(r, col++, horaTimbre, null);            // HORA TIMBRE
+                        UtilExcel.establecerTexto(r, col++, tiempo, null);                // HH:MM:SS
+                        UtilExcel.establecerTexto(r, col++, String.format("%.2f", minutos), null); // minutos con decimales
+                    }
+                }
+            }
+        }
+
+        int ultimaFila = (filaAct == filaDatosIni) ? filaEnc : (filaAct - 1);
+
+        // 6) Estilos de cuerpo
+        CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
+        CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+
+        // Header centrado
+        UtilExcel.aplicarEstiloARegion(hoja, filaEnc, filaEnc, 0, headers.length - 1, estiloCentroBorde, true);
+
+        if (ultimaFila >= filaDatosIni) {
+            // ITEM centrado
+            UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
+            // resto izquierda
+            UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, headers.length - 1, estiloIzqBorde, true);
+        }
+
+        // 7) Tabla estilizada + filtros (ITEM sin filtro)
+        if (ultimaFila >= filaDatosIni) {
+            boolean[] filtros = new boolean[headers.length];
+            for (int i = 0; i < filtros.length; i++) filtros[i] = true;
+            filtros[0] = false;
+
+            UtilExcel.crearTablaEstilizada(
+                    hoja,
+                    "SalidaAnticipadaReporteTabla",
+                    filaEnc, 0,
+                    ultimaFila, headers.length - 1,
+                    true,
+                    filtros
+            );
+        }
+
+        // 8) Finalizar
+        libro.write(baos);
+        return baos.toByteArray();
+
+    } catch (Exception e) {
+        e.printStackTrace();
+        return null;
+    }
+}
+
+// ===== Helpers locales =====
+private String safe(Object v) {
+    if (v == null) return "";
+    String s = String.valueOf(v).trim();
+    return "null".equalsIgnoreCase(s) ? "" : s;
+}
+
+private String[] splitFechaHora(String fechaHora) {
+    // Devuelve [fecha, hora] siempre
+    if (fechaHora == null || !fechaHora.contains(" ")) return new String[] { "", "" };
+    String[] p = fechaHora.split(" ");
+    String fecha = p.length > 0 ? p[0] : "";
+    String hora  = p.length > 1 ? p[1] : "";
+    return new String[] { fecha, hora };
+}
+
+private double segundosAMinutosConDecimales(Double segundos) {
+    if (segundos == null) return 0d;
+    return segundos / 60.0;
+}
+
+private String convertirMinutosATiempo(Double minutos) {
+    if (minutos == null || minutos <= 0) return "00:00:00";
+    int totalSeg = (int) Math.round(minutos * 60);
+    int h = totalSeg / 3600;
+    int m = (totalSeg % 3600) / 60;
+    int s = totalSeg % 60;
+    return String.format("%02d:%02d:%02d", h, m, s);
+}
+
+
 }

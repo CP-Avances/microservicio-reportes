@@ -38,28 +38,27 @@ public final class UtilExcel {
      */
     // Inserta el logo ocupando A1:B5 (columnas A-B y filas 1..5), y se redimensiona
     // si cambian anchos/altos.
-    public static void insertarLogoEstandar(XSSFWorkbook wb, XSSFSheet hoja, byte[] imagenBytes) {
-        if (imagenBytes == null || imagenBytes.length == 0)
-            return;
+// En UtilExcel.java
+public static void insertarLogoEstandar(Workbook wb, Sheet hoja, byte[] imagenBytes) {
+    if (imagenBytes == null || imagenBytes.length == 0) return;
 
-        int tipo = Workbook.PICTURE_TYPE_PNG; // si tu logo es JPG, cámbialo a JPEG
-        int idx = wb.addPicture(imagenBytes, tipo);
+    int tipo = Workbook.PICTURE_TYPE_PNG; // o JPEG si aplica
+    int idx = wb.addPicture(imagenBytes, tipo);
 
-        XSSFDrawing dibujo = hoja.createDrawingPatriarch();
-        XSSFClientAnchor ancla = new XSSFClientAnchor();
+    Drawing<?> dibujo = hoja.createDrawingPatriarch();
+    CreationHelper helper = wb.getCreationHelper();
+    ClientAnchor ancla = helper.createClientAnchor();
 
-        // A1 (0,0) hasta B5 ⇒ col1=0,row1=0 ; col2=2,row2=5 (numCols=2, numFilas=5)
-        ancla.setCol1(0);
-        ancla.setRow1(0);
-        ancla.setCol2(2);
-        ancla.setRow2(5);
+    // A1..B5  => col1=0,row1=0 ; col2=2,row2=5
+    ancla.setCol1(0);
+    ancla.setRow1(0);
+    ancla.setCol2(2);
+    ancla.setRow2(5);
+    ancla.setAnchorType(ClientAnchor.AnchorType.MOVE_AND_RESIZE);
 
-        // Que se MUEVA y REDIMENSIONE si cambian columnas/filas (mantiene el área
-        // A1:B5)
-        ancla.setAnchorType(ClientAnchor.AnchorType.MOVE_AND_RESIZE);
+    dibujo.createPicture(ancla, idx);
+}
 
-        dibujo.createPicture(ancla, idx);
-    }
 
     // -------------------- Celdas / Escritura --------------------
 

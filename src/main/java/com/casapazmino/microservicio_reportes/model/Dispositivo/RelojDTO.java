@@ -23,5 +23,11 @@ public class RelojDTO {
     private String fabricante;
     private String zonaHorariaDispositivo;
     private String formatoGmtDispositivo;
+    private Integer id;
+    private String contrasenia;
+    private String tipoConexion;
+    private Integer idSucursal;
+    private Integer idDepartamento;
+    private String temperatura;
 
 }

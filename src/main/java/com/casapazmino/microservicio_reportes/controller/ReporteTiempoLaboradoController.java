@@ -27,4 +27,14 @@ public class ReporteTiempoLaboradoController {
                 .headers(headers)
                 .body(pdfBytes);
     }
+
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarExcel(@RequestBody ReporteTiempoLaboradoRequest request) {
+        byte[] excelBytes = reporteService.generarReporteTiempoLaboradoExcel(request);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=tiempo_laborado.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(excelBytes);
+    }
 }

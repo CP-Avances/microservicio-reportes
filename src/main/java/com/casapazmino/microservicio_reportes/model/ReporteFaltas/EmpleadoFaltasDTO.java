@@ -19,6 +19,11 @@ public class EmpleadoFaltasDTO {
     private String correo;
     private int genero;
     private int id_nacionalidad;
+    private String ciudad;
+    private String sucursal;
+    private String generoNombre;
+    private String nacionalidadNombre;
+    
     private List<FaltaDTO> faltas;
 
 }

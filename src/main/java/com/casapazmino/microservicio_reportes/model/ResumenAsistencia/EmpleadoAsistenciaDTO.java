@@ -18,6 +18,8 @@ public class EmpleadoAsistenciaDTO {
     private String regimen;
     private String departamento;
     private String cargo;
+    private String ciudad;
+    private String sucursal;
     @JsonProperty("tLaborado")
     private List<RegistroAsistenciaDTO> tLaborado;
  

@@ -19,11 +19,6 @@ public class ReporteVacunacionUsuariosController {
     @PostMapping("/pdf")
     public ResponseEntity<byte[]> generarReportePDF(@RequestBody ReporteVacunacionUsuariosRequest request) {
         byte[] pdf = reporteService.generarReportePDF(request);
-
-        if (pdf == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.setContentDispositionFormData("filename", "Vacunacion_Usuarios.pdf");
@@ -31,5 +26,15 @@ public class ReporteVacunacionUsuariosController {
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(pdf);
+    }
+
+    // XLSX
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarReporteXLSX(@RequestBody ReporteVacunacionUsuariosRequest request) {
+        byte[] bin = reporteService.generarReporteXLSX(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Vacunacion_Usuarios.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(bin);
     }
 }

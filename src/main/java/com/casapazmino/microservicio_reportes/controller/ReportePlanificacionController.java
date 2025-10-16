@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+
 @RestController
 @RequestMapping("/api/reportes")
 public class ReportePlanificacionController {
@@ -23,4 +24,16 @@ public class ReportePlanificacionController {
             .contentType(MediaType.APPLICATION_PDF)
             .body(pdf);
     }
+
+    // === XLSX ===
+    @PostMapping("/planificacion/xlsx")
+    public ResponseEntity<byte[]> generarReportePlanificacionXLSX(@RequestBody ReportePlanificacionRequest request) {
+        byte[] bin = reporteService.generarReporteXLSX(request);
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Planificacion_Horaria.xlsx")
+            .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            .body(bin);
+    }
+
+    
 }

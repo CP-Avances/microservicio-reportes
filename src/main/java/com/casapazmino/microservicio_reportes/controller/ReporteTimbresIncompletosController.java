@@ -29,4 +29,15 @@ public class ReporteTimbresIncompletosController {
             return ResponseEntity.status(500).build();
         }
     }
+
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarExcel(@RequestBody ReporteTimbresIncompletosRequest request) {
+        byte[] excelBytes = reporteService.generarReporteTimbresIncompletosExcel(request);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=timbres_incompletos.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(excelBytes);
+    }
+
 }

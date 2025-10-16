@@ -6,7 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CoordenadaDTO {
-    private int id;
+    private Integer id;
     private String descripcion;
     private String latitud;
     private String longitud;

@@ -28,4 +28,15 @@ public class ReporteAsistenciaController {
                 .headers(headers)
                 .body(pdfBytes);
     }
+
+    // === XLSX ===
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarReporteAsistenciaXLSX(@RequestBody ReporteAsistenciaRequest request) {
+        byte[] bin = reporteAsistenciaService.generarReporteResumenAsistenciaXLSX(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Reporte_Asistencia.xlsx")
+                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(bin);
+    }
+
 }

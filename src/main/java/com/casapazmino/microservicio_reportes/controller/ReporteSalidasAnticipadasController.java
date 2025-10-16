@@ -28,4 +28,17 @@ public class ReporteSalidasAnticipadasController {
                 .headers(headers)
                 .body(pdfBytes);
     }
+
+    // === XLSX ===
+    @PostMapping("/xlsx")
+    public ResponseEntity<byte[]> generarReporteSalidasAnticipadasXLSX(@RequestBody ReporteSalidasAnticipadasRequest request) {
+        byte[] bin = reporteSalidasAnticipadasService.generarReporteXLSX(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Reporte_Salidas_Anticipadas.xlsx")
+                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(bin);
+    }
+
+
+
 }

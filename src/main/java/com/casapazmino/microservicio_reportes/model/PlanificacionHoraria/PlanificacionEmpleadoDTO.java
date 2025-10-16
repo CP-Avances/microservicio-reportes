@@ -14,6 +14,9 @@ public class PlanificacionEmpleadoDTO {
     private String codigo;
     private String departamento;
     private String cargo;
+    private String ciudad;
+    private String sucursal;
+    private String regimen;
 
     private List<PlanificacionHorarioMensualDTO> horarios;
 
