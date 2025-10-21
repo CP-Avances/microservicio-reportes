@@ -2,7 +2,6 @@ package com.casapazmino.microservicio_reportes.controller;
 
 import com.casapazmino.microservicio_reportes.model.ResumenAsistencia.ReporteAsistenciaRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteAsistenciaService;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -10,33 +9,54 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/reporte/asistencia")
+@RequestMapping("/api/reporte/asistencia")
 public class ReporteAsistenciaController {
 
     @Autowired
     private ReporteAsistenciaService reporteAsistenciaService;
 
-    @PostMapping("/pdf")
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarReporteAsistencia(@RequestBody ReporteAsistenciaRequest request) {
-        byte[] pdfBytes = reporteAsistenciaService.generarReporteResumenAsistenciaPDF(request);
+        try {
+            byte[] bin = reporteAsistenciaService.generarReporteResumenAsistenciaPDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "reporte_asistencia.pdf");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(pdfBytes);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Asistencia.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    // === XLSX ===
-    @PostMapping("/xlsx")
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarReporteAsistenciaXLSX(@RequestBody ReporteAsistenciaRequest request) {
-        byte[] bin = reporteAsistenciaService.generarReporteResumenAsistenciaXLSX(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Reporte_Asistencia.xlsx")
-                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                .body(bin);
-    }
+        try {
+            byte[] bin = reporteAsistenciaService.generarReporteResumenAsistenciaXLSX(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Asistencia.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
+    }
 }

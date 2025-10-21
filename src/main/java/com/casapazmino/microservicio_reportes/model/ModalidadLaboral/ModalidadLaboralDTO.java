@@ -1,20 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.ModalidadLaboral;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ModalidadLaboralDTO {
-
     private Long id;
     private String descripcion;
-
-    public ModalidadLaboralDTO() {}
-
-    public ModalidadLaboralDTO(Long id, String descripcion) {
-        this.id = id;
-        this.descripcion = descripcion;
-    }
-
 }

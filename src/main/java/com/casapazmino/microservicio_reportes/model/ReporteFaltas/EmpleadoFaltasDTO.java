@@ -1,11 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.ReporteFaltas;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EmpleadoFaltasDTO {
 
     private String identificacion;
@@ -17,13 +21,11 @@ public class EmpleadoFaltasDTO {
     private String cargo;
     private String rol;
     private String correo;
-    private int genero;
-    private int id_nacionalidad;
+    private Integer genero;
+    private Integer id_nacionalidad;
     private String ciudad;
     private String sucursal;
     private String generoNombre;
     private String nacionalidadNombre;
-    
     private List<FaltaDTO> faltas;
-
 }

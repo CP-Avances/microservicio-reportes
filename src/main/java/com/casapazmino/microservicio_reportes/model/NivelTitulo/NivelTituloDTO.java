@@ -1,21 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.NivelTitulo;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class NivelTituloDTO {
-
     private Integer id;
     private String nombre;
-
-    public NivelTituloDTO() {
-    }
-
-    public NivelTituloDTO(int id, String nombre) {
-        this.id = id;
-        this.nombre = nombre;
-    }
-
 }

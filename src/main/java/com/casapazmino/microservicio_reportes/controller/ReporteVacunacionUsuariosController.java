@@ -9,32 +9,54 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reportes/vacunacion-usuarios")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/reporte/vacunacion-usuarios")
 public class ReporteVacunacionUsuariosController {
 
     @Autowired
     private ReporteVacunacionUsuariosService reporteService;
 
-    @PostMapping("/pdf")
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarReportePDF(@RequestBody ReporteVacunacionUsuariosRequest request) {
-        byte[] pdf = reporteService.generarReportePDF(request);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("filename", "Vacunacion_Usuarios.pdf");
+        try {
+            byte[] bin = reporteService.generarReportePDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(pdf);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=VacunacionUsuarios.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    // XLSX
-    @PostMapping("/xlsx")
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarReporteXLSX(@RequestBody ReporteVacunacionUsuariosRequest request) {
-        byte[] bin = reporteService.generarReporteXLSX(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Vacunacion_Usuarios.xlsx")
-                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                .body(bin);
+        try {
+            byte[] bin = reporteService.generarReporteXLSX(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=VacunacionUsuarios.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 }

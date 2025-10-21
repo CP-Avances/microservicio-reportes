@@ -9,35 +9,56 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reportes/timbres-incompletos")
+@RequestMapping("/api/reporte/timbres-incompletos")
 public class ReporteTimbresIncompletosController {
 
     @Autowired
     private ReporteTimbresIncompletosService reporteService;
 
-    @PostMapping("/pdf")
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarPDF(@RequestBody ReporteTimbresIncompletosRequest request) {
         try {
-            byte[] pdf = reporteService.generarReportePDF(request);
+            byte[] bin = reporteService.generarReportePDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Timbres_incompletos.pdf")
                     .contentType(MediaType.APPLICATION_PDF)
-                    .body(pdf);
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=TimbresIncompletos.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
 
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
         } catch (Exception e) {
-            return ResponseEntity.status(500).build();
+            return ResponseEntity.status(500).build(); // 500
         }
     }
 
-    @PostMapping("/xlsx")
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarExcel(@RequestBody ReporteTimbresIncompletosRequest request) {
-        byte[] excelBytes = reporteService.generarReporteTimbresIncompletosExcel(request);
+        try {
+            byte[] bin = reporteService.generarReporteTimbresIncompletosExcel(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=timbres_incompletos.xlsx")
-                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                .body(excelBytes);
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=TimbresIncompletos.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
-
 }

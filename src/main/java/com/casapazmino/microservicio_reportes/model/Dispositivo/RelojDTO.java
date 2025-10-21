@@ -1,10 +1,14 @@
 package com.casapazmino.microservicio_reportes.model.Dispositivo;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RelojDTO {
 
     private String codigo;
@@ -14,7 +18,7 @@ public class RelojDTO {
     private String nomdepar;
     private String nombre;
     private String ip;
-    private int puerto;
+    private Integer puerto;
     private String marca;
     private String modelo;
     private String serie;
@@ -29,5 +33,4 @@ public class RelojDTO {
     private Integer idSucursal;
     private Integer idDepartamento;
     private String temperatura;
-
 }

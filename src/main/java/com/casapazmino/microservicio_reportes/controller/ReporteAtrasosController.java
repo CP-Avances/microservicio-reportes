@@ -2,7 +2,6 @@ package com.casapazmino.microservicio_reportes.controller;
 
 import com.casapazmino.microservicio_reportes.model.ReporteAtrasos.ReporteAtrasosRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteAtrasosService;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -16,29 +15,48 @@ public class ReporteAtrasosController {
     @Autowired
     private ReporteAtrasosService reporteAtrasosService;
 
-    @PostMapping("/pdf")
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarReporteAtrasos(@RequestBody ReporteAtrasosRequest request) {
-        byte[] pdfBytes = reporteAtrasosService.generarReportePDF(request);
+        try {
+            byte[] bin = reporteAtrasosService.generarReportePDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "reporte_atrasos.pdf");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(pdfBytes);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Atrasos.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    @PostMapping("/xlsx")
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarReporteAtrasosExcel(@RequestBody ReporteAtrasosRequest request) {
-        byte[] excelBytes = reporteAtrasosService.generarReporteAtrasosExcel(request);
+        try {
+            byte[] bin = reporteAtrasosService.generarReporteAtrasosExcel(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        headers.setContentDispositionFormData("attachment", "reporte_atrasos.xlsx");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(excelBytes);
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Atrasos.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 }

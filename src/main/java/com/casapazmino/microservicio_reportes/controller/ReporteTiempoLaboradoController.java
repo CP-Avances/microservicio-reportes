@@ -9,32 +9,54 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reportes/tiempo-laborado")
+@RequestMapping("/api/reporte/tiempo-laborado")
 public class ReporteTiempoLaboradoController {
 
     @Autowired
     private ReporteTiempoLaboradoService reporteService;
 
-    @PostMapping("/pdf")
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarPDF(@RequestBody ReporteTiempoLaboradoRequest request) {
-        byte[] pdfBytes = reporteService.generarReporteTiempoLaboradoPDF(request);
+        try {
+            byte[] bin = reporteService.generarReporteTiempoLaboradoPDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "tiempo_laborado.pdf");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(pdfBytes);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=TiempoLaborado.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    @PostMapping("/xlsx")
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarExcel(@RequestBody ReporteTiempoLaboradoRequest request) {
-        byte[] excelBytes = reporteService.generarReporteTiempoLaboradoExcel(request);
+        try {
+            byte[] bin = reporteService.generarReporteTiempoLaboradoExcel(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=tiempo_laborado.xlsx")
-                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                .body(excelBytes);
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=TiempoLaborado.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 }

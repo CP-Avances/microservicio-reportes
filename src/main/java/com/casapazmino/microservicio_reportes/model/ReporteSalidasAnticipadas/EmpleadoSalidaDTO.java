@@ -1,12 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.ReporteSalidasAnticipadas;
 
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EmpleadoSalidaDTO {
     private String identificacion;
     private String codigo;
@@ -18,5 +21,4 @@ public class EmpleadoSalidaDTO {
     private String ciudad;
     private String sucursal;
     private List<SalidaDTO> salidas;
-
 }

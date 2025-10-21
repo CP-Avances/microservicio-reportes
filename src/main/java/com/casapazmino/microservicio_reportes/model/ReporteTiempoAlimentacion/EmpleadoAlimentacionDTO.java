@@ -1,11 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.ReporteTiempoAlimentacion;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EmpleadoAlimentacionDTO {
     private String identificacion;
     private String codigo;
@@ -16,7 +20,5 @@ public class EmpleadoAlimentacionDTO {
     private String cargo;
     private String ciudad;
     private String sucursal;
-
     private List<RegistroAlimentacionDTO> alimentacion;
-
 }

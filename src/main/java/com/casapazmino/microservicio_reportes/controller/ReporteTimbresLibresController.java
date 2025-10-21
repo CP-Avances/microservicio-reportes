@@ -9,35 +9,56 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reportes/timbres-libres")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/reporte/timbres-libres")
 public class ReporteTimbresLibresController {
 
     @Autowired
     private ReporteTimbresLibresService service;
 
-    @PostMapping("/pdf")
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarPdf(@RequestBody ReporteTimbresLibresRequest request) {
-        byte[] pdf = service.generarReportePDF(request);
+        try {
+            byte[] bin = service.generarReportePDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        String nombre = "TimbresLibres.pdf";
-        headers.setContentDispositionFormData("attachment", nombre);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=TimbresLibres.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
 
-        return ResponseEntity.ok().headers(headers).body(pdf);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    @PostMapping("/xlsx")
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarXlsx(@RequestBody ReporteTimbresLibresRequest request) {
-        byte[] xlsx = service.generarReporteXLSX(request);
+        try {
+            byte[] bin = service.generarReporteXLSX(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        String nombre = "TimbresLibres.xlsx";
-        headers.setContentDispositionFormData("attachment", nombre);
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=TimbresLibres.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
 
-        return ResponseEntity.ok().headers(headers).body(xlsx);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 }

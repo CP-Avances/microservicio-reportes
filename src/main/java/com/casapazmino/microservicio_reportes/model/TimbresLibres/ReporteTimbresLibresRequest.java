@@ -1,21 +1,25 @@
 package com.casapazmino.microservicio_reportes.model.TimbresLibres;
 
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteTimbresLibresRequest {
-    private String usuario;           // quien genera
-    private String empresa;           // EMPRESA EN MAYÚSCULAS
-    private String fraseMarcaAgua;    // marca de agua
-    private String logoBase64;        // logo base64 (png/jpg)
-    private String colorPrincipal;    // hex "#RRGGBB" o "RRGGBB"
-    private String colorSecundario;   // hex "#RRGGBB" o "RRGGBB"
-    private String titulo;            // "LISTA DE TIMBRES LIBRES - ACTIVOS/INACTIVOS"
-    private String tipoFiltro;        // descripción del filtro aplicado (opcional)
-    private Integer opcionBusqueda;   // 1 activos / 2 inactivos, etc.
-    private PeriodoDTO periodo;       // {inicio, fin}
-    private List<DatoGrupoDTO> datos; // lista de grupos (sucursal/ciudad/departamento) con empleados
+    private String usuario;
+    private String empresa;
+    private String fraseMarcaAgua;
+    private String logoBase64;
+    private String colorPrincipal;
+    private String colorSecundario;
+    private String titulo;
+    private String tipoFiltro;
+    private Integer opcionBusqueda;
+    private PeriodoDTO periodo;
+    private List<DatoGrupoDTO> datos;
 }

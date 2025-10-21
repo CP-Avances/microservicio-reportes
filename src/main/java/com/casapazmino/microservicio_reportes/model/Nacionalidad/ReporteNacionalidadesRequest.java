@@ -1,11 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.Nacionalidad;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteNacionalidadesRequest {
 
     private String usuario;
@@ -14,5 +18,4 @@ public class ReporteNacionalidadesRequest {
     private String logoBase64;
     private String colorPrincipal;
     private List<NacionalidadDTO> nacionalidades;
-
 }

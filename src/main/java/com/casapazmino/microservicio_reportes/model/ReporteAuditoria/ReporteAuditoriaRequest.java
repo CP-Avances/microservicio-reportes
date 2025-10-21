@@ -1,12 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.ReporteAuditoria;
 
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteAuditoriaRequest {
     private String usuario;
     private String empresa;
@@ -15,5 +18,4 @@ public class ReporteAuditoriaRequest {
     private String colorPrincipal;
     private String colorSecundario;
     private List<AuditoriaDTO> auditorias;
-
 }

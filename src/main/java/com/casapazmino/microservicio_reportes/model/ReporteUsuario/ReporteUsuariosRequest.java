@@ -1,11 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.ReporteUsuario;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteUsuariosRequest {
 
     private String usuario;
@@ -17,5 +21,4 @@ public class ReporteUsuariosRequest {
     private String tipoFiltro;
     private String titulo;
     private List<AgrupadorUsuariosDTO> datos;
-
 }

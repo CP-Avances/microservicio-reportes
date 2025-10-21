@@ -1,12 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.ReporteTimbresIncompletos;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteTimbresIncompletosRequest {
 
     private String usuario;
@@ -15,11 +18,8 @@ public class ReporteTimbresIncompletosRequest {
     private String logoBase64;
     private String colorPrincipal;
     private String colorSecundario;
-    private int opcionBusqueda;
-
+    private Integer opcionBusqueda;
     private PeriodoDTO periodo;
     private FiltrosAplicadosDTO filtrosAplicados;
     private List<TimbresSucursalDTO> data_pdf;
-    
-
 }

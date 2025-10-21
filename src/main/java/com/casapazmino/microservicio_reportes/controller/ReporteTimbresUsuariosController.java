@@ -10,55 +10,71 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
-@RequestMapping("/api/reportes/timbres-usuarios")
+@RequestMapping("/api/reporte/timbres-usuarios")
 public class ReporteTimbresUsuariosController {
 
     @Autowired
     private ReporteTimbresUsuariosService reporteService;
 
-    @PostMapping(
-        path = "/pdf",
-        produces = MediaType.APPLICATION_PDF_VALUE
-    )
+    // ===================== PDF (Streaming) =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<StreamingResponseBody> generarPDF(@RequestBody ReporteTimbresUsuariosRequest request) {
+        try {
+            StreamingResponseBody stream = outputStream -> {
+                try {
+                    // El service escribe directo al OutputStream (sin cerrar)
+                    reporteService.escribirReportePDF(request, outputStream);
+                } catch (IllegalArgumentException iae) {
+                    // Propagamos para que Spring responda 400 si aplica
+                    throw iae;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            };
 
-        StreamingResponseBody stream = outputStream -> {
-            // El service debe **escribir** directo al OutputStream
-            try {
-                reporteService.escribirReportePDF(request, outputStream);
-            } catch (Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            // Importante: NO cerrar outputStream aquí; Spring lo maneja.
-        };
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=TimbresUsuarios.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(stream);
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Timbres_usuarios.pdf")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(stream);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    @PostMapping(
-        path = "/xlsx",
-        produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    // ===================== XLSX (Streaming) =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<StreamingResponseBody> generarExcel(@RequestBody ReporteTimbresUsuariosRequest request) {
+        try {
+            StreamingResponseBody stream = outputStream -> {
+                try {
+                    // El service escribe directo al OutputStream (sin cerrar)
+                    reporteService.escribirReporteTimbresUsuariosExcel(request, outputStream);
+                } catch (IllegalArgumentException iae) {
+                    throw iae;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            };
 
-        StreamingResponseBody stream = outputStream -> {
-            // El service debe **escribir** directo al OutputStream
-            try {
-                reporteService.escribirReporteTimbresUsuariosExcel(request, outputStream);
-            } catch (Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        };
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=TimbresUsuarios.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(stream);
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=timbres_usuarios.xlsx")
-                .header(HttpHeaders.CACHE_CONTROL, "no-store")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(stream);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 }

@@ -1,13 +1,16 @@
 package com.casapazmino.microservicio_reportes.model.ReporteTiempoLaborado;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EmpleadoTiempoDTO {
     private String identificacion;
     private String codigo;
@@ -18,6 +21,7 @@ public class EmpleadoTiempoDTO {
     private String cargo;
     private String ciudad;
     private String sucursal;
+
     @JsonProperty("tLaborado")
     private List<RegistroTiempoDTO> tLaborado;
 }

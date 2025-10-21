@@ -1,14 +1,17 @@
 package com.casapazmino.microservicio_reportes.model.PlanificacionHoraria;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PlanificacionHorarioMensualDTO {
-
-    private int anio;
-    private int mes;
+    private Integer anio;
+    private Integer mes;
     private String dia1;
     private String dia2;
     private String dia3;
@@ -40,5 +43,4 @@ public class PlanificacionHorarioMensualDTO {
     private String dia29;
     private String dia30;
     private String dia31;
-
 }

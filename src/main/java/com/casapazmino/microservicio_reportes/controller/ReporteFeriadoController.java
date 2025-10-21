@@ -2,58 +2,105 @@ package com.casapazmino.microservicio_reportes.controller;
 
 import com.casapazmino.microservicio_reportes.model.Feriado.ReporteFeriadosRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteFeriadosService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reportes/feriados")
+@RequestMapping("/api/reporte/feriados")
 public class ReporteFeriadoController {
 
-    private final ReporteFeriadosService reporteFeriadosService;
+    @Autowired
+    private ReporteFeriadosService reporteFeriadosService;
 
-    public ReporteFeriadoController(ReporteFeriadosService reporteFeriadosService) {
-        this.reporteFeriadosService = reporteFeriadosService;
-    }
-
-    @PostMapping("/pdf")
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarPDF(@RequestBody ReporteFeriadosRequest request) {
-        byte[] pdf = reporteFeriadosService.generarReporteFeriadosPDF(request);
+        try {
+            byte[] bin = reporteFeriadosService.generarReporteFeriadosPDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=feriados.pdf")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(pdf);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Feriados.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    // XLSX
-    @PostMapping("/xlsx")
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarXLSX(@RequestBody ReporteFeriadosRequest request) {
-        byte[] xlsx = reporteFeriadosService.generarReporteFeriadosXLSX(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=FeriadosEXCEL.xlsx")
-                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                .body(xlsx);
+        try {
+            byte[] bin = reporteFeriadosService.generarReporteFeriadosXLSX(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Feriados.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    // CSV
-    @PostMapping("/csv")
+    // ===================== CSV =====================
+    @PostMapping(value = "/csv", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
     public ResponseEntity<byte[]> generarCSV(@RequestBody ReporteFeriadosRequest request) {
-        byte[] csv = reporteFeriadosService.generarReporteFeriadosCSV(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=feriados.csv")
-                .contentType(MediaType.valueOf("text/csv"))
-                .body(csv);
+        try {
+            byte[] bin = reporteFeriadosService.generarReporteFeriadosCSV(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("text/csv"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Feriados.csv")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    // XML
-    @PostMapping("/xml")
+    // ===================== XML =====================
+    @PostMapping(value = "/xml", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_XML_VALUE)
     public ResponseEntity<byte[]> generarXML(@RequestBody ReporteFeriadosRequest request) {
-        byte[] xml = reporteFeriadosService.generarReporteFeriadosXML(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=feriados.xml")
-                .contentType(MediaType.APPLICATION_XML)
-                .body(xml);
+        try {
+            byte[] bin = reporteFeriadosService.generarReporteFeriadosXML(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_XML)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Feriados.xml")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 }

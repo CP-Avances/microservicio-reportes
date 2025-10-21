@@ -9,22 +9,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reporte/parametros") 
+@RequestMapping("/api/reporte/parametros")
 public class ReporteParametrosController {
 
     @Autowired
     private ReporteParametrosService reporteParametrosService;
 
     // ===================== PDF =====================
-    @PostMapping(
-        value = "/pdf",
-        consumes = MediaType.APPLICATION_JSON_VALUE,
-        produces = MediaType.APPLICATION_PDF_VALUE
-    )
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarReporteParametros(@RequestBody ReporteParametrosRequest request) {
         try {
             byte[] bin = reporteParametrosService.generarReporteParametrosPDF(request);
-            if (bin == null) return ResponseEntity.status(500).build();
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
@@ -41,18 +38,16 @@ public class ReporteParametrosController {
     }
 
     // ===================== XLSX =====================
-    @PostMapping(
-        value = "/xlsx",
-        consumes = MediaType.APPLICATION_JSON_VALUE,
-        produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarReporteParametrosXlsx(@RequestBody ReporteParametrosRequest request) {
         try {
             byte[] bin = reporteParametrosService.generarReporteParametrosXLSX(request);
-            if (bin == null) return ResponseEntity.status(500).build();
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
             return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Parametros.xlsx")
                     .header(HttpHeaders.CACHE_CONTROL, "no-store")
                     .header(HttpHeaders.PRAGMA, "no-cache")
@@ -66,15 +61,12 @@ public class ReporteParametrosController {
     }
 
     // ===================== CSV =====================
-    @PostMapping(
-        value = "/csv",
-        consumes = MediaType.APPLICATION_JSON_VALUE,
-        produces = "text/csv"
-    )
+    @PostMapping(value = "/csv", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
     public ResponseEntity<byte[]> generarReporteParametrosCsv(@RequestBody ReporteParametrosRequest request) {
         try {
             byte[] bin = reporteParametrosService.generarReporteParametrosCSV(request);
-            if (bin == null) return ResponseEntity.status(500).build();
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
@@ -91,15 +83,12 @@ public class ReporteParametrosController {
     }
 
     // ===================== XML =====================
-    @PostMapping(
-        value = "/xml",
-        consumes = MediaType.APPLICATION_JSON_VALUE,
-        produces = MediaType.APPLICATION_XML_VALUE
-    )
+    @PostMapping(value = "/xml", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_XML_VALUE)
     public ResponseEntity<byte[]> generarReporteParametrosXml(@RequestBody ReporteParametrosRequest request) {
         try {
             byte[] bin = reporteParametrosService.generarReporteParametrosXML(request);
-            if (bin == null) return ResponseEntity.status(500).build();
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_XML)

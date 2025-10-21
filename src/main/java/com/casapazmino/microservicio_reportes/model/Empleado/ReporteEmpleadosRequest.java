@@ -1,11 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.Empleado;
 
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteEmpleadosRequest {
 
     private String usuario;
@@ -14,7 +18,4 @@ public class ReporteEmpleadosRequest {
     private String logoBase64;
     private String colorPrincipal;
     private List<EmpleadoDTO> empleados;
-
-    public ReporteEmpleadosRequest() {}
-
 }

@@ -9,51 +9,98 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reportes")
+@RequestMapping("/api/reporte/nacionalidades")
 public class ReporteNacionalidadesController {
 
     @Autowired
     private ReporteNacionalidadesService reporteService;
 
-    @PostMapping("/nacionalidades/pdf")
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarReporteNacionalidades(@RequestBody ReporteNacionalidadesRequest request) {
-        byte[] pdfBytes = reporteService.generarReporteNacionalidadesPDF(request);
+        try {
+            byte[] bin = reporteService.generarReporteNacionalidadesPDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=nacionalidades.pdf")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(pdfBytes);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Nacionalidades.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-      // XLSX
-    @PostMapping("/nacionalidades/xlsx")
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarReporteNacionalidadesXLSX(@RequestBody ReporteNacionalidadesRequest request) {
-        byte[] bin = reporteService.generarReporteNacionalidadesXLSX(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=nacionalidades.xlsx")
-                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                .body(bin);
+        try {
+            byte[] bin = reporteService.generarReporteNacionalidadesXLSX(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Nacionalidades.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    // CSV
-    @PostMapping("/nacionalidades/csv")
+    // ===================== CSV =====================
+    @PostMapping(value = "/csv", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
     public ResponseEntity<byte[]> generarReporteNacionalidadesCSV(@RequestBody ReporteNacionalidadesRequest request) {
-        byte[] bin = reporteService.generarReporteNacionalidadesCSV(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=nacionalidades.csv")
-                .contentType(MediaType.valueOf("text/csv"))
-                .body(bin);
+        try {
+            byte[] bin = reporteService.generarReporteNacionalidadesCSV(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("text/csv"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Nacionalidades.csv")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    // XML
-    @PostMapping("/nacionalidades/xml")
+    // ===================== XML =====================
+    @PostMapping(value = "/xml", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_XML_VALUE)
     public ResponseEntity<byte[]> generarReporteNacionalidadesXML(@RequestBody ReporteNacionalidadesRequest request) {
-        byte[] bin = reporteService.generarReporteNacionalidadesXML(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=nacionalidades.xml")
-                .contentType(MediaType.APPLICATION_XML)
-                .body(bin);
+        try {
+            byte[] bin = reporteService.generarReporteNacionalidadesXML(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_XML)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Nacionalidades.xml")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
-
-
 }

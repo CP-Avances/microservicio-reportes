@@ -16,28 +16,50 @@ public class ReporteTiempoAlimentacionController {
     @Autowired
     private ReporteTiempoAlimentacionService reporteTiempoAlimentacionService;
 
-    @PostMapping("/pdf")
-    public ResponseEntity<byte[]> generarReporteTiempoAlimentacion(@RequestBody ReporteTiempoAlimentacionRequest request) {
-        byte[] pdfBytes = reporteTiempoAlimentacionService.generarReporteTiempoAlimentacionPDF(request);
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> generarReporteTiempoAlimentacion(
+            @RequestBody ReporteTiempoAlimentacionRequest request) {
+        try {
+            byte[] bin = reporteTiempoAlimentacionService.generarReporteTiempoAlimentacionPDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "reporte_tiempo_alimentacion.pdf");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(pdfBytes);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=TiempoAlimentacion.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    // === XLSX ===
-    @PostMapping("/xlsx")
-    public ResponseEntity<byte[]> generarReporteTiempoAlimentacionXLSX(@RequestBody ReporteTiempoAlimentacionRequest request) {
-        System.out.println("Recibida solicitud para generar reporte XLSX de Tiempo de Alimentación");
-        byte[] bin = reporteTiempoAlimentacionService.generarReporteTiempoAlimentacionXLSX(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Tiempo_Alimentacion.xlsx")
-                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                .body(bin);
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> generarReporteTiempoAlimentacionXLSX(
+            @RequestBody ReporteTiempoAlimentacionRequest request) {
+        try {
+            byte[] bin = reporteTiempoAlimentacionService.generarReporteTiempoAlimentacionXLSX(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=TiempoAlimentacion.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
-    
 }

@@ -2,58 +2,105 @@ package com.casapazmino.microservicio_reportes.controller;
 
 import com.casapazmino.microservicio_reportes.model.Empleado.ReporteEmpleadosRequest;
 import com.casapazmino.microservicio_reportes.service.ReporteEmpleadoService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reportes/empleados")
+@RequestMapping("/api/reporte/empleados")
 public class ReporteEmpleadoController {
 
-    private final ReporteEmpleadoService reporteEmpleadoService;
+    @Autowired
+    private ReporteEmpleadoService reporteEmpleadoService;
 
-    public ReporteEmpleadoController(ReporteEmpleadoService reporteEmpleadoService) {
-        this.reporteEmpleadoService = reporteEmpleadoService;
-    }
-
-    @PostMapping("/pdf")
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarReporteEmpleado(@RequestBody ReporteEmpleadosRequest request) {
-        byte[] pdf = reporteEmpleadoService.generarReporteEmpleadosPDF(request);
+        try {
+            byte[] bin = reporteEmpleadoService.generarReporteEmpleadosPDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.pdf")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(pdf);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-        // XLSX
-    @PostMapping("/xlsx")
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarReporteEmpleadoXLSX(@RequestBody ReporteEmpleadosRequest request) {
-        byte[] bin = reporteEmpleadoService.generarReporteEmpleadosXLSX(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.xlsx")
-                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                .body(bin);
+        try {
+            byte[] bin = reporteEmpleadoService.generarReporteEmpleadosXLSX(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
-    // CSV
-    @PostMapping("/csv")
+    // ===================== CSV =====================
+    @PostMapping(value = "/csv", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
     public ResponseEntity<byte[]> generarReporteEmpleadoCSV(@RequestBody ReporteEmpleadosRequest request) {
-        byte[] bin = reporteEmpleadoService.generarReporteEmpleadosCSV(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.csv")
-                .contentType(MediaType.valueOf("text/csv"))
-                .body(bin);
+        try {
+            byte[] bin = reporteEmpleadoService.generarReporteEmpleadosCSV(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.csv")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
-    // XML
-    @PostMapping("/xml")
+    // ===================== XML =====================
+    @PostMapping(value = "/xml", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_XML_VALUE)
     public ResponseEntity<byte[]> generarReporteEmpleadoXML(@RequestBody ReporteEmpleadosRequest request) {
-        byte[] bin = reporteEmpleadoService.generarReporteEmpleadosXML(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.xml")
-                .contentType(MediaType.APPLICATION_XML)
-                .body(bin);
+        try {
+            byte[] bin = reporteEmpleadoService.generarReporteEmpleadosXML(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_XML)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Empleados.xml")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 }

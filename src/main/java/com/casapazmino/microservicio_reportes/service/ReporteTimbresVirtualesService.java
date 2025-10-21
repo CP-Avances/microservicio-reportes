@@ -23,7 +23,7 @@ public class ReporteTimbresVirtualesService {
 
     public byte[] generarReportePDF(ReporteTimbresVirtualesRequest request) {
         try {
-            Rectangle orientacion = request.isTimbreDispositivo() ? PageSize.A4.rotate() : PageSize.A4;
+            Rectangle orientacion = request.getTimbreDispositivo() ? PageSize.A4.rotate() : PageSize.A4;
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             Document document = new Document(orientacion, 40, 40, 30, 50);
@@ -197,7 +197,7 @@ public class ReporteTimbresVirtualesService {
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
             UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
 
-            final boolean conDispositivo = request.isTimbreDispositivo();
+            final boolean conDispositivo = request.getTimbreDispositivo();
 
             // 2) Merges cabecera (5 filas)
             // Con dispositivo -> B..R (indices 1..17)

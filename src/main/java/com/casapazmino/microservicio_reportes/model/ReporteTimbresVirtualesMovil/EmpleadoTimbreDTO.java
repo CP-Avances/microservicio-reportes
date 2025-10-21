@@ -1,12 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.ReporteTimbresVirtualesMovil;
 
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EmpleadoTimbreDTO {
     private String identificacion;
     private String apellido;
@@ -18,5 +21,4 @@ public class EmpleadoTimbreDTO {
     private String ciudad;
     private String sucursal;
     private List<TimbreUsuarioDTO> timbres;
-
 }

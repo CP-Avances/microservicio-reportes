@@ -1,22 +1,16 @@
 package com.casapazmino.microservicio_reportes.model.Sucursal;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SucursalDTO {
-
     private Long id;
     private String nombre;
     private String descripcion;
-
-    public SucursalDTO() {}
-
-    public SucursalDTO(Long id, String nombre, String descripcion) {
-        this.id = id;
-        this.nombre = nombre;
-        this.descripcion = descripcion;
-    }
-
 }

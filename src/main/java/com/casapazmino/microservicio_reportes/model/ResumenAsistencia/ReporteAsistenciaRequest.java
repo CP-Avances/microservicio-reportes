@@ -2,12 +2,15 @@ package com.casapazmino.microservicio_reportes.model.ResumenAsistencia;
 
 import java.util.List;
 import java.util.Map;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteAsistenciaRequest {
 
     private String usuario;
@@ -18,8 +21,7 @@ public class ReporteAsistenciaRequest {
     private String colorSecundario;
     private String fechaInicio;
     private String fechaFin;
-    private int opcionBusqueda;
+    private Integer opcionBusqueda;
     private Map<String, Boolean> resumen;
     private List<GrupoAsistenciaDTO> grupos;
- 
 }

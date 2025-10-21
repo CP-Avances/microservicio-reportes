@@ -16,29 +16,50 @@ public class ReporteSalidasAnticipadasController {
     @Autowired
     private ReporteSalidasAnticipadasService reporteSalidasAnticipadasService;
 
-    @PostMapping("/pdf")
-    public ResponseEntity<byte[]> generarReporteSalidasAnticipadas(@RequestBody ReporteSalidasAnticipadasRequest request) {
-        byte[] pdfBytes = reporteSalidasAnticipadasService.generarReportePDF(request);
+    // ===================== PDF =====================
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> generarReporteSalidasAnticipadas(
+            @RequestBody ReporteSalidasAnticipadasRequest request) {
+        try {
+            byte[] bin = reporteSalidasAnticipadasService.generarReportePDF(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "reporte_salidas_anticipadas.pdf");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(pdfBytes);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=SalidasAnticipadas.pdf")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
 
-    // === XLSX ===
-    @PostMapping("/xlsx")
-    public ResponseEntity<byte[]> generarReporteSalidasAnticipadasXLSX(@RequestBody ReporteSalidasAnticipadasRequest request) {
-        byte[] bin = reporteSalidasAnticipadasService.generarReporteXLSX(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Reporte_Salidas_Anticipadas.xlsx")
-                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                .body(bin);
+    // ===================== XLSX =====================
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> generarReporteSalidasAnticipadasXLSX(
+            @RequestBody ReporteSalidasAnticipadasRequest request) {
+        try {
+            byte[] bin = reporteSalidasAnticipadasService.generarReporteXLSX(request);
+            if (bin == null)
+                return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=SalidasAnticipadas.xlsx")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
+                    .body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build(); // 500
+        }
     }
-
-
-
 }

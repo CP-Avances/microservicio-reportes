@@ -1,26 +1,28 @@
 package com.casapazmino.microservicio_reportes.model.TimbresLibres;
 
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EmpleadoDTO {
     private String identificacion;
     private String nombre;
     private String apellido;
-    private String correo;          // puede ser null
-    private String genero;          // 'Masculino', 'Femenino', 'No especificado', etc.
-    private String nacionalidad;    // nombre nacionalidad
-    private String cargo;           // puede ser null
-    private String regimen;         // puede ser null
-    private String codigo;          // puede ser null
-    private String rol;             // puede ser null
-    private String departamento;    // override por empleado si viene
-    private String ciudad;          // override por empleado si viene
-    private String sucursal;        // override por empleado si viene
-
+    private String correo;
+    private String genero;
+    private String nacionalidad;
+    private String cargo;
+    private String regimen;
+    private String codigo;
+    private String rol;
+    private String departamento;
+    private String ciudad;
+    private String sucursal;
     private List<TimbreDTO> timbres;
 }

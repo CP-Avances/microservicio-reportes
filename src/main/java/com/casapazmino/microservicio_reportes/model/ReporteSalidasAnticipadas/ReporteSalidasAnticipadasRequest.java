@@ -1,12 +1,15 @@
 package com.casapazmino.microservicio_reportes.model.ReporteSalidasAnticipadas;
 
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteSalidasAnticipadasRequest {
     private String usuario;
     private String empresa;
@@ -20,12 +23,15 @@ public class ReporteSalidasAnticipadasRequest {
     private ResumenResumen resumen;
     private List<GrupoSalidasDTO> grupos;
 
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ResumenResumen {
-        private boolean bool_reg;
-        private boolean bool_dep;
-        private boolean bool_cargo;
-        private boolean bool_suc;
-        private boolean bool_emp;
-
+        private Boolean bool_reg;
+        private Boolean bool_dep;
+        private Boolean bool_cargo;
+        private Boolean bool_suc;
+        private Boolean bool_emp;
     }
 }
