@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -26,66 +27,87 @@ public class ReporteNacionalidadesService {
 
     // METODO QUE GENERA EL PDF
     public byte[] generarReporteNacionalidadesPDF(ReporteNacionalidadesRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            // TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float[] WIDTHS = { 2f, 6f };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                    request.getUsuario(),
-                    request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()));
+                request.getUsuario(),
+                request.getFraseMarcaAgua(),
+                request.getColorPrincipal()
+            ));
             document.open();
 
-            // LOGO DE LA EMPRESA
+            // 2) Construcción (helpers existentes)
+            // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            // TITULO DE EMPRESA
+            // Títulos
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-
-            // TITULO DE REPORTE
             document.add(ReporteUtil.crearTituloReporte("LISTA DE NACIONALIDADES"));
 
-            // COLORES DE LA EMPRESA USADOS EN EL REPORTE
+            // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+            Color colorZebra     = ReporteUtil.colorZebraClaro();
 
-            // TABLA
+            // Tabla
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(40);
-            tabla.setWidths(new float[] { 2, 6 });
+            tabla.setWidths(WIDTHS);
             tabla.setSpacingBefore(10f);
 
-            // ENCABEZADOS DE LA TABLA
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(
-                    ReporteUtil.crearCelda("NACIONALIDAD", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            // Encabezados
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO",        ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("NACIONALIDAD",  ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
-            // FILAS DE LA TABLA (CUERPO)
+            // Cuerpo (zebra)
             List<NacionalidadDTO> lista = request.getNacionalidades();
             boolean zebra = false;
-            for (NacionalidadDTO n : lista) {
-                Color bgColor = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(
-                        ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(n.getNombre(), ReporteUtil.fuenteTablaData(), bgColor));
-                zebra = !zebra;
+            if (lista != null) {
+                for (NacionalidadDTO n : lista) {
+                    Color fondo = zebra ? colorZebra : Color.WHITE;
+                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(n.getNombre(),             ReporteUtil.fuenteTablaData(), fondo));
+                    zebra = !zebra;
+                }
             }
 
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            throw e; // entrada inválida → controller la mapeará a 400
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar ReporteNacionalidades.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
-
+    
     // =========================
     // XLSX (igual al front)
     // =========================

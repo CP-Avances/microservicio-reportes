@@ -3,6 +3,7 @@ package com.casapazmino.microservicio_reportes.service;
 import com.casapazmino.microservicio_reportes.model.ReporteTiempoAlimentacion.*;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
@@ -22,172 +23,214 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 public class ReporteTiempoAlimentacionService {
 
     public byte[] generarReporteTiempoAlimentacionPDF(ReporteTiempoAlimentacionRequest request) {
-        System.out.println("Generando PDF de Tiempo de Alimentación...");
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Document document = new Document(PageSize.A4, 40, 40, 30, 50);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
 
+        // ➊ DRY: constantes locales (look & feel intacto)
+        final String TITULO = "TIEMPO DE ALIMENTACIÓN - " + ("1".equals(request.getOpcionBusqueda()) ? "ACTIVOS" : "INACTIVOS");
+        final String PERIODO = "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin();
+
+        final float[] WIDTHS_COLORES = { 3f, 1.5f, 1.5f, 2f, 2f };
+        final float[] WIDTHS_TITULO  = { 8f, 2f };
+        final float[] WIDTHS_INFO    = { 4f, 4f, 4f };
+        final float[] WIDTHS_TABLA   = { 0.5f, 1.8f, 1.8f, 1.8f, 1.8f, 1.8f, 1.8f };
+
+        final String[] ENCAB_COLORES = { "CÓDIGO DE COLOR", "FALTA TIMBRE", " ", "EXCESO DE ALIMENTACIÓN", " " };
+        final String[] ENCAB_TABLA   = { "Nº", "FECHA", "INICIO ALIMENTACIÓN", "FIN ALIMENTACIÓN", "M. ALIMENTACIÓN",
+                                        "M. TOMADOS", "M. EXCESO" };
+
+        final int WIDTH_PERCENT_100 = 100;
+        final float SPACING_AFTER_BLOQUE = 10f;
+        final float SPACING_AFTER_CONTENEDOR = 3f;
+        final float PADDING_TITULOS = 5f;
+
+        final Color COLOR_PRIMARIO   = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+        final Color COLOR_SECUNDARIO = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+        final Color COLOR_ZEBRA      = ReporteUtil.colorZebraClaro();
+        final Color COLOR_EXCESO     = new Color(0x55EE44);
+        final Color COLOR_FT         = new Color(0xEE4444);
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4, 40, 40, 30, 50);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()));
-
+                    request.getColorPrincipal()
+            ));
             document.open();
 
+            // 2) Construcción (helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-            if (logo != null)
-                document.add(logo);
+            if (logo != null) document.add(logo);
 
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte(TITULO));
+            document.add(ReporteUtil.crearTituloPeriodo(PERIODO));
 
-            String titulo = "TIEMPO DE ALIMENTACIÓN - "
-                    + ("1".equals(request.getOpcionBusqueda()) ? "ACTIVOS" : "INACTIVOS");
-            document.add(ReporteUtil.crearTituloReporte(titulo));
+            // Leyenda de colores
+            PdfPTable colores = new PdfPTable(ENCAB_COLORES.length);
+            colores.setWidthPercentage(WIDTH_PERCENT_100);
+            colores.setWidths(WIDTHS_COLORES);
 
-            document.add(ReporteUtil
-                    .crearTituloPeriodo("PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin()));
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Color zebraColor = ReporteUtil.colorZebraClaro();
-            Color colorExceso = new Color(0x55EE44);
-            Color colorFT = new Color(0xEE4444);
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[0], Color.WHITE));
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[1], Color.WHITE));
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[2], COLOR_FT));
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[3], Color.WHITE));
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[4], COLOR_EXCESO));
 
-            PdfPTable colores = new PdfPTable(5);
-            colores.setWidthPercentage(100);
-            colores.setWidths(new float[] { 3, 1.5f, 1.5f, 2, 2 });
-
-            colores.addCell(ReporteUtil.celdaEncabezado("CÓDIGO DE COLOR", Color.WHITE));
-            colores.addCell(ReporteUtil.celdaEncabezado("FALTA TIMBRE", Color.WHITE));
-            colores.addCell(ReporteUtil.celdaEncabezado(" ", new Color(0xEE4444)));
-            colores.addCell(ReporteUtil.celdaEncabezado("EXCESO DE ALIMENTACIÓN", Color.WHITE));
-            colores.addCell(ReporteUtil.celdaEncabezado(" ", new Color(0x55EE44)));
-
-            colores.setSpacingAfter(10f);
+            colores.setSpacingAfter(SPACING_AFTER_BLOQUE);
             document.add(colores);
 
+            // Total de registros (minas)
             AtomicInteger contadorGlobal = new AtomicInteger();
-            request.getGrupos().forEach(
-                    grupo -> grupo.getEmpleados()
-                            .forEach(emp -> contadorGlobal.addAndGet(emp.getAlimentacion().size())));
+            if (request.getGrupos() != null) {
+                request.getGrupos().forEach(g -> {
+                    if (g.getEmpleados() != null) {
+                        g.getEmpleados().forEach(e ->
+                            contadorGlobal.addAndGet(e.getAlimentacion() != null ? e.getAlimentacion().size() : 0)
+                        );
+                    }
+                });
+            }
 
+            // Título tabla + contador
             PdfPTable tablaTitulo = new PdfPTable(2);
-            tablaTitulo.setWidthPercentage(100);
-            tablaTitulo.setWidths(new float[] { 8, 2 });
+            tablaTitulo.setWidthPercentage(WIDTH_PERCENT_100);
+            tablaTitulo.setWidths(WIDTHS_TITULO);
 
             PdfPCell celda1 = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezado()));
-            celda1.setBackgroundColor(colorSecundario);
-            celda1.setPadding(5f);
+            celda1.setBackgroundColor(COLOR_SECUNDARIO);
+            celda1.setPadding(PADDING_TITULOS);
             celda1.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
             tablaTitulo.addCell(celda1);
 
-            PdfPCell celda2 = new PdfPCell(
-                    new Phrase("Nº Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezado()));
-            celda2.setBackgroundColor(colorSecundario);
+            PdfPCell celda2 = new PdfPCell(new Phrase("Nº Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezado()));
+            celda2.setBackgroundColor(COLOR_SECUNDARIO);
             celda2.setHorizontalAlignment(Element.ALIGN_RIGHT);
             celda2.setVerticalAlignment(Element.ALIGN_MIDDLE);
-            celda2.setPadding(5);
+            celda2.setPadding(PADDING_TITULOS);
             celda2.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.RIGHT);
             tablaTitulo.addCell(celda2);
 
-            tablaTitulo.setSpacingAfter(10f);
+            tablaTitulo.setSpacingAfter(SPACING_AFTER_BLOQUE);
             document.add(tablaTitulo);
 
-            for (GrupoAlimentacionDTO grupo : request.getGrupos()) {
-                for (EmpleadoAlimentacionDTO emp : grupo.getEmpleados()) {
+            if (request.getGrupos() != null) {
+                for (GrupoAlimentacionDTO grupo : request.getGrupos()) {
+                    if (grupo.getEmpleados() == null) continue;
 
-                    double totalExcesoAlimentacion = 0;
-                    int contador = 1;
+                    for (EmpleadoAlimentacionDTO emp : grupo.getEmpleados()) {
 
-                    PdfPTable infoEmpleado = new PdfPTable(3);
-                    infoEmpleado.setWidthPercentage(100);
-                    infoEmpleado.setWidths(new float[] { 4, 4, 4 });
+                        double totalExcesoAlimentacion = 0d;
+                        int contador = 1;
 
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:",
-                            emp.getApellido() + " " + emp.getNombre(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:", emp.getIdentificacion(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:", emp.getCodigo(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", emp.getRegimen(), zebraColor));
-                    infoEmpleado
-                            .addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:", emp.getDepartamento(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:", emp.getCargo(), zebraColor));
+                        // Encabezado info empleado con borde exterior
+                        PdfPTable infoEmpleado = new PdfPTable(3);
+                        infoEmpleado.setWidthPercentage(WIDTH_PERCENT_100);
+                        infoEmpleado.setWidths(WIDTHS_INFO);
 
-                    PdfPTable tablaContenedora = new PdfPTable(1);
-                    tablaContenedora.setWidthPercentage(100);
-                    PdfPCell contenedor = new PdfPCell(infoEmpleado);
-                    contenedor.setPadding(0);
-                    contenedor.setBorder(Rectangle.BOX);
-                    tablaContenedora.addCell(contenedor);
-                    tablaContenedora.setSpacingAfter(3f);
-                    document.add(tablaContenedora);
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:",  emp.getApellido() + " " + emp.getNombre(), COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:",      emp.getIdentificacion(),                COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:",      emp.getCodigo(),                        COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", emp.getRegimen(),                COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:",    emp.getDepartamento(),           COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:",           emp.getCargo(),                  COLOR_ZEBRA));
 
-                    PdfPTable tablaAlimentacion = new PdfPTable(7);
-                    tablaAlimentacion.setWidthPercentage(100);
-                    tablaAlimentacion.setWidths(new float[] { 0.5f, 1.8f, 1.8f, 1.8f, 1.8f, 1.8f, 1.8f });
+                        PdfPTable tablaContenedora = new PdfPTable(1);
+                        tablaContenedora.setWidthPercentage(WIDTH_PERCENT_100);
+                        PdfPCell contenedor = new PdfPCell(infoEmpleado);
+                        contenedor.setPadding(0);
+                        contenedor.setBorder(Rectangle.BOX);
+                        tablaContenedora.addCell(contenedor);
+                        tablaContenedora.setSpacingAfter(SPACING_AFTER_CONTENEDOR);
+                        document.add(tablaContenedora);
 
-                    String[] headers = { "Nº", "FECHA", "INICIO ALIMENTACIÓN", "FIN ALIMENTACIÓN", "M. ALIMENTACIÓN",
-                            "M. TOMADOS", "M. EXCESO" };
-                    for (String h : headers) {
-                        tablaAlimentacion
-                                .addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezado(), colorPrincipal));
-                    }
+                        // Tabla principal
+                        PdfPTable tablaAlimentacion = new PdfPTable(ENCAB_TABLA.length);
+                        tablaAlimentacion.setWidthPercentage(WIDTH_PERCENT_100);
+                        tablaAlimentacion.setWidths(WIDTHS_TABLA);
 
-                    for (RegistroAlimentacionDTO registro : emp.getAlimentacion()) {
-                        Color fondo = (contador % 2 == 0) ? zebraColor : Color.WHITE;
+                        for (String h : ENCAB_TABLA) {
+                            tablaAlimentacion.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
+                        }
 
-                        String inicio = (registro.getInicioAlimentacion() == null
-                                || registro.getInicioAlimentacion().isEmpty()) ? "FT"
-                                        : extraerHora(registro.getInicioAlimentacion());
-                        String fin = (registro.getFinAlimentacion() == null || registro.getFinAlimentacion().isEmpty())
-                                ? "FT"
-                                : extraerHora(registro.getFinAlimentacion());
+                        if (emp.getAlimentacion() != null) {
+                            for (RegistroAlimentacionDTO registro : emp.getAlimentacion()) {
+                                Color fondo = (contador % 2 == 0) ? COLOR_ZEBRA : Color.WHITE;
 
-                        Color colorInicio = "FT".equals(inicio) ? colorFT : fondo;
-                        Color colorFin = "FT".equals(fin) ? colorFT : fondo;
+                                String inicio = (registro.getInicioAlimentacion() == null || registro.getInicioAlimentacion().isEmpty())
+                                                ? "FT" : extraerHora(registro.getInicioAlimentacion());
+                                String fin    = (registro.getFinAlimentacion() == null || registro.getFinAlimentacion().isEmpty())
+                                                ? "FT" : extraerHora(registro.getFinAlimentacion());
 
-                        tablaAlimentacion.addCell(ReporteUtil.celdaCentro(String.valueOf(contador), fondo));
-                        tablaAlimentacion.addCell(ReporteUtil.celdaCentro(registro.getFecha(), fondo));
-                        tablaAlimentacion.addCell(ReporteUtil.celdaCentro(inicio, colorInicio));
-                        tablaAlimentacion.addCell(ReporteUtil.celdaCentro(fin, colorFin));
-                        tablaAlimentacion.addCell(
-                                ReporteUtil.celdaCentro(String.valueOf(registro.getMinutosPermitidos()), fondo));
-                        tablaAlimentacion.addCell(
-                                ReporteUtil.celdaCentro(String.valueOf(registro.getMinutosTomados()).replace(",", "."),
-                                        fondo));
-                        Color fondoExceso = registro.getMinutosExceso() > 0 ? colorExceso : fondo;
-                        tablaAlimentacion.addCell(
-                                ReporteUtil.celdaCentro(
+                                Color fondoInicio = "FT".equals(inicio) ? COLOR_FT : fondo;
+                                Color fondoFin    = "FT".equals(fin)    ? COLOR_FT : fondo;
+
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(String.valueOf(contador), fondo));
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(registro.getFecha(), fondo));
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(inicio, fondoInicio));
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(fin,   fondoFin));
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(String.valueOf(registro.getMinutosPermitidos()), fondo));
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(String.valueOf(registro.getMinutosTomados()).replace(",", "."), fondo));
+
+                                Color fondoExceso = registro.getMinutosExceso() > 0 ? COLOR_EXCESO : fondo;
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(
                                         String.format("%.2f", registro.getMinutosExceso()).replace(",", "."),
-                                        fondoExceso));
+                                        fondoExceso
+                                ));
 
-                        totalExcesoAlimentacion += registro.getMinutosExceso();
-                        contador++;
+                                totalExcesoAlimentacion += registro.getMinutosExceso();
+                                contador++;
+                            }
+                        }
+
+                        // Fila de totales: 5 vacías + "TOTAL" + total exceso
+                        for (int i = 0; i < 5; i++) {
+                            PdfPCell celdaVacia = ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(), Color.WHITE);
+                            celdaVacia.setBorder(Rectangle.NO_BORDER);
+                            tablaAlimentacion.addCell(celdaVacia);
+                        }
+                        tablaAlimentacion.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), Color.WHITE));
+                        tablaAlimentacion.addCell(ReporteUtil.crearCelda(
+                                String.format("%.2f", totalExcesoAlimentacion).replace(",", "."),
+                                ReporteUtil.fuenteTexto(), Color.WHITE));
+
+                        tablaAlimentacion.setSpacingAfter(SPACING_AFTER_BLOQUE);
+                        document.add(tablaAlimentacion);
                     }
-
-                    for (int i = 0; i < 5; i++) {
-                        PdfPCell celdaVacia = ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(), Color.WHITE);
-                        celdaVacia.setBorder(Rectangle.NO_BORDER);
-                        tablaAlimentacion.addCell(celdaVacia);
-                    }
-                    tablaAlimentacion.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), Color.WHITE));
-                    tablaAlimentacion.addCell(
-                            ReporteUtil.crearCelda(String.format("%.2f", totalExcesoAlimentacion).replace(",", "."),
-                                    ReporteUtil.fuenteTexto(), Color.WHITE));
-
-                    tablaAlimentacion.setSpacingAfter(10f);
-                    document.add(tablaAlimentacion);
                 }
             }
 
+            // 3) Cierre + retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validaciones de helpers → el controller decidirá 400 si aplica
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Fallo interno uniforme → 500
+            throw new ReportBuildException("No se pudo generar ReporteTiempoAlimentacion.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
-    
+
+
 
     private String extraerHora(String fechaHora) {
         if (fechaHora == null || !fechaHora.contains(" "))

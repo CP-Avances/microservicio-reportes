@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -25,15 +26,22 @@ import java.util.List;
 public class ReporteGeneroService {
 
     // =========================
-    //          PDF (SIN CAMBIOS)
+    //          PDF
     // =========================
     public byte[] generarReporteGenerosPDF(ReporteGenerosRequest request) {
+
+        // DRY: constantes locales
+        final float[] WIDTHS = { 2f, 4f };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
-
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                 request.getUsuario(),
                 request.getFraseMarcaAgua(),
@@ -41,6 +49,7 @@ public class ReporteGeneroService {
             ));
             document.open();
 
+            // 2) Construcción (helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
@@ -50,39 +59,55 @@ public class ReporteGeneroService {
             document.add(ReporteUtil.crearTituloReporte("LISTA DE GÉNEROS"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+            Color colorZebra     = ReporteUtil.colorZebraClaro();
 
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(40);
             tabla.setSpacingBefore(10f);
-            tabla.setWidths(new float[]{2, 4});
+            tabla.setWidths(WIDTHS);
             tabla.setHorizontalAlignment(Element.ALIGN_CENTER);
 
+            // Encabezados
             tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
             tabla.addCell(ReporteUtil.crearCelda("GÉNERO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
+            // Cuerpo (zebra)
             List<GeneroDTO> generos = request.getGeneros();
             boolean zebra = false;
             if (generos != null) {
-                for (GeneroDTO genero: generos) {
+                for (GeneroDTO g : generos) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(genero.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(genero.getGenero(), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(g.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(g.getGenero(),             ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
             }
 
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
-            writer.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Si algún helper valida y falla, el controller puede mapearlo a 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // 500 interno uniforme
+            throw new ReportBuildException("No se pudo generar ReporteGeneros.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
-
     // =========================
     //          XLSX (idéntico al estilo del front)
     // =========================

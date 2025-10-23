@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -24,60 +25,91 @@ import java.util.List;
 public class ReporteEstadoCivilService {
 
     // =========================
-    // PDF (SIN CAMBIOS)
+    // PDF
     // =========================
     public byte[] generarReportePDF(ReporteEstadosCivilRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float[] WIDTHS = { 2f, 5f };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                    request.getUsuario(),
-                    request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()));
+                request.getUsuario(),
+                request.getFraseMarcaAgua(),
+                request.getColorPrincipal()
+            ));
             document.open();
 
+            // 2) Construcción (helpers existentes)
+            // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
+            // Títulos
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
             document.add(ReporteUtil.crearTituloReporte("LISTA DE ESTADOS CIVIL"));
 
+            // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+            Color colorZebra     = ReporteUtil.colorZebraClaro();
 
+            // Tabla principal
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(30);
-            tabla.setWidths(new float[] { 2, 5 });
+            tabla.setWidths(WIDTHS);
             tabla.setSpacingBefore(10f);
 
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(
-                    ReporteUtil.crearCelda("ESTADO CIVIL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            // Encabezados
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO",        ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("ESTADO CIVIL",  ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
+            // Cuerpo (zebra)
             List<EstadoCivilDTO> lista = request.getEstadosCivil();
             boolean zebra = false;
-            for (EstadoCivilDTO e : lista) {
-                Color bgColor = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(
-                        ReporteUtil.crearCelda(String.valueOf(e.getId()), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getEstadoCivil(), ReporteUtil.fuenteTablaData(), bgColor));
-                zebra = !zebra;
+            if (lista != null) {
+                for (EstadoCivilDTO e : lista) {
+                    Color fondo = zebra ? colorZebra : Color.WHITE;
+                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(e.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getEstadoCivil(),         ReporteUtil.fuenteTablaData(), fondo));
+                    zebra = !zebra;
+                }
             }
 
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // si un helper valida y falla, que el controller lo maneje (posible 400)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // 500 interno uniforme
+            throw new ReportBuildException("No se pudo generar ReporteEstadosCivil.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
-
     // =========================
     // XLSX (idéntico al estilo del front)
     // =========================

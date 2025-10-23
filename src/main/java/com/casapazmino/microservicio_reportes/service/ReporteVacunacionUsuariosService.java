@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.model.ReporteVacunacion.ReporteVac
 import com.casapazmino.microservicio_reportes.model.ReporteVacunacion.VacunaUsuarioDTO;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
@@ -28,23 +29,36 @@ import java.util.Locale;
 public class ReporteVacunacionUsuariosService {
 
     public byte[] generarReportePDF(ReporteVacunacionUsuariosRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Document document = new Document(PageSize.A4, 40, 40, 50, 50);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float   M_I = 40f, M_D = 40f, M_S = 50f, M_INF = 50f;
+        final float[] WIDTHS_CABECERA   = { 3f, 3f, 2f };
+        final float[] WIDTHS_EMPLEADO   = { 3f, 4f, 3f };
+        final float[] WIDTHS_VACUNAS    = { 1f, 3f, 2f, 5f };
+        final String  PREF_SUCURSAL     = "SUCURSAL: ";
+        final String  PREF_REGISTROS    = "N° Registros: ";
 
+        Document document = null;
+        PdfWriter writer  = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización de recursos PDF
+            baos     = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4, M_I, M_D, M_S, M_INF);
+            writer   = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()));
-
+                    request.getColorPrincipal()
+            ));
             document.open();
 
+            // 2) Construcción (solo helpers existentes; no cambiamos diseño)
+            // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-            if (logo != null) {
-                document.add(logo);
-            }
+            if (logo != null) document.add(logo);
 
+            // Encabezados
             Paragraph empresa = new Paragraph(request.getEmpresa(), ReporteUtil.fuenteEncabezado());
             empresa.setAlignment(Element.ALIGN_CENTER);
             empresa.setSpacingAfter(5f);
@@ -55,14 +69,16 @@ public class ReporteVacunacionUsuariosService {
             titulo.setSpacingAfter(10f);
             document.add(titulo);
 
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Font fuente = ReporteUtil.fuenteTexto();
+            // Colores y fuente
+            final Color colorPrincipal  = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            final Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+            final Font  fuente          = ReporteUtil.fuenteTexto();
 
             for (AgrupadorVacunaUsuarioDTO grupo : request.getDatos()) {
 
+                // Descripción por tipo de filtro
                 String descripcion = "";
-                String establecimiento = safe("SUCURSAL: " + grupo.getSucursal());
+                String establecimiento = safe(PREF_SUCURSAL + grupo.getSucursal());
 
                 switch (safe(request.getTipoFiltro()).toLowerCase()) {
                     case "regimen":
@@ -87,17 +103,16 @@ public class ReporteVacunacionUsuariosService {
                         .mapToInt(e -> e.getVacunas().size())
                         .sum();
 
-                // Tabla verde sin bordes internos (solo borde externo)
+                // Cabecera de bloque (verde, sin bordes internos; borde externo con TableEvent)
                 PdfPTable tablaCabecera = new PdfPTable(3);
                 tablaCabecera.setWidthPercentage(100);
-                tablaCabecera.setWidths(new float[] { 3, 3, 2 });
+                tablaCabecera.setWidths(WIDTHS_CABECERA);
                 tablaCabecera.setSpacingBefore(10f);
                 tablaCabecera.getDefaultCell().setBorder(Rectangle.NO_BORDER);
 
-                tablaCabecera.addCell(celdaSinBordeIzquierda(descripcion, fuente, colorSecundario));
-                tablaCabecera.addCell(celdaSinBordeIzquierda(establecimiento, fuente, colorSecundario));
-                tablaCabecera
-                        .addCell(celdaSinBordeIzquierda("N° Registros: " + totalRegistros, fuente, colorSecundario));
+                tablaCabecera.addCell(celdaSinBordeIzquierda(descripcion,     fuente, colorSecundario));
+                tablaCabecera.addCell(celdaSinBordeIzquierda(establecimiento,  fuente, colorSecundario));
+                tablaCabecera.addCell(celdaSinBordeIzquierda(PREF_REGISTROS + totalRegistros, fuente, colorSecundario));
 
                 tablaCabecera.setTableEvent((table, widths, heights, headerRows, rowStart, canvas) -> {
                     PdfContentByte cb = canvas[PdfPTable.LINECANVAS];
@@ -105,34 +120,30 @@ public class ReporteVacunacionUsuariosService {
                             widths[0][0],
                             heights[heights.length - 1],
                             widths[0][widths[0].length - 1] - widths[0][0],
-                            heights[0] - heights[heights.length - 1]);
+                            heights[0] - heights[heights.length - 1]
+                    );
                     cb.stroke();
                 });
-
                 document.add(tablaCabecera);
 
+                // Empleado + detalle de vacunas
                 for (EmpleadoVacunaUsuarioDTO empl : grupo.getEmpleados()) {
+                    // Tabla de información del empleado (3 columnas, gris claro, borde externo)
                     PdfPTable tablaEmpleado = new PdfPTable(3);
                     tablaEmpleado.setWidthPercentage(100);
                     tablaEmpleado.setSpacingBefore(6f);
-                    tablaEmpleado.setWidths(new float[] { 3, 4, 3 });
+                    tablaEmpleado.setWidths(WIDTHS_EMPLEADO);
 
                     String[][] filas = new String[][] {
-                            {
-                                    "C.C.: " + safe(empl.getIdentificacion()),
-                                    "EMPLEADO: " + safe(empl.getApellido()) + " " + safe(empl.getNombre()),
-                                    "DEPARTAMENTO: " + safe(empl.getDepartamento())
-                            },
-                            {
-                                    "CORREO: " + safe(empl.getCorreo()),
-                                    "GENERO: " + safe(empl.getGenero()),
-                                    "CARGO: " + safe(empl.getCargo())
-                            },
-                            {
-                                    "REGIMEN: " + safe(empl.getRegimen()),
-                                    "COD: " + safe(empl.getCodigo()),
-                                    "ROL: " + safe(empl.getRol())
-                            }
+                        { "C.C.: " + safe(empl.getIdentificacion()),
+                        "EMPLEADO: " + safe(empl.getApellido()) + " " + safe(empl.getNombre()),
+                        "DEPARTAMENTO: " + safe(empl.getDepartamento()) },
+                        { "CORREO: " + safe(empl.getCorreo()),
+                        "GENERO: " + safe(empl.getGenero()),
+                        "CARGO: " + safe(empl.getCargo()) },
+                        { "REGIMEN: " + safe(empl.getRegimen()),
+                        "COD: " + safe(empl.getCodigo()),
+                        "ROL: " + safe(empl.getRol()) }
                     };
 
                     for (String[] fila : filas) {
@@ -151,16 +162,17 @@ public class ReporteVacunacionUsuariosService {
                                 widths[0][0],
                                 heights[heights.length - 1],
                                 widths[0][widths[0].length - 1] - widths[0][0],
-                                heights[0] - heights[heights.length - 1]);
+                                heights[0] - heights[heights.length - 1]
+                        );
                         cb.stroke();
                     });
-
                     document.add(tablaEmpleado);
 
+                    // Tabla de vacunas (4 columnas)
                     PdfPTable tablaVacunas = new PdfPTable(4);
                     tablaVacunas.setWidthPercentage(100);
                     tablaVacunas.setSpacingBefore(0f);
-                    tablaVacunas.setWidths(new float[] { 1, 3, 2, 5 });
+                    tablaVacunas.setWidths(WIDTHS_VACUNAS);
 
                     // Encabezados centrados
                     for (String header : new String[] { "N°", "VACUNA", "FECHA", "DESCRIPCIÓN" }) {
@@ -172,31 +184,44 @@ public class ReporteVacunacionUsuariosService {
 
                     int index = 1;
                     for (VacunaUsuarioDTO vac : empl.getVacunas()) {
-                        PdfPCell celda1 = new PdfPCell(new Phrase(String.valueOf(index++), fuente));
-                        PdfPCell celda2 = new PdfPCell(new Phrase(safe(vac.getTipo_vacuna()), fuente));
-                        PdfPCell celda3 = new PdfPCell(new Phrase(formatearFecha(vac.getFecha()), fuente));
-                        PdfPCell celda4 = new PdfPCell(new Phrase(safe(vac.getDescripcion()), fuente));
-
-                        for (PdfPCell celda : new PdfPCell[] { celda1, celda2, celda3, celda4 }) {
-                            celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+                        PdfPCell c1 = new PdfPCell(new Phrase(String.valueOf(index++),           fuente));
+                        PdfPCell c2 = new PdfPCell(new Phrase(safe(vac.getTipo_vacuna()),        fuente));
+                        PdfPCell c3 = new PdfPCell(new Phrase(formatearFecha(vac.getFecha()),    fuente));
+                        PdfPCell c4 = new PdfPCell(new Phrase(safe(vac.getDescripcion()),        fuente));
+                        for (PdfPCell c : new PdfPCell[] { c1, c2, c3, c4 }) {
+                            c.setHorizontalAlignment(Element.ALIGN_CENTER);
                         }
-
-                        tablaVacunas.addCell(celda1);
-                        tablaVacunas.addCell(celda2);
-                        tablaVacunas.addCell(celda3);
-                        tablaVacunas.addCell(celda4);
+                        tablaVacunas.addCell(c1);
+                        tablaVacunas.addCell(c2);
+                        tablaVacunas.addCell(c3);
+                        tablaVacunas.addCell(c4);
                     }
 
                     document.add(tablaVacunas);
                 }
             }
 
+            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validaciones de helpers → que el controller decida 400 si corresponde
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Fallo interno → 500 uniforme
+            throw new ReportBuildException("No se pudo generar VacunacionUsuarios.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
 
@@ -258,8 +283,6 @@ public class ReporteVacunacionUsuariosService {
 
             if (request.getDatos() != null) {
                 for (AgrupadorVacunaUsuarioDTO grupo : request.getDatos()) {
-                    String ciudadGrupo = safe(grupo.getCiudad());
-                    String sucursalGrupo = safe(grupo.getSucursal());
 
                     if (grupo.getEmpleados() == null)
                         continue;

@@ -5,6 +5,7 @@ import com.casapazmino.microservicio_reportes.model.ReporteUsuario.ReporteUsuari
 import com.casapazmino.microservicio_reportes.model.ReporteUsuario.UsuarioDTO;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
@@ -22,24 +23,37 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 public class ReporteUsuariosService {
 
     public byte[] generarReportePDF(ReporteUsuariosRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Document document = new Document(PageSize.A4.rotate(), 40, 40, 60, 40);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float[] WIDTHS_CABECERA     = { 3f, 3f, 2f };
+        final float[] WIDTHS_TABLA_USU    = { 1f, 3f, 3f, 4f, 3f, 2f, 3f, 3f, 3f, 3f, 3f, 3f, 3f, 5f };
+        final String  PREF_SUCURSAL       = "SUCURSAL: ";
+        final String  PREF_REGISTROS      = "N° Registros: ";
+        final float   MARGEN_IZQ          = 40f, MARGEN_DER = 40f, MARGEN_SUP = 60f, MARGEN_INF = 40f;
 
+        Document document = null;
+        PdfWriter writer  = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos     = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4.rotate(), MARGEN_IZQ, MARGEN_DER, MARGEN_SUP, MARGEN_INF);
+            writer   = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
                     request.getColorPrincipal()
             ));
-
             document.open();
 
+            // 2) Construcción (respetando tu diseño/estilos actuales)
+            // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
+            // Encabezados empresa/título (manteniendo Paragraph + fuente existente)
             Paragraph empresa = new Paragraph(request.getEmpresa(), ReporteUtil.fuenteEncabezado());
             empresa.setAlignment(Element.ALIGN_CENTER);
             empresa.setSpacingAfter(5f);
@@ -50,13 +64,16 @@ public class ReporteUsuariosService {
             titulo.setSpacingAfter(10f);
             document.add(titulo);
 
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Font fuente = ReporteUtil.fuenteTexto();
+            // Colores y fuente (calculados una vez)
+            final Color colorPrincipal   = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            final Color colorSecundario  = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+            final Font  fuente           = ReporteUtil.fuenteTexto();
 
+            // Por cada grupo (según filtro)
             for (AgrupadorUsuariosDTO grupo : request.getDatos()) {
+                // Descripción de bloque según tipo de filtro
                 String descripcion = "";
-                String establecimiento = safe("SUCURSAL: " + grupo.getSucursal());
+                String establecimiento = safe(PREF_SUCURSAL + grupo.getSucursal());
 
                 switch (safe(request.getTipoFiltro()).toLowerCase()) {
                     case "regimen":
@@ -77,16 +94,18 @@ public class ReporteUsuariosService {
                         break;
                 }
 
+                // Cabecera del bloque (sin bordes en celdas, con borde externo via TableEvent)
                 PdfPTable cabecera = new PdfPTable(3);
                 cabecera.setWidthPercentage(100);
-                cabecera.setWidths(new float[]{3, 3, 2});
+                cabecera.setWidths(WIDTHS_CABECERA);
                 cabecera.setSpacingBefore(10f);
                 cabecera.getDefaultCell().setBorder(Rectangle.NO_BORDER);
 
                 cabecera.addCell(celdaSinBorde(descripcion, fuente, colorSecundario));
                 cabecera.addCell(celdaSinBorde(establecimiento, fuente, colorSecundario));
-                cabecera.addCell(celdaSinBorde("N° Registros: " + grupo.getEmpleados().size(), fuente, colorSecundario));
+                cabecera.addCell(celdaSinBorde(PREF_REGISTROS + grupo.getEmpleados().size(), fuente, colorSecundario));
 
+                // Borde externo del bloque (respetando tu implementación)
                 cabecera.setTableEvent((table, widths, heights, headerRows, rowStart, canvas) -> {
                     PdfContentByte cb = canvas[PdfPTable.LINECANVAS];
                     cb.rectangle(
@@ -104,23 +123,25 @@ public class ReporteUsuariosService {
                 PdfPTable tablaUsuarios = new PdfPTable(14);
                 tablaUsuarios.setWidthPercentage(100);
                 tablaUsuarios.setSpacingBefore(0f);
-                tablaUsuarios.setWidths(new float[]{1, 3, 3, 4, 3, 2, 3, 3, 3, 3, 3, 3, 3, 5});
+                tablaUsuarios.setWidths(WIDTHS_TABLA_USU);
 
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("N°", fuente, colorPrincipal));
+                // Encabezados
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("N°",             fuente, colorPrincipal));
                 tablaUsuarios.addCell(ReporteUtil.crearCelda("IDENTIFICACIÓN", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("CÓDIGO", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("EMPLEADO", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("USUARIO", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("GÉNERO", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("NACIONALIDAD", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("CIUDAD", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("SUCURSAL", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("RÉGIMEN", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("DEPARTAMENTO", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("CARGO", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("ROL", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("CORREO", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("CÓDIGO",         fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("EMPLEADO",       fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("USUARIO",        fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("GÉNERO",         fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("NACIONALIDAD",   fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("CIUDAD",         fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("SUCURSAL",       fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("RÉGIMEN",        fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("DEPARTAMENTO",   fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("CARGO",          fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("ROL",            fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("CORREO",         fuente, colorPrincipal));
 
+                // Cuerpo
                 int index = 1;
                 for (UsuarioDTO usu : grupo.getEmpleados()) {
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(String.valueOf(index++), fuente));
@@ -142,16 +163,31 @@ public class ReporteUsuariosService {
                 document.add(tablaUsuarios);
             }
 
+            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Si algún helper valida y lanza IAEx → que el controller decida 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Fallo interno → 500 uniforme
+            throw new ReportBuildException("No se pudo generar Usuarios.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
 
-        // =========================
+    // =========================
     // XLSX (nuevo)
     // =========================
     public byte[] generarReporteXLSX(ReporteUsuariosRequest request) {

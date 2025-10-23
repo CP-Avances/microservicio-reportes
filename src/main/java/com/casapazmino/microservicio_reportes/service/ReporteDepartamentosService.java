@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -25,14 +26,22 @@ import java.util.List;
 public class ReporteDepartamentosService {
 
     // =========================
-    //          PDF (SIN CAMBIOS)
+    //          PDF 
     // =========================
     public byte[] generarReportePDF(ReporteDepartamentosRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float[] WIDTHS = { 1.5f, 5f, 4f, 1.5f, 4f };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                 request.getUsuario(),
                 request.getFraseMarcaAgua(),
@@ -40,6 +49,7 @@ public class ReporteDepartamentosService {
             ));
             document.open();
 
+            // 2) Construcción (helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
@@ -49,41 +59,58 @@ public class ReporteDepartamentosService {
             document.add(ReporteUtil.crearTituloReporte("LISTA DE DEPARTAMENTOS"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+            Color colorZebra     = ReporteUtil.colorZebraClaro();
 
             PdfPTable tabla = new PdfPTable(5);
             tabla.setWidthPercentage(90);
-            tabla.setWidths(new float[]{1.5f, 5, 4, 1.5f, 4});
+            tabla.setWidths(WIDTHS);
             tabla.setSpacingBefore(10f);
 
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL/ ESTABLECIMIENTO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("DEPARTAMENTO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NIVEL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("DEPARTAMENTO SUPERIOR", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            // Encabezados
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO",                       ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL/ ESTABLECIMIENTO",    ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("DEPARTAMENTO",                 ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("NIVEL",                        ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("DEPARTAMENTO SUPERIOR",        ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
+            // Cuerpo (zebra)
             List<DepartamentoDTO> lista = request.getDepartamentos();
             boolean zebra = false;
             if (lista != null) {
-                for (DepartamentoDTO d: lista) {
+                for (DepartamentoDTO d : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(d.getNomsucursal(), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(d.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getNivel()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(d.getDepartamento_padre(), ReporteUtil.fuenteTablaData(), fondo));
-                    zebra= !zebra;
+                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getId()),         ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(d.getNomsucursal(),                 ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(d.getNombre(),                      ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getNivel()),       ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(d.getDepartamento_padre(),          ReporteUtil.fuenteTablaData(), fondo));
+                    zebra = !zebra;
                 }
             }
 
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
-            writer.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Si algún helper valida y falla, que el controller decida (posible 400)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // 500 uniforme
+            throw new ReportBuildException("No se pudo generar ReporteDepartamentos.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
 

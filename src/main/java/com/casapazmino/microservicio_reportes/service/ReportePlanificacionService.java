@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.model.PlanificacionHoraria.Planifi
 import com.casapazmino.microservicio_reportes.model.PlanificacionHoraria.ReportePlanificacionRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
@@ -28,23 +29,40 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 public class ReportePlanificacionService {
 
     public byte[] generarReportePDF(ReportePlanificacionRequest request) {
-        try {
-            Document document = new Document(PageSize.A4.rotate(), 40, 40, 30, 50);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
 
-            ConfiguracionPaginaPDF evento = new ConfiguracionPaginaPDF(
+        // DRY: constantes locales (anchos, headers)
+        final float[] W_HORARIOS      = { 16f, 16f, 16f, 16f, 16f };
+        final float[] W_NOMENCLATURA  = { 5f, 7f };
+        final float[] W_CONTENEDORA   = { 60f, 40f };
+        final int[]   W_ENCAB_EMPLE   = { 5, 3, 3 };
+        final int     COLS_MES        = 7;
+        final String  T_HEADER_HOR    = "DETALLE DE HORARIOS";
+        final String  T_HEADER_DEF    = "DEFINICIONES";
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            document = new Document(PageSize.A4.rotate(), 40, 40, 30, 50);
+            baos     = new ByteArrayOutputStream();
+            writer   = PdfWriter.getInstance(document, baos);
+            writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal());
-            writer.setPageEvent(evento);
+                    request.getColorPrincipal()
+            ));
             document.open();
 
+            // 2) Construcción (helpers existentes)
+            // Logo (opcional)
             if (request.getLogoBase64() != null) {
                 Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-                document.add(logo);
+                if (logo != null) document.add(logo);
             }
 
+            // Títulos (empresa, título, periodo)
             Paragraph nombreEmpresa = new Paragraph(request.getEmpresa(), ReporteUtil.fuenteEncabezado());
             nombreEmpresa.setAlignment(Element.ALIGN_CENTER);
             document.add(nombreEmpresa);
@@ -55,157 +73,182 @@ public class ReportePlanificacionService {
 
             Paragraph periodo = new Paragraph(
                     "PERIODO DEL: " + request.getPeriodoInicio() + " AL " + request.getPeriodoFin(),
-                    ReporteUtil.fuenteEncabezado());
+                    ReporteUtil.fuenteEncabezado()
+            );
             periodo.setAlignment(Element.ALIGN_CENTER);
             document.add(periodo);
             document.add(Chunk.NEWLINE);
 
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            // Colores
+            Color colorPrincipal  = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
 
-            // TABLA DE HORARIOS
+            // === TABLA DE HORARIOS ===
             PdfPTable tablaHorarios = new PdfPTable(5);
             tablaHorarios.setWidthPercentage(100f);
             tablaHorarios.setHorizontalAlignment(Element.ALIGN_LEFT);
             tablaHorarios.setSpacingAfter(20f);
-            tablaHorarios.setWidths(new int[] { 16, 16, 16, 16, 16 });
+            tablaHorarios.setWidths(W_HORARIOS);
 
-            PdfPCell tituloHorarios = new PdfPCell(new Phrase("DETALLE DE HORARIOS", ReporteUtil.fuenteEncabezado()));
+            PdfPCell tituloHorarios = new PdfPCell(new Phrase(T_HEADER_HOR, ReporteUtil.fuenteEncabezado()));
             tituloHorarios.setColspan(5);
             tituloHorarios.setHorizontalAlignment(Element.ALIGN_CENTER);
             tituloHorarios.setBackgroundColor(colorPrincipal);
             tablaHorarios.addCell(tituloHorarios);
 
-            tablaHorarios.addCell(ReporteUtil.celdaEncabezado("HORARIO", colorPrincipal));
-            tablaHorarios.addCell(ReporteUtil.celdaEncabezado("ENTRADA (E)", colorPrincipal));
-            tablaHorarios.addCell(ReporteUtil.celdaEncabezado("INICIO ALIMENTACIÓN (I/A)", colorPrincipal));
-            tablaHorarios.addCell(ReporteUtil.celdaEncabezado("FIN ALIMENTACIÓN (F/A)", colorPrincipal));
-            tablaHorarios.addCell(ReporteUtil.celdaEncabezado("SALIDA (S)", colorPrincipal));
+            tablaHorarios.addCell(ReporteUtil.celdaEncabezado("HORARIO",                        colorPrincipal));
+            tablaHorarios.addCell(ReporteUtil.celdaEncabezado("ENTRADA (E)",                    colorPrincipal));
+            tablaHorarios.addCell(ReporteUtil.celdaEncabezado("INICIO ALIMENTACIÓN (I/A)",      colorPrincipal));
+            tablaHorarios.addCell(ReporteUtil.celdaEncabezado("FIN ALIMENTACIÓN (F/A)",         colorPrincipal));
+            tablaHorarios.addCell(ReporteUtil.celdaEncabezado("SALIDA (S)",                     colorPrincipal));
 
-            for (PlanificacionDetalleDTO d : request.getDetalle_acciones()) {
-                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getHorario()));
-                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getEntrada_()));
-                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getInicio_comida()));
-                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getFin_comida()));
-                tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getSalida_()));
+            if (request.getDetalle_acciones() != null) {
+                for (PlanificacionDetalleDTO d : request.getDetalle_acciones()) {
+                    tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getHorario()));
+                    tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getEntrada_()));
+                    tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getInicio_comida()));
+                    tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getFin_comida()));
+                    tablaHorarios.addCell(ReporteUtil.celdaCentro(d.getSalida_()));
+                }
             }
 
-            // TABLA DE NOMENCLATURA
+            // === TABLA DE NOMENCLATURA ===
             PdfPTable tablaNomenclatura = new PdfPTable(2);
             tablaNomenclatura.setWidthPercentage(80f);
             tablaNomenclatura.setHorizontalAlignment(Element.ALIGN_RIGHT);
             tablaNomenclatura.setSpacingAfter(100f);
-            tablaNomenclatura.setWidths(new int[] { 5, 7 });
+            tablaNomenclatura.setWidths(W_NOMENCLATURA);
 
-            PdfPCell tituloNomen = new PdfPCell(new Phrase("DEFINICIONES", ReporteUtil.fuenteEncabezado()));
+            PdfPCell tituloNomen = new PdfPCell(new Phrase(T_HEADER_DEF, ReporteUtil.fuenteEncabezado()));
             tituloNomen.setColspan(2);
             tituloNomen.setHorizontalAlignment(Element.ALIGN_CENTER);
             tituloNomen.setBackgroundColor(colorSecundario);
             tablaNomenclatura.addCell(tituloNomen);
 
             tablaNomenclatura.addCell(ReporteUtil.celdaEncabezado("NOMENCLATURA", colorSecundario));
-            tablaNomenclatura.addCell(ReporteUtil.celdaEncabezado("DESCRIPCIÓN", colorSecundario));
+            tablaNomenclatura.addCell(ReporteUtil.celdaEncabezado("DESCRIPCIÓN",  colorSecundario));
 
-            for (Map<String, String> def : request.getNomenclatura()) {
-                tablaNomenclatura.addCell(ReporteUtil.celdaNomenclatura(def.get("nombre"), ReporteUtil.fuenteTexto()));
-                tablaNomenclatura.addCell(
-                        ReporteUtil.celdaNomenclaturaDescripcion(def.get("descripcion"), ReporteUtil.fuenteTexto()));
+            if (request.getNomenclatura() != null) {
+                for (Map<String, String> def : request.getNomenclatura()) {
+                    tablaNomenclatura.addCell(ReporteUtil.celdaNomenclatura(def.get("nombre"),       ReporteUtil.fuenteTexto()));
+                    tablaNomenclatura.addCell(ReporteUtil.celdaNomenclaturaDescripcion(def.get("descripcion"), ReporteUtil.fuenteTexto()));
+                }
             }
 
-            //document.add(tablaHorarios);
-            //document.add(tablaNomenclatura);
-            //document.add(Chunk.NEWLINE);
-
-            // Tabla contenedora de una fila con dos celdas independientes
+            // === LAYOUT CONTENEDOR (dos columnas: horarios / definiciones) ===
             PdfPTable tablaContenedora = new PdfPTable(2);
-            tablaContenedora.setWidthPercentage(70f); // reduce el espacio total ocupado (de 100% a 70%)
-            tablaContenedora.setWidths(new float[] { 60, 40 }); // proporción interna: 60% horarios, 40% definiciones
-            tablaContenedora.setSpacingBefore(5f); // opcional: reducir espacio antes
+            tablaContenedora.setWidthPercentage(70f);
+            tablaContenedora.setWidths(W_CONTENEDORA);
+            tablaContenedora.setSpacingBefore(5f);
 
-            // Celda de la tabla de horarios (puede crecer)
             PdfPCell celdaIzquierda = new PdfPCell();
             celdaIzquierda.setBorder(Rectangle.NO_BORDER);
             celdaIzquierda.setVerticalAlignment(Element.ALIGN_TOP);
             celdaIzquierda.addElement(tablaHorarios);
             tablaContenedora.addCell(celdaIzquierda);
 
-            // Celda de la tabla de definiciones (no se estira)
             PdfPCell celdaDerecha = new PdfPCell();
             celdaDerecha.setBorder(Rectangle.NO_BORDER);
             celdaDerecha.setVerticalAlignment(Element.ALIGN_TOP);
             celdaDerecha.addElement(tablaNomenclatura);
             tablaContenedora.addCell(celdaDerecha);
 
-            // Agregar al documento
             document.add(tablaContenedora);
 
-            for (PlanificacionEmpleadoDTO emp : request.getDatos()) {
-                PdfPTable encabezado = new PdfPTable(3);
-                encabezado.setWidths(new int[] { 5, 3, 3 });
+            // === BLOQUES POR EMPLEADO ===
+            if (request.getDatos() != null) {
+                for (PlanificacionEmpleadoDTO emp : request.getDatos()) {
 
-                encabezado.addCell(
-                        ReporteUtil.celdaInfoEmpleado("EMPLEADO: " + emp.getApellido() + " " + emp.getNombre()));
-                encabezado.addCell(ReporteUtil.celdaInfoEmpleado("C.C.: " + emp.getIdentificacion()));
-                encabezado.addCell(ReporteUtil.celdaInfoEmpleado("COD: " + emp.getCodigo()));
+                    // Encabezado de datos del empleado
+                    PdfPTable encabezado = new PdfPTable(3);
+                    encabezado.setWidths(W_ENCAB_EMPLE);
 
-                encabezado.addCell(ReporteUtil.celdaInfoEmpleado("DEPARTAMENTO: " + emp.getDepartamento()));
-                encabezado.addCell(ReporteUtil.celdaInfoEmpleado("CARGO: " + emp.getCargo()));
-                encabezado.addCell(ReporteUtil.celdaInfoEmpleado(""));
-                document.add(encabezado);
-                Paragraph espacio = new Paragraph("", new Font());
-                espacio.setSpacingBefore(10f); // o el valor que necesites
-                document.add(espacio);
+                    encabezado.addCell(ReporteUtil.celdaInfoEmpleado("EMPLEADO: " + emp.getApellido() + " " + emp.getNombre()));
+                    encabezado.addCell(ReporteUtil.celdaInfoEmpleado("C.C.: " + emp.getIdentificacion()));
+                    encabezado.addCell(ReporteUtil.celdaInfoEmpleado("COD: " + emp.getCodigo()));
 
-                for (PlanificacionHorarioMensualDTO mes : emp.getHorarios()) {
-                    PdfPTable tablaMes = new PdfPTable(7);
-                    tablaMes.setWidthPercentage(100);
+                    encabezado.addCell(ReporteUtil.celdaInfoEmpleado("DEPARTAMENTO: " + emp.getDepartamento()));
+                    encabezado.addCell(ReporteUtil.celdaInfoEmpleado("CARGO: " + emp.getCargo()));
+                    encabezado.addCell(ReporteUtil.celdaInfoEmpleado(""));
+                    document.add(encabezado);
 
-                    PdfPCell celdaTituloMes = new PdfPCell(new Phrase("AÑO: " + mes.getAnio() + " MES: " + mes.getMes(),
-                            ReporteUtil.fuenteEncabezado()));
-                    celdaTituloMes.setColspan(7);
-                    celdaTituloMes.setBackgroundColor(colorSecundario);
-                    celdaTituloMes.setHorizontalAlignment(Element.ALIGN_CENTER);
-                    tablaMes.addCell(celdaTituloMes);
+                    Paragraph espacio = new Paragraph("", new Font());
+                    espacio.setSpacingBefore(10f);
+                    document.add(espacio);
 
-                    for (int i = 1; i <= 31; i += 7) {
-                        for (int j = i; j < i + 7; j++) {
-                            if (j <= 31) {
-                                PdfPCell celdaDia = new PdfPCell(
-                                        new Phrase(String.format("%02d", j), ReporteUtil.fuenteEncabezado()));
-                                celdaDia.setBackgroundColor(colorPrincipal); // o colorSecundario si prefieres
-                                celdaDia.setHorizontalAlignment(Element.ALIGN_CENTER);
-                                celdaDia.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                                tablaMes.addCell(celdaDia);
-                            } else {
-                                tablaMes.addCell("");
+                    // Meses (tablas de 7 columnas)
+                    if (emp.getHorarios() != null) {
+                        for (PlanificacionHorarioMensualDTO mes : emp.getHorarios()) {
+                            PdfPTable tablaMes = new PdfPTable(COLS_MES);
+                            tablaMes.setWidthPercentage(100);
+
+                            PdfPCell celdaTituloMes = new PdfPCell(new Phrase(
+                                    "AÑO: " + mes.getAnio() + " MES: " + mes.getMes(),
+                                    ReporteUtil.fuenteEncabezado()
+                            ));
+                            celdaTituloMes.setColspan(COLS_MES);
+                            celdaTituloMes.setBackgroundColor(colorSecundario);
+                            celdaTituloMes.setHorizontalAlignment(Element.ALIGN_CENTER);
+                            tablaMes.addCell(celdaTituloMes);
+
+                            // cabecera de días (en bloques de 7)
+                            for (int i = 1; i <= 31; i += 7) {
+                                for (int j = i; j < i + 7; j++) {
+                                    if (j <= 31) {
+                                        PdfPCell celdaDia = new PdfPCell(
+                                                new Phrase(String.format("%02d", j), ReporteUtil.fuenteEncabezado())
+                                        );
+                                        celdaDia.setBackgroundColor(colorPrincipal);
+                                        celdaDia.setHorizontalAlignment(Element.ALIGN_CENTER);
+                                        celdaDia.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                                        tablaMes.addCell(celdaDia);
+                                    } else {
+                                        tablaMes.addCell("");
+                                    }
+                                }
+
+                                // valores de los días
+                                for (int j = i; j < i + 7; j++) {
+                                    if (j <= 31) {
+                                        Method getter = PlanificacionHorarioMensualDTO.class.getMethod("getDia" + j);
+                                        String valor = (String) getter.invoke(mes);
+                                        tablaMes.addCell(ReporteUtil.celdaCentro(valor != null ? valor : ""));
+                                    } else {
+                                        tablaMes.addCell("");
+                                    }
+                                }
                             }
-                        }
 
-                        for (int j = i; j < i + 7; j++) {
-                            if (j <= 31) {
-                                Method getter = PlanificacionHorarioMensualDTO.class.getMethod("getDia" + j);
-                                String valor = (String) getter.invoke(mes);
-                                tablaMes.addCell(ReporteUtil.celdaCentro(valor != null ? valor : ""));
-                            } else {
-                                tablaMes.addCell("");
-                            }
+                            document.add(tablaMes);
+
+                            Paragraph espacioEntreEmpleados = new Paragraph("", new Font());
+                            espacioEntreEmpleados.setSpacingBefore(25f);
+                            document.add(espacioEntreEmpleados);
                         }
                     }
-
-                    document.add(tablaMes);
-                    Paragraph espacioEntreEmpleados = new Paragraph("", new Font());
-                    espacioEntreEmpleados.setSpacingBefore(25f); 
-                    document.add(espacioEntreEmpleados);
-
                 }
             }
 
+            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            throw e; // 400 si algún helper de entrada lo lanza
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // 500 uniforme
+            throw new ReportBuildException("No se pudo generar ReportePlanificacion.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
 

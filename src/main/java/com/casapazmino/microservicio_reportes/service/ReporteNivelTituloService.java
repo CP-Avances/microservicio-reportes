@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -28,62 +29,86 @@ public class ReporteNivelTituloService {
 
     // METODO QUE GENER EL PDF
     public byte[] generarReporteNivelTituloPDF(ReporteNivelesTitulosRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            // TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float[] WIDTHS = { 2f, 6f };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                    request.getUsuario(),
-                    request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()));
+                request.getUsuario(),
+                request.getFraseMarcaAgua(),
+                request.getColorPrincipal()
+            ));
             document.open();
 
-            // LOGO DE EMPRESA
+            // 2) Construcción (helpers existentes)
+            // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            // TITULO DE EMPRESA
+            // Títulos
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-
-            // TITULO DEL REPORTE
             document.add(ReporteUtil.crearTituloReporte("LISTA DE NIVELES DE TÍTULOS PROFESIONALES"));
 
-            // COLORES DE LA EMPRESA USADOS EN EL REPORTE
+            // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+            Color colorZebra     = ReporteUtil.colorZebraClaro();
 
-            // TABLA
+            // Tabla
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(40);
-            tabla.setWidths(new float[] { 2, 6 });
+            tabla.setWidths(WIDTHS);
             tabla.setSpacingBefore(10f);
 
-            // ENCABEZADOS DE LA TABLA
+            // Encabezados
             tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NIVEL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("NIVEL",  ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
-            // FILAS DE LA TABLA (CUERPO)
+            // Cuerpo (zebra)
             List<NivelTituloDTO> lista = request.getNivelesTitulos();
             boolean zebra = false;
-            for (NivelTituloDTO n : lista) {
-                Color bgColor = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(
-                        ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(n.getNombre(), ReporteUtil.fuenteTablaData(), bgColor));
-                zebra = !zebra;
+            if (lista != null) {
+                for (NivelTituloDTO n : lista) {
+                    Color fondo = zebra ? colorZebra : Color.WHITE;
+                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(n.getNombre(),             ReporteUtil.fuenteTablaData(), fondo));
+                    zebra = !zebra;
+                }
             }
 
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Si algún helper valida y falla, que el controller lo mapee (posible 400)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // 500 interno uniforme
+            throw new ReportBuildException("No se pudo generar ReporteNivelesTitulos.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
 

@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -28,11 +29,19 @@ public class ReporteCargosService {
     //          PDF (SIN CAMBIOS)
     // =========================
     public byte[] generarReportePDF(ReporteCargosRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float[] WIDTHS = { 1f, 4f };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4); // respetamos tu tamaño original
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
@@ -40,6 +49,7 @@ public class ReporteCargosService {
             ));
             document.open();
 
+            // 2) Construcción (helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
@@ -49,32 +59,49 @@ public class ReporteCargosService {
             document.add(ReporteUtil.crearTituloReporte("LISTA TIPO DE CARGOS"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+            Color colorZebra     = ReporteUtil.colorZebraClaro();
 
             PdfPTable tabla = new PdfPTable(2);
-            tabla.setWidthPercentage(50);
-            tabla.setWidths(new float[]{1, 4});
+            tabla.setWidthPercentage(50);   // respetamos tu diseño
+            tabla.setWidths(WIDTHS);
             tabla.setSpacingBefore(10f);
 
-            tabla.addCell(ReporteUtil.crearCelda("ITEM", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            // Encabezados
+            tabla.addCell(ReporteUtil.crearCelda("ITEM",   ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
             tabla.addCell(ReporteUtil.crearCelda("CARGOS", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
+            // Cuerpo (zebra)
             boolean zebra = false;
             for (CargoDTO cargo : request.getCargos()) {
                 Color fondo = zebra ? colorZebra : Color.WHITE;
                 tabla.addCell(ReporteUtil.crearCelda(String.valueOf(cargo.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(cargo.getCargo(), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(cargo.getCargo(),               ReporteUtil.fuenteTablaData(), fondo));
                 zebra = !zebra;
             }
 
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
-            writer.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // si algún helper valida y falla, dejamos que el controller lo trate (posible 400)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // fallo interno → 500 uniforme
+            throw new ReportBuildException("No se pudo generar ReporteCargos.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
 

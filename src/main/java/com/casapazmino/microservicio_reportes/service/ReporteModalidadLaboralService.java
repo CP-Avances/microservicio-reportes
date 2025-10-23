@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -28,18 +29,27 @@ public class ReporteModalidadLaboralService {
     //          PDF (sin cambios)
     // =========================
     public byte[] generarReportePDF(ReporteModalidadLaboralRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float[] WIDTHS = { 1f, 5f };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                    request.getUsuario(),
-                    request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
+                request.getUsuario(),
+                request.getFraseMarcaAgua(),
+                request.getColorPrincipal()
             ));
             document.open();
 
+            // 2) Construcción (helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
@@ -49,38 +59,54 @@ public class ReporteModalidadLaboralService {
             document.add(ReporteUtil.crearTituloReporte("MODALIDAD LABORAL"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+            Color colorZebra     = ReporteUtil.colorZebraClaro();
 
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(50);
-            tabla.setWidths(new float[]{1, 5});
+            tabla.setWidths(WIDTHS);
             tabla.setSpacingBefore(10f);
 
-            tabla.addCell(ReporteUtil.crearCelda("ITEM", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("MODALIDAD LABORAL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            // Encabezados
+            tabla.addCell(ReporteUtil.crearCelda("ITEM",               ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("MODALIDAD LABORAL",  ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
-            boolean zebra = false;
+            // Cuerpo (zebra)
             List<ModalidadLaboralDTO> lista = request.getModalidades();
+            boolean zebra = false;
             if (lista != null) {
                 for (ModalidadLaboralDTO modalidad : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
                     tabla.addCell(ReporteUtil.crearCelda(String.valueOf(modalidad.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(modalidad.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(modalidad.getDescripcion(),        ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
             }
 
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
-            writer.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Si algún helper valida y falla, dejamos que el controller mapee (posible 400)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // 500 interno uniforme
+            throw new ReportBuildException("No se pudo generar ReporteModalidadLaboral.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
-
     // =========================
     //          XLSX (idéntico al ExcelJS del front)
     // =========================

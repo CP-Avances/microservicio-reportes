@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -23,16 +24,23 @@ import java.util.List;
 
 @Service
 public class ReporteCiudadesService {
-
     // =========================
-    //          PDF (SIN CAMBIOS)
+    //          PDF 
     // =========================
     public byte[] generarReportePDF(ReporteCiudadesRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float[] WIDTHS = { 2f, 4f };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                 request.getUsuario(),
                 request.getFraseMarcaAgua(),
@@ -40,42 +48,61 @@ public class ReporteCiudadesService {
             ));
             document.open();
 
+            // 2) Construcción (helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-            if (logo != null) document.add(logo);
+            if (logo != null) {
+                document.add(logo);
+            }
 
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
             document.add(ReporteUtil.crearTituloReporte("LISTA DE CIUDADES"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+            Color colorZebra     = ReporteUtil.colorZebraClaro();
 
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(50);
-            tabla.setWidths(new float[]{2, 4});
+            tabla.setWidths(WIDTHS);
             tabla.setSpacingBefore(10f);
 
+            // Encabezados
             tabla.addCell(ReporteUtil.crearCelda("Provincia", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("Ciudad", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("Ciudad",    ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
+            // Cuerpo (zebra)
             boolean zebra = false;
             for (CiudadDTO ciudad : request.getCiudades()) {
                 Color fondo = zebra ? colorZebra : Color.WHITE;
                 tabla.addCell(ReporteUtil.crearCelda(ciudad.getProvincia(), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(ciudad.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(ciudad.getNombre(),    ReporteUtil.fuenteTablaData(), fondo));
                 zebra = !zebra;
             }
 
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
-            writer.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // si algún helper lanza IAEx, dejamos que el controller lo trate (posible 400)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // 500 uniforme
+            throw new ReportBuildException("No se pudo generar ReporteCiudades.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
-
     // =========================
     //          XLSX (idéntico al front)
     // =========================

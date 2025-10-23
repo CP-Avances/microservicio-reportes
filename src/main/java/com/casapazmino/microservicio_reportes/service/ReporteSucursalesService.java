@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -28,11 +29,25 @@ public class ReporteSucursalesService {
     //          PDF (SIN CAMBIOS)
     // =========================
     public byte[] generarReportePDF(ReporteSucursalesRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // ➊ DRY: constantes locales (mismo look & feel)
+        final String TITULO = "LISTA DE SUCURSALES";
+        final float[] WIDTHS = { 1.5f, 5f, 2f };
+        final int WIDTH_PERCENT_50 = 50;
+        final float SPACING_BEFORE = 10f;
+
+        final Color COLOR_PRIMARIO = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+        final Color COLOR_ZEBRA    = ReporteUtil.colorZebraClaro();
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
@@ -40,46 +55,61 @@ public class ReporteSucursalesService {
             ));
             document.open();
 
+            // 2) Construcción (helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-            document.add(ReporteUtil.crearTituloReporte("LISTA DE SUCURSALES"));
-
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+            document.add(ReporteUtil.crearTituloReporte(TITULO));
 
             PdfPTable tabla = new PdfPTable(3);
-            tabla.setWidthPercentage(50);
-            tabla.setWidths(new float[]{1.5f, 5f, 2f});
-            tabla.setSpacingBefore(10f);
+            tabla.setWidthPercentage(WIDTH_PERCENT_50);
+            tabla.setWidths(WIDTHS);
+            tabla.setSpacingBefore(SPACING_BEFORE);
 
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL / ESTABLECIMIENTO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("CIUDAD", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            // Encabezados
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO",                     ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL / ESTABLECIMIENTO", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.crearCelda("CIUDAD",                     ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
 
+            // Cuerpo con zebra
             boolean zebra = false;
             List<SucursalDTO> lista = request.getSucursales();
             if (lista != null) {
-                for (SucursalDTO sucursal : lista) {
-                    Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(sucursal.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(sucursal.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(sucursal.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
+                for (SucursalDTO s : lista) {
+                    Color fondo = zebra ? COLOR_ZEBRA : Color.WHITE;
+                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(s.getId()),  ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(s.getNombre(),              ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(s.getDescripcion(),         ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
             }
 
             document.add(tabla);
+
+            // 3) Cierre + retorno
             document.close();
-            writer.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validaciones de helpers → el controller podría responder 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Fallo interno uniforme → 500
+            throw new ReportBuildException("No se pudo generar ReporteSucursales.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
 

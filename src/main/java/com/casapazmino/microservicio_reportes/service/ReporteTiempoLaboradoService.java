@@ -3,6 +3,7 @@ package com.casapazmino.microservicio_reportes.service;
 import com.casapazmino.microservicio_reportes.model.ReporteTiempoLaborado.*;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
@@ -22,339 +23,273 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 public class ReporteTiempoLaboradoService {
 
         public byte[] generarReporteTiempoLaboradoPDF(ReporteTiempoLaboradoRequest request) {
-                try {
-                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                        Document document = new Document(PageSize.A4.rotate(), 40, 40, 30, 50);
-                        PdfWriter writer = PdfWriter.getInstance(document, baos);
-                        writer.setPageEvent(new ConfiguracionPaginaPDF(
-                                        request.getUsuario(),
-                                        request.getFraseMarcaAgua(),
-                                        request.getColorPrincipal()));
 
-                        document.open();
+        // ➊ DRY: constantes locales (look & feel intacto)
+        final String TITULO  = "REPORTE DE TIEMPO LABORADO - " + ("1".equals(request.getOpcionBusqueda()) ? "ACTIVOS" : "INACTIVOS");
+        final String PERIODO = "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin();
 
-                        // Logo y encabezado
-                        Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-                        if (logo != null)
-                                document.add(logo);
+        final float[] WIDTHS_COLORES   = { 3f, 1.5f, 1.5f, 2f, 2f };
+        final float[] WIDTHS_TITULO    = { 8f, 2f };
+        final float[] WIDTHS_INFO      = { 4f, 4f, 4f };
+        final float[] WIDTHS_ENC_DATA  = {
+                0.5f, 1.8f, // N°, FECHA
+                1.2f, 1.2f, 1.2f, 1.2f, // ENTRADA(HORARIO,TIMBRE), INICIO ALIM(HORARIO,TIMBRE)
+                1.2f, 1.2f, 1.2f, 1.2f, // FIN ALIM(HORARIO,TIMBRE), SALIDA(HORARIO,TIMBRE)
+                1.5f, 1.5f,             // TIEMPO PLANIFICADO (MINUTOS, HH:MM:SS)
+                1.5f, 1.5f              // TIEMPO LABORADO (MINUTOS, HH:MM:SS)
+        };
 
-                        document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-                        String titulo = "REPORTE DE TIEMPO LABORADO - "
-                                        + ("1".equals(request.getOpcionBusqueda()) ? "ACTIVOS" : "INACTIVOS");
-                        document.add(ReporteUtil.crearTituloReporte(titulo));
-                        document.add(ReporteUtil
-                                        .crearTituloPeriodo("PERIODO DEL: " + request.getFechaInicio() + " AL "
-                                                        + request.getFechaFin()));
+        final int COLS = 14;
+        final int WIDTH_PERCENT_100 = 100;
+        final float SPACING_AFTER_BLOQUE = 10f;
+        final float PADDING_TITULOS = 5f;
 
-                        Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-                        Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-                        Color zebraColor = ReporteUtil.colorZebraClaro();
+        final Color COLOR_PRIMARIO   = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+        final Color COLOR_SECUNDARIO = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+        final Color COLOR_ZEBRA      = ReporteUtil.colorZebraClaro();
+        final Color COLOR_FT         = new Color(0xEE4444);
+        final Color COLOR_TIEMPO_MENOR_PLAN = new Color(0x55EE44);
 
-                        // Contador
-                        AtomicInteger totalRegistros = new AtomicInteger();
-                        request.getGrupos().forEach(
-                                        grupo -> grupo.getEmpleados().forEach(emp -> {
-                                                totalRegistros.addAndGet(emp.getTLaborado().size());
-                                        }));
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
 
-                        // Tabla de codigos de color
-                        PdfPTable colores = new PdfPTable(5);
-                        colores.setWidthPercentage(100);
-                        colores.setWidths(new float[] { 3, 1.5f, 1.5f, 2, 2 });
+        try {
+                // 1) Inicialización
+                baos = new ByteArrayOutputStream();
+                document = new Document(PageSize.A4.rotate(), 40, 40, 30, 50);
+                writer = PdfWriter.getInstance(document, baos);
+                writer.setPageEvent(new ConfiguracionPaginaPDF(
+                        request.getUsuario(),
+                        request.getFraseMarcaAgua(),
+                        request.getColorPrincipal()
+                ));
+                document.open();
 
-                        colores.addCell(ReporteUtil.celdaEncabezado("CÓDIGO DE COLOR", Color.WHITE));
-                        colores.addCell(ReporteUtil.celdaEncabezado("FALTA TIMBRE", Color.WHITE));
-                        colores.addCell(ReporteUtil.celdaEncabezado(" ", new Color(0xEE4444)));
-                        colores.addCell(ReporteUtil.celdaEncabezado("TIEMPO LABORADO MENOR AL PLANIFICADO",
-                                        Color.WHITE));
-                        colores.addCell(ReporteUtil.celdaEncabezado(" ", new Color(0x55EE44)));
+                // 2) Construcción (helpers existentes)
+                Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
+                if (logo != null) document.add(logo);
 
-                        colores.setSpacingAfter(10f);
-                        document.add(colores);
+                document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+                document.add(ReporteUtil.crearTituloReporte(TITULO));
+                document.add(ReporteUtil.crearTituloPeriodo(PERIODO));
 
-                        // Tabla de título y contador
-                        PdfPTable tablaTitulo = new PdfPTable(2);
-                        tablaTitulo.setWidthPercentage(100);
-                        tablaTitulo.setWidths(new float[] { 8, 2 });
-                        tablaTitulo.setSpacingAfter(10f);
+                // Contador global de registros
+                AtomicInteger totalRegistros = new AtomicInteger();
+                if (request.getGrupos() != null) {
+                request.getGrupos().forEach(g -> {
+                        if (g.getEmpleados() != null) {
+                        g.getEmpleados().forEach(emp ->
+                                totalRegistros.addAndGet(emp.getTLaborado() != null ? emp.getTLaborado().size() : 0)
+                        );
+                        }
+                });
+                }
 
-                        PdfPCell celdaTitulo = new PdfPCell(
-                                        new Phrase("LISTA DE EMPLEADOS", ReporteUtil.fuenteEncabezado()));
-                        celdaTitulo.setBackgroundColor(colorSecundario);
-                        celdaTitulo.setPadding(5f);
-                        celdaTitulo.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
-                        tablaTitulo.addCell(celdaTitulo);
+                // Leyenda de colores
+                PdfPTable colores = new PdfPTable(5);
+                colores.setWidthPercentage(WIDTH_PERCENT_100);
+                colores.setWidths(WIDTHS_COLORES);
+                colores.addCell(ReporteUtil.celdaEncabezado("CÓDIGO DE COLOR", Color.WHITE));
+                colores.addCell(ReporteUtil.celdaEncabezado("FALTA TIMBRE", Color.WHITE));
+                colores.addCell(ReporteUtil.celdaEncabezado(" ", COLOR_FT));
+                colores.addCell(ReporteUtil.celdaEncabezado("TIEMPO LABORADO MENOR AL PLANIFICADO", Color.WHITE));
+                colores.addCell(ReporteUtil.celdaEncabezado(" ", COLOR_TIEMPO_MENOR_PLAN));
+                colores.setSpacingAfter(SPACING_AFTER_BLOQUE);
+                document.add(colores);
 
-                        PdfPCell celdaContador = new PdfPCell(
-                                        new Phrase("N° Registros: " + totalRegistros.get(),
-                                                        ReporteUtil.fuenteEncabezado()));
-                        celdaContador.setBackgroundColor(colorSecundario);
-                        celdaContador.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                        celdaContador.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                        celdaContador.setPadding(5f);
-                        celdaContador.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.RIGHT);
-                        tablaTitulo.addCell(celdaContador);
+                // Título + contador
+                PdfPTable tablaTitulo = new PdfPTable(2);
+                tablaTitulo.setWidthPercentage(WIDTH_PERCENT_100);
+                tablaTitulo.setWidths(WIDTHS_TITULO);
 
-                        document.add(tablaTitulo);
+                PdfPCell celdaTitulo = new PdfPCell(new Phrase("LISTA DE EMPLEADOS", ReporteUtil.fuenteEncabezado()));
+                celdaTitulo.setBackgroundColor(COLOR_SECUNDARIO);
+                celdaTitulo.setPadding(PADDING_TITULOS);
+                celdaTitulo.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
+                tablaTitulo.addCell(celdaTitulo);
 
-                        for (GrupoTiempoDTO grupo : request.getGrupos()) {
-                                for (EmpleadoTiempoDTO emp : grupo.getEmpleados()) {
+                PdfPCell celdaContador = new PdfPCell(new Phrase("N° Registros: " + totalRegistros.get(), ReporteUtil.fuenteEncabezado()));
+                celdaContador.setBackgroundColor(COLOR_SECUNDARIO);
+                celdaContador.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                celdaContador.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                celdaContador.setPadding(PADDING_TITULOS);
+                celdaContador.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.RIGHT);
+                tablaTitulo.addCell(celdaContador);
 
-                                        // TABLA INFORMACION DEL EMPLEADO
-                                        PdfPTable infoEmpleado = new PdfPTable(3);
-                                        infoEmpleado.setWidthPercentage(100);
-                                        infoEmpleado.setWidths(new float[] { 4, 4, 4 });
+                tablaTitulo.setSpacingAfter(SPACING_AFTER_BLOQUE);
+                document.add(tablaTitulo);
 
-                                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:",
-                                                        emp.getIdentificacion(), zebraColor));
-                                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:",
-                                                        emp.getApellido() + " " + emp.getNombre(), zebraColor));
-                                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:", emp.getCodigo(),
-                                                        zebraColor));
-                                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:",
-                                                        emp.getRegimen(), zebraColor));
-                                        infoEmpleado
-                                                        .addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:",
-                                                                        emp.getDepartamento(), zebraColor));
-                                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:", emp.getCargo(),
-                                                        zebraColor));
+                // Por grupo / empleado
+                if (request.getGrupos() != null) {
+                for (GrupoTiempoDTO grupo : request.getGrupos()) {
+                        if (grupo.getEmpleados() == null) continue;
 
-                                        PdfPTable tablaContenedora = new PdfPTable(1);
-                                        tablaContenedora.setWidthPercentage(100);
-                                        PdfPCell contenedor = new PdfPCell(infoEmpleado);
-                                        contenedor.setPadding(0);
-                                        contenedor.setBorder(Rectangle.BOX);
-                                        tablaContenedora.addCell(contenedor);
-                                        tablaContenedora.setSpacingAfter(5f);
-                                        document.add(tablaContenedora);
+                        for (EmpleadoTiempoDTO emp : grupo.getEmpleados()) {
 
-                                        // TABLA DE ASISTENCIA POR DÍA (encabezado en una sola tabla con 16 columnas)
-                                        PdfPTable encabezado = new PdfPTable(14);
-                                        encabezado.setWidthPercentage(100);
-                                        encabezado.setWidths(new float[] { 0.5f, 1.8f,
-                                                        1.2f, 1.2f, 1.2f, 1.2f,
-                                                        1.2f, 1.2f, 1.2f, 1.2f,
-                                                        1.5f, 1.5f, 1.5f, 1.5f });
-                                        // Fila 1 - encabezados agrupados con rowspan o colspan
-                                        encabezado.addCell(
-                                                        ReporteUtil.crearCelda("N°", ReporteUtil.fuenteEncabezado(),
-                                                                        colorPrincipal, 2, 1));
-                                        encabezado.addCell(
-                                                        ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(),
-                                                                        colorPrincipal, 2, 1));
+                        // Info empleado con borde exterior
+                        PdfPTable infoEmpleado = new PdfPTable(3);
+                        infoEmpleado.setWidthPercentage(WIDTH_PERCENT_100);
+                        infoEmpleado.setWidths(WIDTHS_INFO);
 
-                                        encabezado.addCell(
-                                                        ReporteUtil.crearCelda("ENTRADA",
-                                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal,
-                                                                        1, 2));
-                                        encabezado.addCell(ReporteUtil.crearCelda("INICIO ALIMENTACIÓN",
-                                                        ReporteUtil.fuenteEncabezado(),
-                                                        colorPrincipal, 1, 2));
-                                        encabezado.addCell(ReporteUtil.crearCelda("FIN ALIMENTACIÓN",
-                                                        ReporteUtil.fuenteEncabezado(),
-                                                        colorPrincipal, 1, 2));
-                                        encabezado.addCell(
-                                                        ReporteUtil.crearCelda("SALIDA", ReporteUtil.fuenteEncabezado(),
-                                                                        colorPrincipal, 1, 2));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:",        emp.getIdentificacion(),               COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:",    emp.getApellido() + " " + emp.getNombre(), COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:",         emp.getCodigo(),                      COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", emp.getRegimen(),                 COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:",    emp.getDepartamento(),            COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:",           emp.getCargo(),                   COLOR_ZEBRA));
 
-                                        encabezado.addCell(ReporteUtil.crearCelda("TIEMPO PLANIFICADO",
-                                                        ReporteUtil.fuenteEncabezado(),
-                                                        colorPrincipal, 2, 2));
+                        PdfPTable tablaContenedora = new PdfPTable(1);
+                        tablaContenedora.setWidthPercentage(WIDTH_PERCENT_100);
+                        PdfPCell contenedor = new PdfPCell(infoEmpleado);
+                        contenedor.setPadding(0);
+                        contenedor.setBorder(Rectangle.BOX);
+                        tablaContenedora.addCell(contenedor);
+                        tablaContenedora.setSpacingAfter(5f);
+                        document.add(tablaContenedora);
 
-                                        encabezado.addCell(ReporteUtil.crearCelda("TIEMPO LABORADO",
-                                                        ReporteUtil.fuenteEncabezado(),
-                                                        colorPrincipal, 2, 2));
+                        // Encabezado (agrupado) en 14 columnas
+                        PdfPTable encabezado = new PdfPTable(COLS);
+                        encabezado.setWidthPercentage(WIDTH_PERCENT_100);
+                        encabezado.setWidths(WIDTHS_ENC_DATA);
 
-                                        // Fila 2 - subcolumnas debajo de agrupados
-                                        for (int i = 0; i < 4; i++) {
-                                                encabezado.addCell(
-                                                                ReporteUtil.crearCelda("HORARIO",
-                                                                                ReporteUtil.fuenteEncabezado(),
-                                                                                colorPrincipal));
-                                                encabezado.addCell(
-                                                                ReporteUtil.crearCelda("TIMBRE",
-                                                                                ReporteUtil.fuenteEncabezado(),
-                                                                                colorSecundario));
-                                        }
+                        encabezado.addCell(ReporteUtil.crearCelda("N°",    ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO, 2, 1));
+                        encabezado.addCell(ReporteUtil.crearCelda("FECHA",  ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO, 2, 1));
 
-                                        encabezado.addCell(
-                                                        ReporteUtil.crearCelda("MINUTOS",
-                                                                        ReporteUtil.fuenteEncabezado(),
-                                                                        colorSecundario));
-                                        encabezado.addCell(
-                                                        ReporteUtil.crearCelda("HH:MM:SS",
-                                                                        ReporteUtil.fuenteEncabezado(),
-                                                                        colorSecundario));
+                        encabezado.addCell(ReporteUtil.crearCelda("ENTRADA",            ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO, 1, 2));
+                        encabezado.addCell(ReporteUtil.crearCelda("INICIO ALIMENTACIÓN", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO, 1, 2));
+                        encabezado.addCell(ReporteUtil.crearCelda("FIN ALIMENTACIÓN",    ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO, 1, 2));
+                        encabezado.addCell(ReporteUtil.crearCelda("SALIDA",              ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO, 1, 2));
 
-                                        encabezado.addCell(
-                                                        ReporteUtil.crearCelda("MINUTOS",
-                                                                        ReporteUtil.fuenteEncabezado(),
-                                                                        colorSecundario));
-                                        encabezado.addCell(
-                                                        ReporteUtil.crearCelda("HH:MM:SS",
-                                                                        ReporteUtil.fuenteEncabezado(),
-                                                                        colorSecundario));
+                        encabezado.addCell(ReporteUtil.crearCelda("TIEMPO PLANIFICADO", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO, 2, 2));
+                        encabezado.addCell(ReporteUtil.crearCelda("TIEMPO LABORADO",    ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO, 2, 2));
 
-                                        encabezado.setSpacingAfter(0f);
-                                        document.add(encabezado);
+                        // Subcolumnas
+                        for (int i = 0; i < 4; i++) {
+                                encabezado.addCell(ReporteUtil.crearCelda("HORARIO", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
+                                encabezado.addCell(ReporteUtil.crearCelda("TIMBRE",  ReporteUtil.fuenteEncabezado(), COLOR_SECUNDARIO));
+                        }
+                        encabezado.addCell(ReporteUtil.crearCelda("MINUTOS",  ReporteUtil.fuenteEncabezado(), COLOR_SECUNDARIO));
+                        encabezado.addCell(ReporteUtil.crearCelda("HH:MM:SS", ReporteUtil.fuenteEncabezado(), COLOR_SECUNDARIO));
+                        encabezado.addCell(ReporteUtil.crearCelda("MINUTOS",  ReporteUtil.fuenteEncabezado(), COLOR_SECUNDARIO));
+                        encabezado.addCell(ReporteUtil.crearCelda("HH:MM:SS", ReporteUtil.fuenteEncabezado(), COLOR_SECUNDARIO));
 
-                                        // TABLA DE DATOS
-                                        PdfPTable tablaData = new PdfPTable(14);
-                                        tablaData.setWidthPercentage(100);
-                                        tablaData.setWidths(new float[] { 0.5f, 1.8f,
-                                                        1.2f, 1.2f, 1.2f, 1.2f,
-                                                        1.2f, 1.2f, 1.2f, 1.2f,
-                                                        1.5f, 1.5f, 1.5f, 1.5f });
+                        encabezado.setSpacingAfter(0f);
+                        document.add(encabezado);
 
-                                        Color colorFT = new Color(0xEE4444);
-                                        Color colorTiempoMenorPlani = new Color(0x55EE44);
+                        // Datos
+                        PdfPTable tablaData = new PdfPTable(COLS);
+                        tablaData.setWidthPercentage(WIDTH_PERCENT_100);
+                        tablaData.setWidths(WIDTHS_ENC_DATA);
 
-                                        int contador = 1;
-                                        double totalPlanificadosMin = 0;
-                                        double totalLaboradosMin = 0;
+                        int contador = 1;
+                        double totalPlanificadosMin = 0d;
+                        double totalLaboradosMin    = 0d;
 
-                                        for (RegistroTiempoDTO reg : emp.getTLaborado()) {
-                                                Color fondo = (contador % 2 == 0) ? zebraColor : Color.WHITE;
+                        if (emp.getTLaborado() != null) {
+                                for (RegistroTiempoDTO reg : emp.getTLaborado()) {
+                                Color fondo = (contador % 2 == 0) ? COLOR_ZEBRA : Color.WHITE;
 
-                                                tablaData.addCell(
-                                                                ReporteUtil.crearCelda(String.valueOf(contador),
-                                                                                ReporteUtil.fuenteTexto(), fondo));
-                                                tablaData.addCell(ReporteUtil.crearCelda(
-                                                                ReporteUtil.formatearFechaConDia(
-                                                                                reg.getEntrada().getFecha_horario()),
-                                                                ReporteUtil.fuenteTexto(), fondo));
+                                tablaData.addCell(ReporteUtil.crearCelda(String.valueOf(contador), ReporteUtil.fuenteTexto(), fondo));
+                                tablaData.addCell(ReporteUtil.crearCelda(
+                                        ReporteUtil.formatearFechaConDia(reg.getEntrada().getFecha_horario()),
+                                        ReporteUtil.fuenteTexto(), fondo));
 
-                                                // ENTRADA
-                                                tablaData.addCell(ReporteUtil.crearCelda(
-                                                                extraerHora(reg.getEntrada().getFecha_hora_horario()),
-                                                                ReporteUtil.fuenteTexto(), fondo));
-                                                tablaData.addCell(ReporteUtil.crearCelda(
-                                                                formatearTimbre(reg.getEntrada()
-                                                                                .getFecha_hora_horario(),
-                                                                                reg.getEntrada().getFecha_hora_timbre()),
-                                                                ReporteUtil.fuenteTexto(),
-                                                                getColorTimbre(
-                                                                                formatearTimbre(reg.getEntrada()
-                                                                                                .getFecha_hora_horario(),
-                                                                                                reg.getEntrada().getFecha_hora_timbre()),
-                                                                                fondo, colorFT)));
+                                // ENTRADA
+                                tablaData.addCell(ReporteUtil.crearCelda(
+                                        extraerHora(reg.getEntrada().getFecha_hora_horario()),
+                                        ReporteUtil.fuenteTexto(), fondo));
+                                String tEntrada = formatearTimbre(reg.getEntrada().getFecha_hora_horario(), reg.getEntrada().getFecha_hora_timbre());
+                                tablaData.addCell(ReporteUtil.crearCelda(
+                                        tEntrada, ReporteUtil.fuenteTexto(), getColorTimbre(tEntrada, fondo, COLOR_FT)));
 
-                                                // INICIO ALIMENTACIÓN
-                                                tablaData.addCell(
-                                                                ReporteUtil.crearCelda(extraerHora(reg
-                                                                                .getInicioAlimentacion()
-                                                                                .getFecha_hora_horario()),
-                                                                                ReporteUtil.fuenteTexto(), fondo));
-                                                tablaData.addCell(ReporteUtil.crearCelda(
-                                                                formatearTimbre(reg.getInicioAlimentacion()
-                                                                                .getFecha_hora_horario(),
-                                                                                reg.getInicioAlimentacion()
-                                                                                                .getFecha_hora_timbre()),
-                                                                ReporteUtil.fuenteTexto(),
-                                                                getColorTimbre(
-                                                                                formatearTimbre(reg
-                                                                                                .getInicioAlimentacion()
-                                                                                                .getFecha_hora_horario(),
-                                                                                                reg.getInicioAlimentacion()
-                                                                                                                .getFecha_hora_timbre()),
-                                                                                fondo, colorFT)));
+                                // INICIO ALIMENTACIÓN
+                                tablaData.addCell(ReporteUtil.crearCelda(
+                                        extraerHora(reg.getInicioAlimentacion().getFecha_hora_horario()),
+                                        ReporteUtil.fuenteTexto(), fondo));
+                                String tIniAli = formatearTimbre(reg.getInicioAlimentacion().getFecha_hora_horario(), reg.getInicioAlimentacion().getFecha_hora_timbre());
+                                tablaData.addCell(ReporteUtil.crearCelda(
+                                        tIniAli, ReporteUtil.fuenteTexto(), getColorTimbre(tIniAli, fondo, COLOR_FT)));
 
-                                                // FIN ALIMENTACIÓN
-                                                tablaData.addCell(
-                                                                ReporteUtil.crearCelda(extraerHora(reg
-                                                                                .getFinAlimentacion()
-                                                                                .getFecha_hora_horario()),
-                                                                                ReporteUtil.fuenteTexto(), fondo));
-                                                tablaData.addCell(ReporteUtil.crearCelda(
-                                                                formatearTimbre(reg.getFinAlimentacion()
-                                                                                .getFecha_hora_horario(),
-                                                                                reg.getFinAlimentacion()
-                                                                                                .getFecha_hora_timbre()),
-                                                                ReporteUtil.fuenteTexto(),
-                                                                getColorTimbre(
-                                                                                formatearTimbre(reg.getFinAlimentacion()
-                                                                                                .getFecha_hora_horario(),
-                                                                                                reg.getFinAlimentacion()
-                                                                                                                .getFecha_hora_timbre()),
-                                                                                fondo, colorFT)));
+                                // FIN ALIMENTACIÓN
+                                tablaData.addCell(ReporteUtil.crearCelda(
+                                        extraerHora(reg.getFinAlimentacion().getFecha_hora_horario()),
+                                        ReporteUtil.fuenteTexto(), fondo));
+                                String tFinAli = formatearTimbre(reg.getFinAlimentacion().getFecha_hora_horario(), reg.getFinAlimentacion().getFecha_hora_timbre());
+                                tablaData.addCell(ReporteUtil.crearCelda(
+                                        tFinAli, ReporteUtil.fuenteTexto(), getColorTimbre(tFinAli, fondo, COLOR_FT)));
 
-                                                // SALIDA
-                                                tablaData.addCell(ReporteUtil.crearCelda(
-                                                                extraerHora(reg.getSalida().getFecha_hora_horario()),
-                                                                ReporteUtil.fuenteTexto(), fondo));
-                                                tablaData.addCell(ReporteUtil.crearCelda(
-                                                                formatearTimbre(reg.getSalida().getFecha_hora_horario(),
-                                                                                reg.getSalida().getFecha_hora_timbre()),
-                                                                ReporteUtil.fuenteTexto(),
-                                                                getColorTimbre(
-                                                                                formatearTimbre(reg.getSalida()
-                                                                                                .getFecha_hora_horario(),
-                                                                                                reg.getSalida().getFecha_hora_timbre()),
-                                                                                fondo, colorFT)));
+                                // SALIDA
+                                tablaData.addCell(ReporteUtil.crearCelda(
+                                        extraerHora(reg.getSalida().getFecha_hora_horario()),
+                                        ReporteUtil.fuenteTexto(), fondo));
+                                String tSalida = formatearTimbre(reg.getSalida().getFecha_hora_horario(), reg.getSalida().getFecha_hora_timbre());
+                                tablaData.addCell(ReporteUtil.crearCelda(
+                                        tSalida, ReporteUtil.fuenteTexto(), getColorTimbre(tSalida, fondo, COLOR_FT)));
 
-                                                // TIEMPO PLANIFICADO
-                                                double minPlanificado = Double.parseDouble(reg.getMinPlanificados());
-                                                double minLaborado = Double.parseDouble(reg.getMinLaborados());
-                                                Color fondoTiempoLaborado = minLaborado < minPlanificado ? colorTiempoMenorPlani : fondo;
+                                // TIEMPO PLANIFICADO / LABORADO
+                                double minPlanificado = Double.parseDouble(reg.getMinPlanificados());
+                                double minLaborado    = Double.parseDouble(reg.getMinLaborados());
+                                Color fondoLaborado   = minLaborado < minPlanificado ? COLOR_TIEMPO_MENOR_PLAN : fondo;
 
-                                                tablaData.addCell(ReporteUtil.celdaCentro(reg.getTiempoPlanificado(), fondo));
-                                                tablaData.addCell(ReporteUtil.celdaCentro(reg.getMinPlanificados(), fondo));
+                                tablaData.addCell(ReporteUtil.celdaCentro(reg.getMinPlanificados(), fondo));
+                                tablaData.addCell(ReporteUtil.celdaCentro(reg.getTiempoPlanificado(), fondo));
+                                tablaData.addCell(ReporteUtil.celdaCentro(reg.getMinLaborados(), fondoLaborado));
+                                tablaData.addCell(ReporteUtil.celdaCentro(reg.getTiempoLaborado(), fondoLaborado));
 
-                                                // TIEMPO LABORADO
-                                                tablaData.addCell(ReporteUtil.celdaCentro(reg.getTiempoLaborado(), fondoTiempoLaborado));
-                                                tablaData.addCell(ReporteUtil.celdaCentro(reg.getMinLaborados(), fondoTiempoLaborado));
-
-                                                
-                                                contador++;
-                                                
-                                                totalPlanificadosMin += Double.parseDouble(reg.getMinPlanificados());
-                                                totalLaboradosMin += Double.parseDouble(reg.getMinLaborados());
-
-                                        }
-
-                                        // Vacías hasta columna 10
-                                        for (int i = 0; i < 9; i++) {
-                                                PdfPCell celdaVacia = ReporteUtil.crearCelda("",
-                                                                ReporteUtil.fuenteTexto(), Color.WHITE);
-                                                celdaVacia.setBorder(Rectangle.NO_BORDER);
-                                                tablaData.addCell(celdaVacia);
-                                        }
-
-                                        // Celda: TOTAL (Texto)
-                                        tablaData.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(),
-                                                        Color.WHITE));
-
-                                        // Totales de TIEMPO PLANIFICADO
-                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                        convertirMinutosATiempo(totalPlanificadosMin),
-                                                        ReporteUtil.fuenteTexto(), Color.WHITE));
-                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                        String.format("%.2f", totalPlanificadosMin).replace(",", "."),
-                                                        ReporteUtil.fuenteTexto(), Color.WHITE));
-
-                                        // Totales de TIEMPO LABORADO
-                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                        convertirMinutosATiempo(totalLaboradosMin),
-                                                        ReporteUtil.fuenteTexto(), Color.WHITE));
-                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                        String.format("%.2f", totalLaboradosMin).replace(",", "."),
-                                                        ReporteUtil.fuenteTexto(), Color.WHITE));
-
-                                        tablaData.setSpacingAfter(10f);
-                                        document.add(tablaData);
-
+                                totalPlanificadosMin += minPlanificado;
+                                totalLaboradosMin    += minLaborado;
+                                contador++;
                                 }
-
                         }
 
-                        document.close();
-                        return baos.toByteArray();
+                        // Fila de totales (alineada con 14 columnas)
+                        for (int i = 0; i < 9; i++) {
+                                PdfPCell vacia = ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(), Color.WHITE);
+                                vacia.setBorder(Rectangle.NO_BORDER);
+                                tablaData.addCell(vacia);
+                        }
+                        tablaData.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), Color.WHITE));
 
-                } catch (Exception e) {
-                        e.printStackTrace();
-                        return null;
+                        // Totales Planificado (HH:MM:SS y MINUTOS)
+                        tablaData.addCell(ReporteUtil.crearCelda(String.format("%.2f", totalPlanificadosMin).replace(",", "."), ReporteUtil.fuenteTexto(), Color.WHITE));
+                        tablaData.addCell(ReporteUtil.crearCelda(convertirMinutosATiempo(totalPlanificadosMin),         ReporteUtil.fuenteTexto(), Color.WHITE));
+
+                        // Totales Laborado (HH:MM:SS y MINUTOS)
+                        tablaData.addCell(ReporteUtil.crearCelda(String.format("%.2f", totalLaboradosMin).replace(",", "."),  ReporteUtil.fuenteTexto(), Color.WHITE));
+                        tablaData.addCell(ReporteUtil.crearCelda(convertirMinutosATiempo(totalLaboradosMin),              ReporteUtil.fuenteTexto(), Color.WHITE));
+
+                        tablaData.setSpacingAfter(SPACING_AFTER_BLOQUE);
+                        document.add(tablaData);
+                        }
+                }
+                }
+
+                // 3) Cierre + retorno
+                document.close();
+                return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+                // Validaciones de helpers → el controller decidirá 400 si aplica
+                throw e;
+        } catch (Exception e) {
+                // Fallo interno uniforme → 500
+                throw new ReportBuildException("No se pudo generar ReporteTiempoLaborado.pdf", e);
+        } finally {
+                // 4) Ciclo de recursos garantizado
+                if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+                }
+                if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+                }
+                if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
                 }
         }
+        }
+
+
 
         public byte[] generarReporteTiempoLaboradoExcel(ReporteTiempoLaboradoRequest request) {
                 System.out.println("Generando XLSX de Tiempo Laborado...");

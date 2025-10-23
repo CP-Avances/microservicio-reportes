@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -25,14 +26,28 @@ import java.util.List;
 public class ReporteProvinciasService {
 
     // =========================
-    //          PDF (SIN CAMBIOS)
+    //          PDF 
     // =========================
     public byte[] generarReportePDF(ReporteProvinciasRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // ➊ DRY: constantes locales (look & feel NO cambia)
+        final String TITULO = "LISTA DE PROVINCIAS";
+        final float[] WIDTHS = { 2f, 4f };     // mismas proporciones
+        final int WIDTH_PERCENT = 50;          // mismo 50%
+        final float SPACING_BEFORE = 10f;
+
+        final Color COLOR_PRIMARIO = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+        final Color COLOR_ZEBRA    = ReporteUtil.colorZebraClaro();
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización de recursos
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4); // mismo tamaño
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
@@ -40,45 +55,64 @@ public class ReporteProvinciasService {
             ));
             document.open();
 
+            // 2) Construcción (usando helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-            document.add(ReporteUtil.crearTituloReporte("LISTA DE PROVINCIAS"));
 
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+            Paragraph titulo = ReporteUtil.crearTituloReporte(TITULO);
+            titulo.setAlignment(Element.ALIGN_CENTER);
+            document.add(titulo);
 
             PdfPTable tabla = new PdfPTable(2);
-            tabla.setWidthPercentage(50);
-            tabla.setWidths(new float[]{2, 4});
-            tabla.setSpacingBefore(10f);
+            tabla.setWidthPercentage(WIDTH_PERCENT);
+            tabla.setWidths(WIDTHS);
+            tabla.setSpacingBefore(SPACING_BEFORE);
 
-            tabla.addCell(ReporteUtil.crearCelda("PAÍS", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("PROVINCIAS", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            // Encabezados
+            tabla.addCell(ReporteUtil.crearCelda("PAÍS",       ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.crearCelda("PROVINCIAS", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
 
+            // Cuerpo con zebra
             boolean zebra = false;
             List<ProvinciaDTO> lista = request.getProvincias();
-            for (ProvinciaDTO provincia : lista) {
-                Color fondo = zebra ? colorZebra : null;
-                tabla.addCell(ReporteUtil.crearCelda(provincia.getPais(), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(provincia.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
-                zebra = !zebra;
+            if (lista != null) {
+                for (ProvinciaDTO provincia : lista) {
+                    Color fondo = zebra ? COLOR_ZEBRA : null; // null conserva blanco
+                    tabla.addCell(ReporteUtil.crearCelda(provincia.getPais(),   ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(provincia.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                    zebra = !zebra;
+                }
             }
 
             document.add(tabla);
+
+            // 3) Cierre + retorno
             document.close();
-            writer.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validaciones de helpers → que el controller decida 400 si corresponde
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Fallo interno uniforme → 500
+            throw new ReportBuildException("No se pudo generar ReporteProvincias.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
-
     // =========================
     //          XLSX (igual al ExcelJS del front)
     // =========================

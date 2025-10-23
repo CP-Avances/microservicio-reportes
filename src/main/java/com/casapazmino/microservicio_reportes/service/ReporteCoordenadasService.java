@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -27,68 +28,91 @@ public class ReporteCoordenadasService {
 
     //METODO QUE GENERA EL PDF
     public byte[] generarReportePDF(ReporteCoordenadasRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            //TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float[] WIDTHS = { 1.8f, 3f, 5.1f, 5.1f };
+        final String[] HEADERS = { "Código", "Descripción", "Latitud", "Longitud" };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            Document doc = new Document(PageSize.A4); // alias local para claridad, pero mantenemos referencia en 'document'
+            document = doc;
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                    request.getUsuario(),
-                    request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
+                request.getUsuario(),
+                request.getFraseMarcaAgua(),
+                request.getColorPrincipal()
             ));
             document.open();
 
-            //LOGO DE EMPRESA
+            // 2) Construcción (helpers existentes)
+            // Logo (opcional)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            //TITULO DE EMPRESA
+            // Títulos
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-            
-            //TITULO DE REPORTE
             document.add(ReporteUtil.crearTituloReporte("Lista de coordenadas geográficas"));
 
-            //COLORES DE LA EMPRESA USADOS EN EL REPORTE
+            // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color zebraColor = ReporteUtil.colorZebraClaro();
+            Color zebraColor     = ReporteUtil.colorZebraClaro();
 
-            //TABLA
+            // Tabla
             PdfPTable tabla = new PdfPTable(4);
             tabla.setWidthPercentage(60);
-            tabla.setWidths(new float[]{1.8f, 3f, 5.1f, 5.1f});
+            tabla.setWidths(WIDTHS);
             tabla.setSpacingBefore(10f);
 
-            //ENCABEZADOS DE LA TABLA
-            String[] headers = {"Código", "Descripción", "Latitud", "Longitud"};
-            for (String col : headers) {
-                tabla.addCell(ReporteUtil.crearCelda(col, ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            // Encabezados
+            for (String h : HEADERS) {
+                tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
             }
 
-            //FILAS DE LA TABLA
+            // Filas (zebra)
             boolean zebra = false;
             for (CoordenadaDTO c : request.getCoordenadas()) {
-                Color fondo = zebra ? zebraColor : null;
+                Color fondo = zebra ? zebraColor : Color.WHITE;
                 zebra = !zebra;
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(c.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(c.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(c.getLatitud(), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(c.getLongitud(), ReporteUtil.fuenteTablaData(), fondo));
+
+                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(c.getId()),    ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(c.getDescripcion(),           ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(c.getLatitud(),               ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(c.getLongitud(),              ReporteUtil.fuenteTablaData(), fondo));
             }
 
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Si algún helper valida y falla, que el controller decida (posible 400)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // 500 uniforme
+            throw new ReportBuildException("No se pudo generar ReporteCoordenadas.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
-
     // =========================
     //          XLSX (idéntico al front)
     // =========================

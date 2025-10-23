@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -28,62 +29,86 @@ public class ReporteVacunaService {
 
     // METODO QUE GENERA EL PDF
     public byte[] generarReporteVacunasPDF(ReporteVacunasRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        // DRY: constantes locales
+        final float[] WIDTHS_TABLA     = { 2f, 6f };
+        final float   PORC_ANCHO_TABLA = 45f;
+        final String  TITULO_REPORTE   = "LISTA TIPOS DE VACUNAS";
 
-            // TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // Colores calculados una sola vez
+        final Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+        final Color colorZebra     = ReporteUtil.colorZebraClaro();
+
+        Document document = null;
+        PdfWriter writer  = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización de recursos PDF
+            baos     = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4, 40, 40, 30, 50);
+            writer   = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()));
+                    request.getColorPrincipal()
+            ));
             document.open();
 
-            // LOGO DE EMPRESA
+            // 2) Construcción (helpers existentes; no cambiamos diseño)
+            // Logo de empresa
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            // TITULO DE EMPRESA
+            // Títulos
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte(TITULO_REPORTE));
 
-            // TITUTLO DE REPORTE
-            document.add(ReporteUtil.crearTituloReporte("LISTA TIPOS DE VACUNAS"));
-
-            // COLORES DE LA EMRPESA USADOS EN EL REPORTE
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
-
-            // TABLA
+            // Tabla principal
             PdfPTable tabla = new PdfPTable(2);
-            tabla.setWidthPercentage(45);
-            tabla.setWidths(new float[] { 2, 6 });
+            tabla.setWidthPercentage(PORC_ANCHO_TABLA);
+            tabla.setWidths(WIDTHS_TABLA);
             tabla.setSpacingBefore(10f);
 
-            // ENCABEZADOS DE LA TABLA
+            // Encabezados
             tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
             tabla.addCell(ReporteUtil.crearCelda("NOMBRE", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
-            // FILAS DE LA TABLA (CUERPO)
+            // Filas (zebra) – manteniendo el sort por id
             List<VacunaDTO> lista = request.getVacunas();
             lista.sort(Comparator.comparingInt(VacunaDTO::getId));
             boolean zebra = false;
             for (VacunaDTO v : lista) {
-                Color bgColor = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(
-                        ReporteUtil.crearCelda(String.valueOf(v.getId()), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(v.getNombre(), ReporteUtil.fuenteTablaData(), bgColor));
+                Color bg = zebra ? colorZebra : Color.WHITE;
+                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(v.getId()), ReporteUtil.fuenteTablaData(), bg));
+                tabla.addCell(ReporteUtil.crearCelda(v.getNombre(),               ReporteUtil.fuenteTablaData(), bg));
                 zebra = !zebra;
             }
+
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Si algún helper valida y lanza IAEx → que el controller decida 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Fallo interno → 500 uniforme
+            throw new ReportBuildException("No se pudo generar Vacunas.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
 

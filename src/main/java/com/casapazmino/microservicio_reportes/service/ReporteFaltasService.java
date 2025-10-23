@@ -5,6 +5,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 
@@ -23,17 +24,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ReporteFaltasService {
 
     public byte[] generarReporteFaltasPDF(ReporteFaltasRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Document document = new Document(PageSize.A4, 40, 40, 30, 50);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
-            writer.setPageEvent(new ConfiguracionPaginaPDF(
-                    request.getUsuario(),
-                    request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()));
 
+        // DRY: constantes locales
+        final float[] WIDTHS_TITULO = { 8f, 2f };
+        final float[] WIDTHS_INFO   = { 4f, 4f, 4f };
+        final float[] WIDTHS_FALTAS = { 3f, 3f };
+        final float[] WIDTHS_RESUMEN = { 4f, 4f, 2f };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4, 40, 40, 30, 50);
+            writer = PdfWriter.getInstance(document, baos);
+            writer.setPageEvent(new ConfiguracionPaginaPDF(
+                request.getUsuario(),
+                request.getFraseMarcaAgua(),
+                request.getColorPrincipal()
+            ));
             document.open();
 
+            // 2) Construcción (helpers existentes)
             // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) document.add(logo);
@@ -41,26 +55,27 @@ public class ReporteFaltasService {
             // Títulos
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
             document.add(ReporteUtil.crearTituloReporte(
-                    "FALTAS - USUARIOS " + (request.getOpcionBusqueda() == 1 ? "ACTIVOS" : "INACTIVOS")));
+                "FALTAS - USUARIOS " + (request.getOpcionBusqueda() == 1 ? "ACTIVOS" : "INACTIVOS")
+            ));
             document.add(ReporteUtil.crearTituloPeriodo(
-                    "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin()));
+                "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin()
+            ));
 
             // Colores
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorPrincipal  = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Color zebraColor = ReporteUtil.colorZebraClaro();
+            Color zebraColor      = ReporteUtil.colorZebraClaro();
 
             // Contador global
             AtomicInteger totalFaltasGeneral = new AtomicInteger();
             request.getGrupos().forEach(
-                    grupo -> grupo.getEmpleados()
-                            .forEach(emp -> totalFaltasGeneral.addAndGet(emp.getFaltas().size()))
+                grupo -> grupo.getEmpleados().forEach(emp -> totalFaltasGeneral.addAndGet(emp.getFaltas().size()))
             );
 
-            // Título con contador global
+            // Título global
             PdfPTable tablaTitulo = new PdfPTable(2);
             tablaTitulo.setWidthPercentage(100);
-            tablaTitulo.setWidths(new float[]{8, 2});
+            tablaTitulo.setWidths(WIDTHS_TITULO);
 
             PdfPCell celda1 = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezado()));
             celda1.setBackgroundColor(colorSecundario);
@@ -68,7 +83,9 @@ public class ReporteFaltasService {
             celda1.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
             tablaTitulo.addCell(celda1);
 
-            PdfPCell celda2 = new PdfPCell(new Phrase("Nº Registros: " + totalFaltasGeneral.get(), ReporteUtil.fuenteEncabezado()));
+            PdfPCell celda2 = new PdfPCell(
+                new Phrase("Nº Registros: " + totalFaltasGeneral.get(), ReporteUtil.fuenteEncabezado())
+            );
             celda2.setBackgroundColor(colorSecundario);
             celda2.setHorizontalAlignment(Element.ALIGN_RIGHT);
             celda2.setVerticalAlignment(Element.ALIGN_MIDDLE);
@@ -79,25 +96,23 @@ public class ReporteFaltasService {
             tablaTitulo.setSpacingAfter(10f);
             document.add(tablaTitulo);
 
-            // Por grupo
+            // Grupos
             for (GrupoFaltasDTO grupo : request.getGrupos()) {
                 for (EmpleadoFaltasDTO emp : grupo.getEmpleados()) {
                     int contador = 1;
 
-                    // Tabla info empleado
+                    // Info empleado
                     PdfPTable infoEmpleado = new PdfPTable(3);
                     infoEmpleado.setWidthPercentage(100);
-                    infoEmpleado.setWidths(new float[]{4, 4, 4});
+                    infoEmpleado.setWidths(WIDTHS_INFO);
 
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:", emp.getApellido() + " " + emp.getNombre(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:", emp.getIdentificacion(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:", emp.getCodigo(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:",   emp.getApellido() + " " + emp.getNombre(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:",       emp.getIdentificacion(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:",        emp.getCodigo(), zebraColor));
                     infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", emp.getRegimen(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:", emp.getDepartamento(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:", emp.getCargo(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:",    emp.getDepartamento(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:",           emp.getCargo(), zebraColor));
 
-
-                    // Contenedor con borde
                     PdfPTable tablaContenedora = new PdfPTable(1);
                     tablaContenedora.setWidthPercentage(100);
                     PdfPCell contenedor = new PdfPCell(infoEmpleado);
@@ -107,24 +122,28 @@ public class ReporteFaltasService {
                     tablaContenedora.setSpacingAfter(3f);
                     document.add(tablaContenedora);
 
-                    // Tabla faltas
+                    // Tabla de faltas
                     PdfPTable tablaFaltas = new PdfPTable(2);
                     tablaFaltas.setWidthPercentage(100);
-                    tablaFaltas.setWidths(new float[]{3, 3});
+                    tablaFaltas.setWidths(WIDTHS_FALTAS);
 
-                    tablaFaltas.addCell(ReporteUtil.crearCelda("N°", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                    tablaFaltas.addCell(ReporteUtil.crearCelda("N°",    ReporteUtil.fuenteEncabezado(), colorPrincipal));
                     tablaFaltas.addCell(ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(), colorPrincipal));
 
                     for (FaltaDTO falta : emp.getFaltas()) {
                         Color fondo = (contador % 2 == 0) ? zebraColor : Color.WHITE;
                         tablaFaltas.addCell(ReporteUtil.celdaCentro(String.valueOf(contador), fondo));
-                        tablaFaltas.addCell(ReporteUtil.celdaCentro(ReporteUtil.formatearFechaConDia(falta.getFecha()), fondo));
+                        tablaFaltas.addCell(ReporteUtil.celdaCentro(
+                            ReporteUtil.formatearFechaConDia(falta.getFecha()), fondo
+                        ));
                         contador++;
                     }
 
+                    // Fila total por empleado
                     tablaFaltas.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), colorSecundario));
-                    tablaFaltas.addCell(ReporteUtil.crearCelda(String.valueOf(emp.getFaltas().size()),
-                            ReporteUtil.fuenteTexto(), colorSecundario));
+                    tablaFaltas.addCell(ReporteUtil.crearCelda(
+                        String.valueOf(emp.getFaltas().size()), ReporteUtil.fuenteTexto(), colorSecundario
+                    ));
 
                     tablaFaltas.setSpacingAfter(10f);
                     document.add(tablaFaltas);
@@ -132,30 +151,45 @@ public class ReporteFaltasService {
             }
 
             // Resumen general final
-            if (!request.isResumen()) {
+            if (!request.getResumen()) {
                 document.add(Chunk.NEWLINE);
+
                 PdfPTable resumen = new PdfPTable(3);
                 resumen.setWidthPercentage(100);
-                resumen.setWidths(new float[]{4, 4, 2});
+                resumen.setWidths(WIDTHS_RESUMEN);
                 resumen.setSpacingBefore(10f);
 
                 resumen.addCell(ReporteUtil.crearCelda("TOTAL GENERAL", ReporteUtil.fuenteEncabezado(), colorSecundario));
-                resumen.addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteEncabezado(), colorSecundario));
-                resumen.addCell(ReporteUtil.crearCelda(String.valueOf(totalFaltasGeneral.get()),
-                        ReporteUtil.fuenteEncabezado(), colorSecundario));
+                resumen.addCell(ReporteUtil.crearCelda("",              ReporteUtil.fuenteEncabezado(), colorSecundario));
+                resumen.addCell(ReporteUtil.crearCelda(
+                    String.valueOf(totalFaltasGeneral.get()), ReporteUtil.fuenteEncabezado(), colorSecundario
+                ));
 
                 document.add(resumen);
             }
 
+            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            throw e; // 400 si algún helper lo lanza
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // 500 interno uniforme
+            throw new ReportBuildException("No se pudo generar ReporteFaltas.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
-
 
     public byte[] generarReporteFaltasExcel(ReporteFaltasRequest request) {
         System.out.println("Generando XLSX de Faltas (una hoja)...");

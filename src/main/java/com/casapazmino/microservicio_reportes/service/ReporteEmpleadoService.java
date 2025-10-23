@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -26,79 +27,100 @@ public class ReporteEmpleadoService {
 
     //METODO QUE GENERA EL REPORTE PDF
     public byte[] generarReporteEmpleadosPDF(ReporteEmpleadosRequest request) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-            //TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
-            Document document = new Document(PageSize.A4.rotate());
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+        // DRY: constantes locales
+        final float[] WIDTHS = { 1.8f, 5.5f, 3.7f, 3f, 7.3f, 2.7f, 3f, 3f, 3f, 2f, 3f };
+        final String[] HEADERS = {
+            "Código", "Nombre", "Identificación", "Fecha Nacimiento", "Correo",
+            "Género", "Estado Civil", "Domicilio", "Teléfono", "Estado", "Nacionalidad"
+        };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
+        try {
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4.rotate());
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                    request.getUsuario(),
-                    request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
+                request.getUsuario(),
+                request.getFraseMarcaAgua(),
+                request.getColorPrincipal()
             ));
             document.open();
 
-            //LOGO DE EMPRESA
+            // 2) Construcción (helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            //TITULO DE EMPRESA
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-            
-            //TITULO DE REPORTE
             document.add(ReporteUtil.crearTituloReporte("Lista de Empleados"));
 
-            //TABLA
+            // Colores
+            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorZebra     = ReporteUtil.colorZebraClaro();
+
+            // Tabla principal
             PdfPTable tabla = new PdfPTable(11);
             tabla.setWidthPercentage(100);
-            tabla.setWidths(new float[]{1.8f, 5.5f, 3.7f, 3, 7.3f, 2.7f, 3, 3, 3, 2, 3});
+            tabla.setWidths(WIDTHS);
             tabla.setSpacingBefore(10f);
 
-            //COLORES DE LA EMPRESA USADOS EN EL REPORTE
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
-
-            //ENCABEZADOS
-            String[] headers = {
-                "Código", "Nombre", "Identificación", "Fecha Nacimiento", "Correo",
-                "Género", "Estado Civil", "Domicilio", "Teléfono", "Estado", "Nacionalidad"
-            };
-
-            for (String encabezado : headers) {
-                tabla.addCell(ReporteUtil.crearCelda(encabezado, ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            // Encabezados
+            for (String h : HEADERS) {
+                tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
             }
 
+            // Cuerpo (zebra)
             List<EmpleadoDTO> empleados = request.getEmpleados();
             boolean zebra = false;
-            for (EmpleadoDTO e: empleados) {
-                Color bgColor = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(ReporteUtil.crearCelda(e.getCodigo(), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getNombreCompleto(), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getIdentificacion(), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getFechaNacimiento(), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getCorreo(), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getGenero(), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getEstadoCivil(), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getDomicilio(), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getTelefono(), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getEstadoTexto(), ReporteUtil.fuenteTablaData(), bgColor));
-                tabla.addCell(ReporteUtil.crearCelda(e.getNacionalidad(), ReporteUtil.fuenteTablaData(), bgColor));
-                zebra = !zebra;
+            if (empleados != null) {
+                for (EmpleadoDTO e : empleados) {
+                    Color bg = zebra ? colorZebra : Color.WHITE;
+                    tabla.addCell(ReporteUtil.crearCelda(e.getCodigo(),          ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getNombreCompleto(),  ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getIdentificacion(),  ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getFechaNacimiento(), ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getCorreo(),          ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getGenero(),          ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getEstadoCivil(),     ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getDomicilio(),       ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getTelefono(),        ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getEstadoTexto(),     ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getNacionalidad(),    ReporteUtil.fuenteTablaData(), bg));
+                    zebra = !zebra;
+                }
             }
 
             document.add(tabla);
+
+            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // si un helper valida y falla, que el controller decida (posible 400)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // 500 interno uniforme
+            throw new ReportBuildException("No se pudo generar ReporteEmpleados.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
-
     // =========================
     //          XLSX (LEGACY)
     // =========================
@@ -281,12 +303,6 @@ public class ReporteEmpleadoService {
         return (s == null) ? "" : s;
     }
 
-    private static String[] partirNombre(String nombreCompleto) {
-        if (nombreCompleto == null || nombreCompleto.isEmpty()) return new String[]{"", ""};
-        int idx = nombreCompleto.indexOf(' ');
-        if (idx < 0) return new String[]{"", nombreCompleto};
-        return new String[]{ nombreCompleto.substring(0, idx), nombreCompleto.substring(idx + 1) };
-    }
 
     private String csv(String v) {
         if (v == null) return "";

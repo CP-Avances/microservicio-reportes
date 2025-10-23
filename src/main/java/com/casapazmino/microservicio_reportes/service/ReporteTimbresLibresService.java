@@ -3,6 +3,7 @@ package com.casapazmino.microservicio_reportes.service;
 import com.casapazmino.microservicio_reportes.model.TimbresLibres.*;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
@@ -19,53 +20,66 @@ import org.springframework.stereotype.Service;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
+import java.util.Collections;
 import java.util.List;
 
 @Service
 public class ReporteTimbresLibresService {
 
     // =========================
-    // PDF (misma estética pdfMake)
+    // PDF
     // =========================
     public byte[] generarReportePDF(ReporteTimbresLibresRequest request) {
+
+        // ➊ DRY: constantes locales (manteniendo el look & feel)
+        final String TITULO_DEF = "TIMBRES LIBRES - " + ((request.getOpcionBusqueda() != null && request.getOpcionBusqueda() == 1) ? "ACTIVOS" : "INACTIVOS");
+        final float[] WIDTHS_CABECERA = { 3f, 3f, 2f };
+        final float[] WIDTHS_EMPLEADO = { 3f, 4f, 3f };
+        final float[] WIDTHS_TABLA_CON_DISP = { 0.8f, 1.2f, 1.0f, 1.2f, 1.0f, 1.0f, 1.2f, 3.0f, 1.2f, 1.2f };
+        final float[] WIDTHS_TABLA_SIN_DISP = { 0.8f, 1.2f, 1.0f, 1.0f, 1.2f, 3.0f, 1.2f, 1.2f };
+        final int WIDTH_PERCENT_100 = 100;
+
+        final Color COLOR_PRIMARIO   = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+        final Color COLOR_SECUNDARIO = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+        final Font  FUENTE_TEXTO     = ReporteUtil.fuenteTexto();
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
         try {
-            boolean conDispositivo = hayColumnaDispositivo(request);
-            // Igual que tu FE: portrait normal / landscape si hay columnas de dispositivo
-            Rectangle pageSize = conDispositivo ? PageSize.A4.rotate() : PageSize.A4;
+            // 1) Inicialización
+            final boolean conDispositivo = hayColumnaDispositivo(request);
+            final Rectangle pageSize = conDispositivo ? PageSize.A4.rotate() : PageSize.A4;
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Document document = new Document(pageSize, 40, 40, 50, 50);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
-
+            baos = new ByteArrayOutputStream();
+            document = new Document(pageSize, 40, 40, 50, 50);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
                     request.getColorPrincipal()
             ));
-
             document.open();
 
-            // Logo
+            // 2) Construcción (helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) document.add(logo);
 
-            // Empresa / Título / Periodo (centrado)
+            // Empresa
             Paragraph empresa = new Paragraph(safe(request.getEmpresa()), ReporteUtil.fuenteEncabezado());
             empresa.setAlignment(Element.ALIGN_CENTER);
             empresa.setSpacingAfter(5f);
             document.add(empresa);
 
-            String tituloStr = (request.getTitulo() == null || request.getTitulo().isEmpty())
-                    ? ("TIMBRES LIBRES - " + ((request.getOpcionBusqueda() != null && request.getOpcionBusqueda() == 1) ? "ACTIVOS" : "INACTIVOS"))
-                    : request.getTitulo();
+            // Título
+            String tituloStr = (request.getTitulo() == null || request.getTitulo().isEmpty()) ? TITULO_DEF : request.getTitulo();
             Paragraph titulo = new Paragraph(tituloStr, ReporteUtil.fuenteEncabezado());
             titulo.setAlignment(Element.ALIGN_CENTER);
             titulo.setSpacingAfter(0f);
             document.add(titulo);
 
+            // Periodo (si aplica)
             if (request.getPeriodo() != null) {
                 Paragraph periodo = new Paragraph(
                         "PERIODO DEL: " + safe(request.getPeriodo().getInicio()) + " AL " + safe(request.getPeriodo().getFin()),
@@ -76,74 +90,61 @@ public class ReporteTimbresLibresService {
                 document.add(periodo);
             }
 
-            // Colores/fonts
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Font fuente = ReporteUtil.fuenteTexto();
-
             // Datos
             if (request.getDatos() != null) {
                 for (DatoGrupoDTO grupo : request.getDatos()) {
-
-                    // === Cabecera principal (3 celdas, borde externo, fondo colorSecundario) ===
-                    String descripcion = resolverDescripcionCabecera(request.getTipoFiltro(), grupo);
-                    String establecimiento = esEmpleadoFiltro(request.getTipoFiltro())
-                            ? ""
-                            : "SUCURSAL: " + safe(grupo.getSucursal());
-
-                    int totalRegistros = contarRegistrosTimbres(grupo);
+                    // 2.1 Cabecera principal (3 celdas, borde externo)
+                    String descripcion   = resolverDescripcionCabecera(request.getTipoFiltro(), grupo);
+                    String establecimiento = esEmpleadoFiltro(request.getTipoFiltro()) ? "" : "SUCURSAL: " + safe(grupo.getSucursal());
+                    int totalRegistros   = contarRegistrosTimbres(grupo);
 
                     PdfPTable tablaCabecera = new PdfPTable(3);
-                    tablaCabecera.setWidthPercentage(100);
-                    tablaCabecera.setWidths(new float[]{3, 3, 2});
+                    tablaCabecera.setWidthPercentage(WIDTH_PERCENT_100);
+                    tablaCabecera.setWidths(WIDTHS_CABECERA);
                     tablaCabecera.setSpacingBefore(10f);
                     tablaCabecera.getDefaultCell().setBorder(Rectangle.NO_BORDER);
 
-                    tablaCabecera.addCell(celdaSinBordeIzquierda(descripcion, fuente, colorSecundario));
-                    tablaCabecera.addCell(celdaSinBordeIzquierda(establecimiento, fuente, colorSecundario));
-                    tablaCabecera.addCell(celdaSinBordeIzquierda("N° Registros: " + totalRegistros, fuente, colorSecundario));
+                    tablaCabecera.addCell(celdaSinBordeIzquierda(descripcion,       FUENTE_TEXTO, COLOR_SECUNDARIO));
+                    tablaCabecera.addCell(celdaSinBordeIzquierda(establecimiento,   FUENTE_TEXTO, COLOR_SECUNDARIO));
+                    tablaCabecera.addCell(celdaSinBordeIzquierda("N° Registros: " + totalRegistros, FUENTE_TEXTO, COLOR_SECUNDARIO));
 
+                    // Borde alrededor de toda la cabecera (sin tocar helpers)
                     tablaCabecera.setTableEvent((table, widths, heights, headerRows, rowStart, canvas) -> {
                         PdfContentByte cb = canvas[PdfPTable.LINECANVAS];
                         cb.rectangle(
                                 widths[0][0],
                                 heights[heights.length - 1],
                                 widths[0][widths[0].length - 1] - widths[0][0],
-                                heights[0] - heights[heights.length - 1]);
+                                heights[0] - heights[heights.length - 1]
+                        );
                         cb.stroke();
                     });
                     document.add(tablaCabecera);
 
-                    // === Ficha del empleado (3x3, fondo gris claro, borde externo) ===
+                    // 2.2 Ficha del empleado (3x3, fondo gris claro, borde externo)
                     if (grupo.getEmpleados() == null) continue;
 
                     for (EmpleadoDTO empl : grupo.getEmpleados()) {
                         PdfPTable tablaEmpleado = new PdfPTable(3);
-                        tablaEmpleado.setWidthPercentage(100);
+                        tablaEmpleado.setWidthPercentage(WIDTH_PERCENT_100);
                         tablaEmpleado.setSpacingBefore(6f);
-                        tablaEmpleado.setWidths(new float[]{3, 4, 3});
+                        tablaEmpleado.setWidths(WIDTHS_EMPLEADO);
 
-                        String[][] filas = new String[][]{
-                                {
-                                        "C.C.: " + safe(empl.getIdentificacion()),
-                                        "EMPLEADO: " + (safe(empl.getApellido()) + " " + safe(empl.getNombre())).trim(),
-                                        "COD: " + safe(empl.getCodigo())
-                                },
-                                {
-                                        "RÉGIMEN LABORAL: " + safe(empl.getRegimen()),
-                                        "DEPARTAMENTO: " + safe(empl.getDepartamento()),
-                                        "CARGO: " + safe(empl.getCargo())
-                                },
-                                {
-                                        "CIUDAD: " + safe(empl.getCiudad()),
-                                        "SUCURSAL: " + safe(empl.getSucursal()),
-                                        "ROL: " + safe(empl.getRol())
-                                }
+                        String[][] filas = new String[][] {
+                            { "C.C.: " + safe(empl.getIdentificacion()),
+                            "EMPLEADO: " + (safe(empl.getApellido()) + " " + safe(empl.getNombre())).trim(),
+                            "COD: " + safe(empl.getCodigo()) },
+                            { "RÉGIMEN LABORAL: " + safe(empl.getRegimen()),
+                            "DEPARTAMENTO: " + safe(empl.getDepartamento()),
+                            "CARGO: " + safe(empl.getCargo()) },
+                            { "CIUDAD: " + safe(empl.getCiudad()),
+                            "SUCURSAL: " + safe(empl.getSucursal()),
+                            "ROL: " + safe(empl.getRol()) }
                         };
 
                         for (String[] fila : filas) {
                             for (String texto : fila) {
-                                PdfPCell celda = new PdfPCell(new Phrase(texto, fuente));
+                                PdfPCell celda = new PdfPCell(new Phrase(texto, FUENTE_TEXTO));
                                 celda.setBackgroundColor(Color.LIGHT_GRAY);
                                 celda.setHorizontalAlignment(Element.ALIGN_LEFT);
                                 celda.setBorder(Rectangle.NO_BORDER);
@@ -157,62 +158,60 @@ public class ReporteTimbresLibresService {
                                     widths[0][0],
                                     heights[heights.length - 1],
                                     widths[0][widths[0].length - 1] - widths[0][0],
-                                    heights[0] - heights[heights.length - 1]);
+                                    heights[0] - heights[heights.length - 1]
+                            );
                             cb.stroke();
                         });
                         document.add(tablaEmpleado);
 
-                        // === Tabla timbres (encabezado de 2 filas) ===
-                        PdfPTable tabla = new PdfPTable(conDispositivo ? 10 : 8);
-                        tabla.setWidthPercentage(100);
-                        if (conDispositivo) {
-                            tabla.setWidths(new float[]{0.8f, 1.2f, 1.0f, 1.2f, 1.0f, 1.0f, 1.2f, 3.0f, 1.2f, 1.2f});
-                        } else {
-                            tabla.setWidths(new float[]{0.8f, 1.2f, 1.0f, 1.0f, 1.2f, 3.0f, 1.2f, 1.2f});
-                        }
+                        // 2.3 Tabla de timbres
+                        final int cols = conDispositivo ? 10 : 8;
+                        PdfPTable tabla = new PdfPTable(cols);
+                        tabla.setWidthPercentage(WIDTH_PERCENT_100);
+                        tabla.setWidths(conDispositivo ? WIDTHS_TABLA_CON_DISP : WIDTHS_TABLA_SIN_DISP);
 
-                        // Fila 1: N°, TIMBRE(2), [DISPOSITIVO(2)], RELOJ, ACCIÓN, OBSERVACIÓN, LONGITUD, LATITUD
-                        addHeaderCellRowSpan(tabla, "N°", colorPrincipal, 2);
-                        addHeaderCellColSpan(tabla, "TIMBRE", colorPrincipal, 2);
-                        if (conDispositivo) addHeaderCellColSpan(tabla, "DISPOSITIVO", colorPrincipal, 2);
-                        addHeaderCellRowSpan(tabla, "RELOJ", colorPrincipal, 2);
-                        addHeaderCellRowSpan(tabla, "ACCIÓN", colorPrincipal, 2);
-                        addHeaderCellRowSpan(tabla, "OBSERVACIÓN", colorPrincipal, 2);
-                        addHeaderCellRowSpan(tabla, "LONGITUD", colorPrincipal, 2);
-                        addHeaderCellRowSpan(tabla, "LATITUD", colorPrincipal, 2);
+                        // Encabezado fila 1
+                        addHeaderCellRowSpan(tabla, "N°", COLOR_PRIMARIO, 2);
+                        addHeaderCellColSpan(tabla, "TIMBRE", COLOR_PRIMARIO, 2);
+                        if (conDispositivo) addHeaderCellColSpan(tabla, "DISPOSITIVO", COLOR_PRIMARIO, 2);
+                        addHeaderCellRowSpan(tabla, "RELOJ", COLOR_PRIMARIO, 2);
+                        addHeaderCellRowSpan(tabla, "ACCIÓN", COLOR_PRIMARIO, 2);
+                        addHeaderCellRowSpan(tabla, "OBSERVACIÓN", COLOR_PRIMARIO, 2);
+                        addHeaderCellRowSpan(tabla, "LONGITUD", COLOR_PRIMARIO, 2);
+                        addHeaderCellRowSpan(tabla, "LATITUD", COLOR_PRIMARIO, 2);
 
-                        // Fila 2: sub-encabezados
-                        addHeaderCell(tabla, "FECHA", colorPrincipal);
-                        addHeaderCell(tabla, "HORA", colorPrincipal);
+                        // Encabezado fila 2 (subtítulos)
+                        addHeaderCell(tabla, "FECHA", COLOR_PRIMARIO);
+                        addHeaderCell(tabla, "HORA",  COLOR_PRIMARIO);
                         if (conDispositivo) {
-                            addHeaderCell(tabla, "FECHA", colorPrincipal);
-                            addHeaderCell(tabla, "HORA", colorPrincipal);
+                            addHeaderCell(tabla, "FECHA", COLOR_PRIMARIO);
+                            addHeaderCell(tabla, "HORA",  COLOR_PRIMARIO);
                         }
 
                         // Cuerpo con zebra
                         int c = 0;
-                        List<TimbreDTO> timbres = empl.getTimbres();
-                        if (timbres != null && !timbres.isEmpty()) {
+                        List<TimbreDTO> timbres = (empl.getTimbres() != null) ? empl.getTimbres() : Collections.emptyList();
+                        if (!timbres.isEmpty()) {
                             for (TimbreDTO t : timbres) {
                                 c++;
                                 Color bg = (c % 2 == 0) ? new Color(0xE5, 0xE7, 0xE9) : Color.WHITE;
 
                                 addBodyCell(tabla, String.valueOf(c), bg, true);
                                 addBodyCell(tabla, safe(t.getFechaServidor()), bg, false);
-                                addBodyCell(tabla, safe(t.getHoraServidor()), bg, false);
+                                addBodyCell(tabla, safe(t.getHoraServidor()),  bg, false);
                                 if (conDispositivo) {
                                     addBodyCell(tabla, safe(t.getFechaDispositivo()), bg, false);
-                                    addBodyCell(tabla, safe(t.getHoraDispositivo()), bg, false);
+                                    addBodyCell(tabla, safe(t.getHoraDispositivo()),  bg, false);
                                 }
-                                addBodyCell(tabla, safe(t.getId_reloj()), bg, true);
+                                addBodyCell(tabla, safe(t.getId_reloj()),      bg, true);
                                 addBodyCell(tabla, mapAccion(safe(t.getAccion())), bg, true);
-                                addBodyCell(tabla, safe(t.getObservacion()), bg, false);
-                                addBodyCell(tabla, safe(t.getLongitud()), bg, false);
-                                addBodyCell(tabla, safe(t.getLatitud()), bg, false);
+                                addBodyCell(tabla, safe(t.getObservacion()),   bg, false);
+                                addBodyCell(tabla, safe(t.getLongitud()),      bg, false);
+                                addBodyCell(tabla, safe(t.getLatitud()),       bg, false);
                             }
                         } else {
                             PdfPCell vacio = new PdfPCell(new Phrase("SIN REGISTROS", ReporteUtil.fuenteTexto()));
-                            vacio.setColspan(conDispositivo ? 10 : 8);
+                            vacio.setColspan(cols);
                             vacio.setHorizontalAlignment(Element.ALIGN_CENTER);
                             tabla.addCell(vacio);
                         }
@@ -222,15 +221,31 @@ public class ReporteTimbresLibresService {
                 }
             }
 
+            // 3) Cierre + retorno
             document.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validaciones de helpers → que el controller decida 400 si corresponde
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Fallo interno uniforme → 500
+            throw new ReportBuildException("No se pudo generar ReporteTimbresLibres.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
 
+    
     // =========================
     // XLSX (misma estructura ExcelJS)
     // =========================
@@ -518,15 +533,6 @@ public class ReporteTimbresLibresService {
         return (val == null || val.equalsIgnoreCase("null")) ? "" : val;
     }
 
-    private String formatearFecha(String fechaIso) {
-        try {
-            LocalDate fecha = LocalDate.parse(fechaIso.substring(0, 10));
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE. dd/MM/yyyy", new Locale("es", "ES"));
-            return formatter.format(fecha);
-        } catch (Exception e) {
-            return fechaIso;
-        }
-    }
 
     private String fechaCortaExcel(String iso) {
         if (iso == null) return "";

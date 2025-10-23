@@ -7,8 +7,9 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.ReportBuildException;
+
 import com.lowagie.text.Document;
-import com.lowagie.text.Element;
 import com.lowagie.text.Image;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Phrase;
@@ -30,98 +31,135 @@ public class ReporteRolesService {
 
     // METODO QUE GENERA EL PDF
     public byte[] generarReporteRolesPDF(ReporteRolesRequest request) {
+
+        // ➊ DRY: constantes locales
+        final String TITULO = "PERMISOS O FUNCIONALIDADES DEL ROL";
+        final float[] WIDTHS_INFO = { 3f, 4f, 4f, 2f, 2f };
+        final int WIDTH_PERCENT_100 = 100;
+        final float SPACING_BEFORE_ENCABEZADO = 10f;
+        final float SPACING_AFTER_ENCABEZADO = 5f;
+        final float SPACING_BEFORE_TABLA = 5f;
+        final float PADDING_TITULOS = 3f;
+
+        final Color COLOR_PRIMARIO   = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+        final Color COLOR_SECUNDARIO = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+        final Color COLOR_ZEBRA      = ReporteUtil.colorZebraClaro();
+
+        final String[] HEADERS = { "PÁGINA", "FUNCIÓN", "MÓDULO", "APLICACIÓN WEB", "APLICACIÓN MÓVIL" };
+
+        Document document = null;
+        PdfWriter writer = null;
+        ByteArrayOutputStream baos = null;
+
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            // TIPO Y TAMAÑO DE LA PAGINA DEL REPORTE
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()));
+                    request.getColorPrincipal()
+            ));
             document.open();
 
-            // LOGO
+            // 2) Construcción (helpers existentes)
+            // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
-            // TITULO DE EMPRESA (EJM. CASA PAZMIÑO S.A.)
+            // Títulos
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte(TITULO));
 
-            // TITULO DE REPORTE (EJM. REPORTE ATRASOS)
-            document.add(ReporteUtil.crearTituloReporte("PERMISOS O FUNCIONALIDADES DEL ROL"));
+            // Por cada rol
+            if (request.getRoles() != null) {
+                for (RolDTO rol : request.getRoles()) {
 
-            // COLORES DE LA EMPRESA USADOS EN EL REPORTE
-            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Color colorZebra = ReporteUtil.colorZebraClaro();
+                    // Encabezado de rol
+                    PdfPTable encabezado = new PdfPTable(1);
+                    encabezado.setWidthPercentage(WIDTH_PERCENT_100);
+                    encabezado.setSpacingBefore(SPACING_BEFORE_ENCABEZADO);
 
-            for (RolDTO rol : request.getRoles()) {
-                // TABLA ENCABEZADO ROL
-                PdfPTable encabezado = new PdfPTable(1);
-                encabezado.setWidthPercentage(100);
-                encabezado.setSpacingBefore(10f);
+                    PdfPCell celdaRol = new PdfPCell(new Phrase("ROL: " + rol.getNombre(), ReporteUtil.fuenteEncabezado()));
+                    celdaRol.setBackgroundColor(COLOR_PRIMARIO);
+                    celdaRol.setPadding(PADDING_TITULOS);
+                    encabezado.addCell(celdaRol);
 
-                PdfPCell celdaRol = new PdfPCell(new Phrase("ROL: " + rol.getNombre(), ReporteUtil.fuenteEncabezado()));
-                celdaRol.setBackgroundColor(colorPrincipal);
-                celdaRol.setPadding(3f);
-                encabezado.addCell(celdaRol);
+                    encabezado.setSpacingAfter(SPACING_AFTER_ENCABEZADO);
+                    document.add(encabezado);
 
-                encabezado.setSpacingAfter(5f);
-                document.add(encabezado);
+                    // Subtítulo
+                    PdfPTable subtitulo = new PdfPTable(1);
+                    subtitulo.setWidthPercentage(WIDTH_PERCENT_100);
 
-                // TABLA DE SUBTITULO DE ESTE REPORTE (FUNCIONES DEL SISTEMA ASIGANDAS)
-                PdfPTable subtitulo = new PdfPTable(1);
-                subtitulo.setWidthPercentage(100);
+                    PdfPCell celdaTitulo = new PdfPCell(
+                            new Phrase("FUNCIONES DEL SISTEMA ASIGNADAS", ReporteUtil.fuenteEncabezadoTablaData()));
+                    celdaTitulo.setBackgroundColor(COLOR_SECUNDARIO);
+                    celdaTitulo.setHorizontalAlignment(PdfPCell.ALIGN_CENTER);
+                    celdaTitulo.setPadding(PADDING_TITULOS);
+                    subtitulo.addCell(celdaTitulo);
+                    document.add(subtitulo);
 
-                PdfPCell celdaTitulo = new PdfPCell(
-                        new Phrase("FUNCIONES DEL SISTEMA ASIGNADAS", ReporteUtil.fuenteEncabezadoTablaData()));
-                celdaTitulo.setBackgroundColor(colorSecundario);
-                celdaTitulo.setHorizontalAlignment(PdfPCell.ALIGN_CENTER);
-                celdaTitulo.setPadding(3f);
-                subtitulo.addCell(celdaTitulo);
-                document.add(subtitulo);
+                    // Tabla de información
+                    PdfPTable tabla = new PdfPTable(HEADERS.length);
+                    tabla.setWidthPercentage(WIDTH_PERCENT_100);
+                    tabla.setWidths(WIDTHS_INFO);
+                    tabla.setSpacingBefore(SPACING_BEFORE_TABLA);
 
-                // TABLA DE INFORMACION DE LOS ROLES
-                PdfPTable tabla = new PdfPTable(5);
-                tabla.setWidthPercentage(100);
-                tabla.setWidths(new float[] { 3, 4, 4, 2, 2 });
-                tabla.setSpacingBefore(5f);
+                    // Encabezados
+                    for (String h : HEADERS) {
+                        tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), COLOR_SECUNDARIO));
+                    }
 
-                // ENCABEZADOS DE TABLA DE INFORMACION
-                String[] headers = { "PÁGINA", "FUNCIÓN", "MÓDULO", "APLICACIÓN WEB", "APLICACIÓN MÓVIL" };
-                for (String h : headers) {
-                    tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+                    // Cuerpo con zebra
+                    boolean zebra = false;
+                    if (rol.getFunciones() != null) {
+                        for (FuncionDTO f : rol.getFunciones()) {
+                            Color fondo = zebra ? COLOR_ZEBRA : Color.WHITE;
+                            zebra = !zebra;
+
+                            tabla.addCell(ReporteUtil.crearCelda(f.getPagina(), ReporteUtil.fuenteTablaData(), fondo));
+                            tabla.addCell(ReporteUtil.crearCelda(f.getAccion(), ReporteUtil.fuenteTablaData(), fondo));
+                            tabla.addCell(ReporteUtil.crearCelda(
+                                    transformarModulo(f.getNombre_modulo()), ReporteUtil.fuenteTablaData(), fondo));
+
+                            // Mantener la lógica original: WEB = "Sí" cuando !movil; MÓVIL = "Sí" cuando movil
+                            tabla.addCell(ReporteUtil.crearCelda(f.getMovil() ? "" : "Sí", ReporteUtil.fuenteTablaData(), fondo));
+                            tabla.addCell(ReporteUtil.crearCelda(f.getMovil() ? "Sí" : "", ReporteUtil.fuenteTablaData(), fondo));
+                        }
+                    }
+
+                    document.add(tabla);
                 }
-
-                // FILAS CON EFECTO CEBRA
-                boolean zebra = false;
-                for (FuncionDTO f : rol.getFunciones()) {
-                    Color fondo = zebra ? colorZebra : Color.WHITE;
-                    zebra = !zebra;
-
-                    tabla.addCell(ReporteUtil.crearCelda(f.getPagina(), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(f.getAccion(), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(transformarModulo(f.getNombre_modulo()),
-                            ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(
-                            ReporteUtil.crearCelda(f.isMovil() ? "" : "Sí", ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(
-                            ReporteUtil.crearCelda(f.isMovil() ? "Sí" : "", ReporteUtil.fuenteTablaData(), fondo));
-                }
-                document.add(tabla);
             }
+
+            // 3) Cierre + retorno
             document.close();
-            writer.close();
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validaciones de helpers → el controller podrá responder 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Fallo interno uniforme → 500
+            throw new ReportBuildException("No se pudo generar ReporteRoles.pdf", e);
+        } finally {
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try { document.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try { baos.close(); } catch (Exception ignore) {}
+            }
         }
     }
+
 
     public byte[] generarReporteRolesXLSX(ReporteRolesRequest request) {
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
@@ -170,8 +208,8 @@ public class ReporteRolesService {
                         UtilExcel.establecerValor(r, 2, f.getPagina(), estI); // PÁGINA
                         UtilExcel.establecerValor(r, 3, f.getAccion(), estI); // FUNCIÓN
                         UtilExcel.establecerValor(r, 4, transformarModulo(f.getNombre_modulo()), estI); // MÓDULO
-                        UtilExcel.establecerValor(r, 5, f.isMovil() ? "" : "Sí", estC); // APP WEB
-                        UtilExcel.establecerValor(r, 6, f.isMovil() ? "Sí" : "", estC); // APP MÓVIL
+                        UtilExcel.establecerValor(r, 5, f.getMovil() ? "" : "Sí", estC); // APP WEB
+                        UtilExcel.establecerValor(r, 6, f.getMovil() ? "Sí" : "", estC); // APP MÓVIL
 
                         fila++;
                     }
@@ -219,8 +257,8 @@ public class ReporteRolesService {
 
                     for (FuncionDTO f : rol.getFunciones()) {
                         String modulo = transformarModulo(f.getNombre_modulo());
-                        String appWeb = f.isMovil() ? "" : "Sí";
-                        String appMovil = f.isMovil() ? "Sí" : "";
+                        String appWeb = f.getMovil() ? "" : "Sí";
+                        String appMovil = f.getMovil() ? "Sí" : "";
 
                         sb.append(n++).append(',')
                                 .append(csvEsc(rol.getNombre())).append(',')
@@ -259,8 +297,8 @@ public class ReporteRolesService {
                     if (rol.getFunciones() != null) {
                         for (FuncionDTO f : rol.getFunciones()) {
                             String modulo = transformarModulo(f.getNombre_modulo());
-                            String appWeb = f.isMovil() ? "" : "Sí";
-                            String appMovil = f.isMovil() ? "Sí" : "";
+                            String appWeb = f.getMovil() ? "" : "Sí";
+                            String appMovil = f.getMovil() ? "Sí" : "";
 
                             sb.append("      <detalle>\n");
                             sb.append("        <pagina>").append(xmlEsc(f.getPagina())).append("</pagina>\n");
