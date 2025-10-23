@@ -180,114 +180,136 @@ public class ReporteHorariosService {
         return celda;
     }
 
-        // =========================
+    // =========================
     //           XLSX
     // =========================
     public byte[] generarReporteXLSX(ReporteHorariosRequest request) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA     = "Horarios"; // ≤ 31 chars
+        final int    FILA_ENCABEZADO = 5;
+
+        // Merges B1:N1 ... B5:N5 => (row 0..4, col 1..13)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 13;
+
+        final String TITULO_REPORTE = "LISTA DE HORARIOS";
+
+        final String[] HEADERS = {
+            "ITEM","HORARIO","CÓDIGO","HORAS DE TRABAJO","MINUTOS DE ALIMENTACIÓN",
+            "HORARIO NOTURNO","DOCUMENTO","ORDEN","HORA","TOLERANCIA",
+            "ACCIÓN","OTRO DÍA","MINUTOS ANTES","MINUTOS DESPUÉS"
+        };
+        final int[] ANCHOS = { 10,20,20,20,20,20,20,20,20,20,20,20,30,30 };
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            XSSFSheet hoja = libro.createSheet("Horarios");
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener encabezado visible
 
-            // 1) Logo A1:B5
+            // 1) Logo A1:B5 (si existe)
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            }
 
-            // 2) Merges B1:N1 ... B5:N5 (N = 14 columnas: A..N)
-            UtilExcel.combinarCeldas(hoja, 0, 0, 1, 13);
-            UtilExcel.combinarCeldas(hoja, 1, 1, 1, 13);
-            UtilExcel.combinarCeldas(hoja, 2, 2, 1, 13);
-            UtilExcel.combinarCeldas(hoja, 3, 3, 1, 13);
-            UtilExcel.combinarCeldas(hoja, 4, 4, 1, 13);
+            // 2) Merges B1:N1 ... B5:N5
+            for (int r = MERGE_FIL_INI; r <= MERGE_FIL_FIN; r++) {
+                UtilExcel.combinarCeldas(hoja, r, r, MERGE_COL_INI, MERGE_COL_FIN);
+            }
 
             // 3) Títulos
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
-            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE HORARIOS", estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo);
 
-            // 4) Encabezados + anchos (fila 6 → idx 5)
-            final int filaEncabezado = 5;
-            String[] encabezados = {
-                    "ITEM","HORARIO","CÓDIGO","HORAS DE TRABAJO","MINUTOS DE ALIMENTACIÓN",
-                    "HORARIO NOTURNO","DOCUMENTO","ORDEN","HORA","TOLERANCIA",
-                    "ACCIÓN","OTRO DÍA","MINUTOS ANTES","MINUTOS DESPUÉS"
-            };
-            int[] anchos = {10,20,20,20,20,20,20,20,20,20,20,20,30,30};
-
-            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(filaHeader, c, encabezados[c], null);
+            // 4) Encabezados + anchos
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
             CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(filaHeader, encabezados.length, estiloEncabezado);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
             // 5) Cuerpo (aplanado horarios x detalles)
-            int filaDatosInicio = filaEncabezado + 1;
+            int filaDatosInicio = FILA_ENCABEZADO + 1;
             int filaActual = filaDatosInicio;
             int item = 1;
 
             List<HorarioDTO> horarios = request.getHorarios();
             if (horarios != null) {
                 for (HorarioDTO h : horarios) {
+                    if (h == null) continue;
                     List<DetalleHorarioDTO> dets = h.getDetalles();
                     if (dets == null || dets.isEmpty()) continue;
 
                     for (DetalleHorarioDTO d : dets) {
+                        if (d == null) continue;
                         Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                        UtilExcel.establecerValor(r, 0, item++, null);                              // ITEM
-                        UtilExcel.establecerTexto(r, 1, nvl(h.getNombre()), null);                  // HORARIO
-                        UtilExcel.establecerTexto(r, 2, nvl(h.getCodigo()), null);                  // CÓDIGO
-                        UtilExcel.establecerTexto(r, 3, nvl(h.getHoraTrabajo()), null);            // HORAS DE TRABAJO
-                        UtilExcel.establecerTexto(r, 4, nvl(h.getMinutosComida()), null);          // MINUTOS DE ALIMENTACIÓN
-                        UtilExcel.establecerTexto(r, 5, h.isNoturno() ? "Sí" : "No", null);        // HORARIO NOTURNO
-                        UtilExcel.establecerTexto(r, 6, nvl(h.getDocumento()), null);              // DOCUMENTO
-                        UtilExcel.establecerValor(r, 7, d.getOrden(), null);                       // ORDEN
-                        UtilExcel.establecerTexto(r, 8, nvl(d.getHora()), null);                   // HORA
-                        UtilExcel.establecerTexto(r, 9, nvl(d.getTolerancia()), null);             // TOLERANCIA
-                        UtilExcel.establecerTexto(r,10, nvl(d.getTipoAccionShow()), null);         // ACCIÓN
-                        UtilExcel.establecerTexto(r,11, d.isSegundoDia() ? "Sí" : "No", null);     // OTRO DÍA
-                        UtilExcel.establecerValor(r,12, d.getMinutosAntes(), null);                // MINUTOS ANTES
-                        UtilExcel.establecerValor(r,13, d.getMinutosDespues(), null);              // MINUTOS DESPUÉS
+                        UtilExcel.establecerValor(r, 0, item++, null);                          // ITEM
+                        UtilExcel.establecerTexto(r, 1, nvl(h.getNombre()), null);              // HORARIO
+                        UtilExcel.establecerTexto(r, 2, nvl(h.getCodigo()), null);              // CÓDIGO
+                        UtilExcel.establecerTexto(r, 3, nvl(h.getHoraTrabajo()), null);         // HORAS DE TRABAJO
+                        UtilExcel.establecerTexto(r, 4, nvl(h.getMinutosComida()), null);       // MINUTOS DE ALIMENTACIÓN
+                        UtilExcel.establecerTexto(r, 5, h.isNoturno() ? "Sí" : "No", null);     // HORARIO NOTURNO
+                        UtilExcel.establecerTexto(r, 6, nvl(h.getDocumento()), null);           // DOCUMENTO
+                        UtilExcel.establecerValor(r, 7, d.getOrden(), null);                    // ORDEN
+                        UtilExcel.establecerTexto(r, 8, nvl(d.getHora()), null);                // HORA
+                        UtilExcel.establecerTexto(r, 9, nvl(d.getTolerancia()), null);          // TOLERANCIA
+                        UtilExcel.establecerTexto(r,10, nvl(d.getTipoAccionShow()), null);      // ACCIÓN
+                        UtilExcel.establecerTexto(r,11, d.isSegundoDia() ? "Sí" : "No", null);  // OTRO DÍA
+                        UtilExcel.establecerValor(r,12, d.getMinutosAntes(), null);             // MINUTOS ANTES
+                        UtilExcel.establecerValor(r,13, d.getMinutosDespues(), null);           // MINUTOS DESPUÉS
                     }
                 }
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
             // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
             CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            // Encabezado
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
 
             if (ultimaFila >= filaDatosInicio) {
+                // ITEM centrado
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, encabezados.length - 1, estiloIzqBorde, true);
-            }
+                // Resto izquierda
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde, true);
 
-            // 7) Tabla estilizada con filtros (A6: Nn)
-            if (ultimaFila >= filaDatosInicio) {
+                // 7) Tabla estilizada + filtros (ITEM sin filtro)
+                boolean[] filtros = new boolean[HEADERS.length];
+                for (int i = 0; i < filtros.length; i++) filtros[i] = true;
+                filtros[0] = false;
+
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "HorariosTabla",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
-                        true,
-                        new boolean[]{ false, true, true, true, true, true, true, true, true, true, true, true, true, true }
+                    hoja,
+                    "HorariosTabla",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    filtros
                 );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+            throw e; // Validación → 400
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar Horarios.xlsx", e); // Interno → 500
         }
     }
 
+    
     // =========================
     //            CSV
     // =========================

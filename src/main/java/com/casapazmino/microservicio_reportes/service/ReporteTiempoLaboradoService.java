@@ -292,64 +292,80 @@ public class ReporteTiempoLaboradoService {
 
 
         public byte[] generarReporteTiempoLaboradoExcel(ReporteTiempoLaboradoRequest request) {
-                System.out.println("Generando XLSX de Tiempo Laborado...");
+                // =========================
+                // 0) Constantes DRY locales
+                // =========================
+                final String NOMBRE_HOJA     = "Tiempo_laborado"; // ≤ 31 chars
+                final int    FILA_ENCABEZADO = 5;                 // fila 6 (idx 5)
+
+                // MERGES exactos (B1:V5) → (row 0..4, col 1..21)
+                final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+                final int MERGE_COL_INI = 1, MERGE_COL_FIN = 21;
+
+                final String[] HEADERS = {
+                        "ITEM","IDENTIFICACIÓN","CÓDIGO","APELLIDO NOMBRE","CIUDAD","SUCURSAL",
+                        "RÉGIMEN","DEPARTAMENTO","CARGO","FECHA",
+                        "HORARIO ENTRADA","TIMBRE ENTRADA",
+                        "HORARIO INICIO ALIMENTACIÓN","TIMBRE INICIO ALIMENTACIÓN",
+                        "HORARIO FIN ALIMENTACIÓN","TIMBRE FIN ALIMENTACIÓN",
+                        "HORARIO SALIDA","TIMBRE SALIDA",
+                        "TIEMPO PLANIFICADO","TIEMPO PLANIFICADO MINUTOS",
+                        "TIEMPO LABORADO","TIEMPO LABORADO MINUTOS"
+                };
+                final int[] ANCHOS = {
+                        10,20,20,28, 18,18,18,20,18, 18,
+                        18,18, 22,22, 22,22, 18,18, 22,26, 22,26
+                };
+                // Filtros: ITEM sin filtro; resto con filtro
+                final boolean[] FILTROS = new boolean[] {
+                        false, true, true, true, true, true, true, true, true, true,
+                        true,  true, true, true, true, true, true, true, true, true,
+                        true,  true
+                };
+
                 try (XSSFWorkbook libro = new XSSFWorkbook();
                         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
                         // =========================
-                        // Hoja: Tiempo Laborado
+                        // Hoja
                         // =========================
-                        XSSFSheet hoja = libro.createSheet("Tiempo_laborado");
+                        XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+                        hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
 
                         // 1) Logo estándar A1:B5
                         byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-                        UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
-
-                        // 2) Merges B1:V5 (B=1 .. V=21 en 0-based)
-                        for (int row = 0; row <= 4; row++) {
-                        UtilExcel.combinarCeldas(hoja, row, row, 1, 21);
+                        if (logo != null && logo.length > 0) {
+                        UtilExcel.insertarLogoEstandar(libro, hoja, logo);
                         }
 
-                        // 3) Títulos
+                        // 2) MERGES B1:V5
+                        for (int row = MERGE_FIL_INI; row <= MERGE_FIL_FIN; row++) {
+                        UtilExcel.combinarCeldas(hoja, row, row, MERGE_COL_INI, MERGE_COL_FIN);
+                        }
+
+                        // 3) TÍTULOS
                         CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
                         UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())), estiloTitulo);
 
-                        String activosInactivos = ("1".equals(safe(request.getOpcionBusqueda())) ||
-                                                "1".equals(String.valueOf(request.getOpcionBusqueda())))
-                                                ? "ACTIVOS" : "INACTIVOS";
+                        String ob = safe(request.getOpcionBusqueda());
+                        String activosInactivos = ("1".equals(ob) || "1".equals(String.valueOf(ob))) ? "ACTIVOS" : "INACTIVOS";
                         UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE TIEMPO LABORADO - " + activosInactivos, estiloTitulo);
 
                         String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL " + safe(request.getFechaFin());
                         UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
 
-                        // 4) Encabezados + anchos (fila 6 → idx 5)
-                        final int filaEnc = 5;
-                        String[] headers = {
-                                "ITEM","IDENTIFICACIÓN","CÓDIGO","APELLIDO NOMBRE","CIUDAD","SUCURSAL",
-                                "RÉGIMEN","DEPARTAMENTO","CARGO","FECHA",
-                                "HORARIO ENTRADA","TIMBRE ENTRADA",
-                                "HORARIO INICIO ALIMENTACIÓN","TIMBRE INICIO ALIMENTACIÓN",
-                                "HORARIO FIN ALIMENTACIÓN","TIMBRE FIN ALIMENTACIÓN",
-                                "HORARIO SALIDA","TIMBRE SALIDA",
-                                "TIEMPO PLANIFICADO","TIEMPO PLANIFICADO MINUTOS",
-                                "TIEMPO LABORADO","TIEMPO LABORADO MINUTOS"
-                        };
-                        int[] anchos = {
-                                10,20,20,28, 18,18,18,20,18, 18,
-                                18,18, 22,22, 22,22, 18,18, 22,26, 22,26
-                        };
-
-                        Row fh = UtilExcel.asegurarFila(hoja, filaEnc);
-                        for (int c = 0; c < headers.length; c++) {
-                        UtilExcel.establecerTexto(fh, c, headers[c], null);
+                        // 4) ENCABEZADOS + ANCHOS (fila 6 → idx 5)
+                        Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+                        for (int c = 0; c < HEADERS.length; c++) {
+                        UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
                         }
-                        CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-                        UtilExcel.aplicarEstiloAFila(fh, headers.length, estiloHeader);
-                        UtilExcel.establecerAnchosColumnas(hoja, anchos);
-                        hoja.getRow(filaEnc).setHeightInPoints(18f);
+                        CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+                        UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+                        UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+                        hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-                        // 5) Cuerpo (aplanado grupos → empleados → tLaborado)
-                        int filaDatosIni = filaEnc + 1;
+                        // 5) CUERPO (aplanado grupos → empleados → tLaborado)
+                        int filaDatosIni = FILA_ENCABEZADO + 1;
                         int filaAct = filaDatosIni;
                         int item = 1;
 
@@ -360,7 +376,7 @@ public class ReporteTiempoLaboradoService {
                                 for (EmpleadoTiempoDTO emp : grupo.getEmpleados()) {
                                 if (emp == null || emp.getTLaborado() == null) continue;
 
-                                String apenom = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
+                                String apenom   = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
                                 String ciudad   = firstNonEmpty(safe(emp.getCiudad()), safe(grupo.getCiudad()));
                                 String sucursal = firstNonEmpty(safe(emp.getSucursal()), safe(grupo.getSucursal()));
 
@@ -368,10 +384,10 @@ public class ReporteTiempoLaboradoService {
                                         if (reg == null) continue;
 
                                         boolean esEAS   = "EAS".equalsIgnoreCase(safe(reg.getTipo()));
-                                        boolean control = "true".equalsIgnoreCase(String.valueOf(reg.getControl())) ||
-                                                        Boolean.TRUE.equals(reg.getControl());
+                                        boolean control = "true".equalsIgnoreCase(String.valueOf(reg.getControl()))
+                                                || Boolean.TRUE.equals(reg.getControl());
 
-                                        // FECHA (tomamos la fecha_hora_horario de ENTRADA)
+                                        // FECHA (desde horario de entrada)
                                         String fecha = safe(() -> reg.getEntrada().getFecha_hora_horario());
 
                                         // HORARIOS (HH:mm:ss)
@@ -380,23 +396,20 @@ public class ReporteTiempoLaboradoService {
                                         String iaHorario      = esEAS ? horaDe(safe(() -> reg.getInicioAlimentacion().getFecha_hora_horario())) : "";
                                         String faHorario      = esEAS ? horaDe(safe(() -> reg.getFinAlimentacion().getFecha_hora_horario()))    : "";
 
-                                        // TIMBRES (regla del frontend antiguo: hora || L/FD || FT/SCA según control)
+                                        // TIMBRES (hora || L/FD || FT/SCA según control)
                                         String origen = safe(reg.getOrigen());
                                         String entradaTimbre = toTimbre(
                                                 safe(() -> reg.getEntrada().getFecha_hora_horario()),
                                                 safe(() -> reg.getEntrada().getFecha_hora_timbre()),
                                                 origen, control);
-
                                         String salidaTimbre = toTimbre(
                                                 safe(() -> reg.getSalida().getFecha_hora_horario()),
                                                 safe(() -> reg.getSalida().getFecha_hora_timbre()),
                                                 origen, control);
-
                                         String iaTimbre = esEAS ? toTimbre(
                                                 safe(() -> reg.getInicioAlimentacion().getFecha_hora_horario()),
                                                 safe(() -> reg.getInicioAlimentacion().getFecha_hora_timbre()),
                                                 origen, control) : "";
-
                                         String faTimbre = esEAS ? toTimbre(
                                                 safe(() -> reg.getFinAlimentacion().getFecha_hora_horario()),
                                                 safe(() -> reg.getFinAlimentacion().getFecha_hora_timbre()),
@@ -405,8 +418,7 @@ public class ReporteTiempoLaboradoService {
                                         // Tiempos y minutos (si !control, replica planificado)
                                         String tiempoPlan = safe(reg.getTiempoPlanificado());
                                         String minPlan    = normalize2(safe(reg.getMinPlanificados()));
-
-                                        String tiempoLab  = control ? safe(reg.getTiempoLaborado())  : tiempoPlan;
+                                        String tiempoLab  = control ? safe(reg.getTiempoLaborado())   : tiempoPlan;
                                         String minLab     = control ? normalize2(safe(reg.getMinLaborados())) : minPlan;
 
                                         // === Escritura de fila ===
@@ -445,49 +457,49 @@ public class ReporteTiempoLaboradoService {
                         }
                         }
 
-                        int ultimaFila = (filaAct == filaDatosIni) ? filaEnc : (filaAct - 1);
+                        int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
-                        // 6) Estilos cuerpo
+                        // 6) Estilos de cuerpo (por región)
                         CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
                         CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-                        // Header centrado con bordes
-                        UtilExcel.aplicarEstiloARegion(hoja, filaEnc, filaEnc, 0, headers.length - 1, estiloCentroBorde, true);
+                        // Encabezado centrado con borde
+                        UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
 
                         if (ultimaFila >= filaDatosIni) {
                         // ITEM centrado
                         UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
-                        // resto izquierda
-                        UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, headers.length - 1, estiloIzqBorde, true);
+                        // Resto izquierda
+                        UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde, true);
                         }
 
-                        // 7) Tabla estilizada + filtros (ITEM sin filtro)
+                        // 7) Tabla estilizada + filtros
                         if (ultimaFila >= filaDatosIni) {
-                        boolean[] filtros = new boolean[headers.length];
-                        for (int i = 0; i < filtros.length; i++) filtros[i] = true;
-                        filtros[0] = false; // ITEM sin filtro
-
                         UtilExcel.crearTablaEstilizada(
                                 hoja,
                                 "TiempoLaboradoTabla",
-                                filaEnc, 0,
-                                ultimaFila, headers.length - 1,
+                                FILA_ENCABEZADO, 0,
+                                ultimaFila, HEADERS.length - 1,
                                 true,
-                                filtros
+                                FILTROS
                         );
                         }
 
-                        // 8) Finalizar
+                        // 8) Cierre + retorno
                         libro.write(baos);
                         return baos.toByteArray();
 
+                } catch (IllegalArgumentException e) {
+                        // Validación → 400
+                        throw e;
                 } catch (Exception e) {
-                        e.printStackTrace();
-                        return null;
+                        // Internos → 500 uniforme
+                        throw new ReportBuildException("No se pudo generar TiempoLaborado.xlsx", e);
                 }
-                }
+        }
 
-        private String extraerHora(String fechaHora) {
+        
+                private String extraerHora(String fechaHora) {
                 if (fechaHora == null || !fechaHora.contains(" "))
                         return "";
                 return fechaHora.split(" ")[1];

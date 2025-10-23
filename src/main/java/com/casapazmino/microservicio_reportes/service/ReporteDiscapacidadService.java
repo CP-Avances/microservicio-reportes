@@ -111,22 +111,40 @@ public class ReporteDiscapacidadService {
             }
         }
     }
+    
+    
     // =========================
-    // XLSX (idéntico al front)
+    // XLSX 
     // =========================
     public byte[] generarReporteDiscapacidadesXLSX(ReporteDiscapacidadesRequest request) {
-        try (XSSFWorkbook libro = new XSSFWorkbook();
-                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA = "Discapacidades";
+        final int FILA_ENCABEZADO = 5;
 
-            XSSFSheet hoja = libro.createSheet("Discapacidades");
+        // Merges B1:C1 ... B5:C5 => (row 0..4, col 1..2)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 2;
+
+        final String[] HEADERS = { "ITEM", "CODIGO", "NOMBRE" };
+        final int[] ANCHOS      = {   20,     30,      40   };
+
+        try (XSSFWorkbook libro = new XSSFWorkbook();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
 
             // 1) Logo estándar A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            }
 
             // 2) Merges B1:C1 ... B5:C5
-            for (int r = 0; r < 5; r++) {
-                UtilExcel.combinarCeldas(hoja, r, r, 1, 2);
+            for (int r = MERGE_FIL_INI; r <= MERGE_FIL_FIN; r++) {
+                UtilExcel.combinarCeldas(hoja, r, r, MERGE_COL_INI, MERGE_COL_FIN);
             }
 
             // 3) Títulos
@@ -135,68 +153,67 @@ public class ReporteDiscapacidadService {
             UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE DISCAPACIDADES", estiloTitulo);
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
-            final int filaEncabezado = 5;
-            String[] encabezados = { "ITEM", "CODIGO", "NOMBRE" };
-            int[] anchos = { 20, 30, 40 };
-
-            Row header = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(header, c, encabezados[c], null);
+            Row header = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(header, c, HEADERS[c], null);
             }
             CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(header, encabezados.length, estiloHeader);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(header, HEADERS.length, estiloHeader);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // 5) Ordenar por id (como hacía el front antes de exportar)
+            // 5) Ordenar por id y escribir cuerpo
             List<DiscapacidadDTO> datos = request.getDiscapacidades();
             List<DiscapacidadDTO> ordenados = new ArrayList<>(datos == null ? List.of() : datos);
             ordenados.sort(Comparator.comparingLong(d -> d.getId() == null ? Long.MAX_VALUE : d.getId()));
 
-            int filaDatosInicio = filaEncabezado + 1;
-            int filaActual = filaDatosInicio;
+            int filaDatosIni = FILA_ENCABEZADO + 1;
+            int filaAct = filaDatosIni;
 
             for (int i = 0; i < ordenados.size(); i++) {
                 DiscapacidadDTO d = ordenados.get(i);
-                Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                UtilExcel.establecerValor(r, 0, i + 1, null); // ITEM
-                UtilExcel.establecerValor(r, 1, d.getId(), null); // CODIGO
+                Row r = UtilExcel.asegurarFila(hoja, filaAct++);
+                UtilExcel.establecerValor(r, 0, i + 1, null);                                // ITEM
+                UtilExcel.establecerValor(r, 1, d.getId(), null);                            // CODIGO
                 UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(d.getNombre()), null); // NOMBRE
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
-            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto
-            // izquierda)
+            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
 
-            if (ultimaFila >= filaDatosInicio) {
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 2, estiloIzqBorde, true);
+            if (ultimaFila >= filaDatosIni) {
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 2, estiloIzqBorde, true);
 
                 // 7) Tabla estilizada (A6:Cn), zebra y AutoFilter (ITEM sin filtro)
+                boolean[] filtros = new boolean[] { false, true, true };
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "DiscapacidadesTabla",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
-                        true,
-                        new boolean[] { false, true, true });
+                    hoja,
+                    "DiscapacidadesTabla",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    filtros
+                );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            throw e; // Validación → 400
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar Discapacidades.xlsx", e); // Interno → 500
         }
     }
 
+    
     // =========================
     // CSV (keys simples)
     // =========================

@@ -252,248 +252,270 @@ public class ReportePlanificacionService {
         }
     }
 
-        // =========================
+    // =========================
     // XLSX (nuevo) - 3 hojas
     // =========================
     public byte[] generarReporteXLSX(ReportePlanificacionRequest request) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String HOJA_PLAN   = "Planificacion horaria"; // ≤31
+        final String HOJA_DET    = "Detalle Horarios";
+        final String HOJA_DEF    = "Definiciones";
+
+        final int FILA_ENC_1 = 5; // planificacion
+        final int FILA_ENC_2 = 5; // detalle
+        final int FILA_ENC_3 = 5; // definiciones
+
+        // Merges B1:AP5 (row 0..4, col 1..41)
+        final int M1_FIL_INI = 0, M1_FIL_FIN = 4, M1_COL_INI = 1, M1_COL_FIN = 41;
+
+        // Merges hoja detalle: B1:F5 (row 0..4, col 1..5)
+        final int M2_FIL_INI = 0, M2_FIL_FIN = 4, M2_COL_INI = 1, M2_COL_FIN = 5;
+
+        // Merges hoja definiciones: B1:C5 (row 0..4, col 1..2)
+        final int M3_FIL_INI = 0, M3_FIL_FIN = 4, M3_COL_INI = 1, M3_COL_FIN = 2;
+
+        final String TITULO_PLAN = "PLANIFICACION HORARIA";
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            // === Hoja 1: Planificacion horaria ===
-            XSSFSheet hojaPlan = libro.createSheet("Planificacion horaria");
+            // Estilos reutilizables
+            final CellStyle estiloTitulo   = ConfiguracionExcel.crearEstiloTitulo(libro);
+            final CellStyle estiloHeader   = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+            final CellStyle centroBorde    = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
+            final CellStyle izquierdaBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            // Logo estándar A1:B5
-            byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hojaPlan, logo); // A1:B5
+            // Logo (una sola decodificación para reusar en 3 hojas)
+            final byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
 
-            // Merges B1:AP5 (B=1 .. AP=41 zero-based)
-            for (int row = 0; row <= 4; row++) {
-                UtilExcel.combinarCeldas(hojaPlan, row, row, 1, 41);
+            // =========================
+            // === Hoja 1: Planificación
+            // =========================
+            XSSFSheet hojaPlan = libro.createSheet(HOJA_PLAN);
+            hojaPlan.createFreezePane(0, FILA_ENC_1 + 1);
+
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hojaPlan, logo); // A1:B5
+            }
+
+            for (int row = M1_FIL_INI; row <= M1_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hojaPlan, row, row, M1_COL_INI, M1_COL_FIN);
             }
 
             // Títulos (empresa, título, periodo)
-            CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hojaPlan, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
             String titulo = (request.getTitulo() == null || request.getTitulo().isEmpty())
-                    ? "PLANIFICACION HORARIA"
-                    : request.getTitulo();
+                    ? TITULO_PLAN : request.getTitulo();
             UtilExcel.establecerTexto(hojaPlan, 1, 1, UtilExcel.aMayusculasSeguras(titulo), estiloTitulo);
 
-            String periodo = "PERIODO DEL REPORTE: " +
-                    safe(request.getPeriodoInicio()) + " AL " + safe(request.getPeriodoFin());
+            final String periodo = "PERIODO DEL REPORTE: " + safe(request.getPeriodoInicio()) + " AL " + safe(request.getPeriodoFin());
             UtilExcel.establecerTexto(hojaPlan, 2, 1, periodo, estiloTitulo);
 
-            // Encabezados (fila 6 -> idx 5)
-            final int filaEnc1 = 5;
-            String[] encabezados1 = construirHeadersPlanificacion();
-            int[] anchos1 = construirAnchosPlanificacion();
+            // Encabezados
+            final String[] HEADERS1 = construirHeadersPlanificacion();
+            final int[]    ANCHOS1  = construirAnchosPlanificacion();
 
-            Row header1 = UtilExcel.asegurarFila(hojaPlan, filaEnc1);
-            for (int c = 0; c < encabezados1.length; c++) {
-                UtilExcel.establecerTexto(header1, c, encabezados1[c], null);
+            Row header1 = UtilExcel.asegurarFila(hojaPlan, FILA_ENC_1);
+            for (int c = 0; c < HEADERS1.length; c++) {
+                UtilExcel.establecerTexto(header1, c, HEADERS1[c], null);
             }
-            CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(header1, encabezados1.length, estiloHeader);
-            UtilExcel.establecerAnchosColumnas(hojaPlan, anchos1);
-            hojaPlan.getRow(filaEnc1).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(header1, HEADERS1.length, estiloHeader);
+            UtilExcel.establecerAnchosColumnas(hojaPlan, ANCHOS1);
+            hojaPlan.getRow(FILA_ENC_1).setHeightInPoints(18f);
 
             // Cuerpo
-            int filaDatosIni1 = filaEnc1 + 1;
+            int filaDatosIni1 = FILA_ENC_1 + 1;
             int filaAct1 = filaDatosIni1;
-            int item = 1;
+            int item1 = 1;
 
             List<PlanificacionEmpleadoDTO> empleados = request.getDatos();
             if (empleados != null) {
                 for (PlanificacionEmpleadoDTO emp : empleados) {
-                    if (emp.getHorarios() == null) continue;
+                    if (emp == null || emp.getHorarios() == null) continue;
 
                     String apeNom = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
                     String codigo = safe(emp.getCodigo());
-                    String ident = safe(emp.getIdentificacion());
-                    String suc = safe(emp.getSucursal());
-                    String cui = safe(emp.getCiudad());
-                    String reg = safe(emp.getRegimen());
-                    String dep = safe(emp.getDepartamento());
-                    String car = safe(emp.getCargo());
+                    String ident  = safe(emp.getIdentificacion());
+                    String suc    = safe(emp.getSucursal());
+                    String cui    = safe(emp.getCiudad());
+                    String reg    = safe(emp.getRegimen());
+                    String dep    = safe(emp.getDepartamento());
+                    String car    = safe(emp.getCargo());
 
                     for (PlanificacionHorarioMensualDTO h : emp.getHorarios()) {
+                        if (h == null) continue;
                         Row r = UtilExcel.asegurarFila(hojaPlan, filaAct1++);
                         int col = 0;
-                        UtilExcel.establecerValor(r, col++, item++, null);                 // ITEM
-                        UtilExcel.establecerTexto(r, col++, codigo, null);                 // CÓDIGO
-                        UtilExcel.establecerTexto(r, col++, apeNom, null);                 // NOMBRE EMPLEADO
-                        UtilExcel.establecerTexto(r, col++, ident, null);                  // IDENTIFICACIÓN
-                        UtilExcel.establecerTexto(r, col++, cui, null);                    // CIUDAD
-                        UtilExcel.establecerTexto(r, col++, suc, null);                    // SUCURSAL
-                        UtilExcel.establecerTexto(r, col++, reg, null);                    // RÉGIMEN
-                        UtilExcel.establecerTexto(r, col++, dep, null);                    // DEPARTAMENTO
-                        UtilExcel.establecerTexto(r, col++, car, null);                    // CARGO
-                        UtilExcel.establecerTexto(r, col++, safe(h.getAnio()), null);      // AÑO
-                        UtilExcel.establecerTexto(r, col++, safe(h.getMes()), null);       // MES
-
-                        // Días 01..31 vía reflexión (getDia1..getDia31)
+                        UtilExcel.establecerValor(r, col++, item1++, null);              // ITEM
+                        UtilExcel.establecerTexto(r, col++, codigo, null);               // CÓDIGO
+                        UtilExcel.establecerTexto(r, col++, apeNom, null);               // NOMBRE EMPLEADO
+                        UtilExcel.establecerTexto(r, col++, ident, null);                // IDENTIFICACIÓN
+                        UtilExcel.establecerTexto(r, col++, cui, null);                  // CIUDAD
+                        UtilExcel.establecerTexto(r, col++, suc, null);                  // SUCURSAL
+                        UtilExcel.establecerTexto(r, col++, reg, null);                  // RÉGIMEN
+                        UtilExcel.establecerTexto(r, col++, dep, null);                  // DEPARTAMENTO
+                        UtilExcel.establecerTexto(r, col++, car, null);                  // CARGO
+                        UtilExcel.establecerTexto(r, col++, safe(h.getAnio()), null);    // AÑO
+                        UtilExcel.establecerTexto(r, col++, safe(h.getMes()), null);     // MES
                         for (int d = 1; d <= 31; d++) {
-                            String val = obtenerDia(h, d);
-                            UtilExcel.establecerTexto(r, col++, val, null);
+                            UtilExcel.establecerTexto(r, col++, obtenerDia(h, d), null); // D01..D31
                         }
                     }
                 }
             }
 
-            int ultimaFila1 = (filaAct1 == filaDatosIni1) ? filaEnc1 : (filaAct1 - 1);
+            int ultimaFila1 = (filaAct1 == filaDatosIni1) ? FILA_ENC_1 : (filaAct1 - 1);
 
-            // Estilos cuerpo
-            CellStyle centroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle izqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
-
-            // Header centrado
-            UtilExcel.aplicarEstiloARegion(hojaPlan, filaEnc1, filaEnc1, 0, encabezados1.length - 1, centroBorde, true);
-
+            // Estilos
+            UtilExcel.aplicarEstiloARegion(hojaPlan, FILA_ENC_1, FILA_ENC_1, 0, HEADERS1.length - 1, centroBorde, true);
             if (ultimaFila1 >= filaDatosIni1) {
-                // ITEM centrado
-                UtilExcel.aplicarEstiloARegion(hojaPlan, filaDatosIni1, ultimaFila1, 0, 0, centroBorde, true);
-                // resto izquierda
-                UtilExcel.aplicarEstiloARegion(hojaPlan, filaDatosIni1, ultimaFila1, 1, encabezados1.length - 1, izqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hojaPlan, filaDatosIni1, ultimaFila1, 0, 0, centroBorde, true); // ITEM
+                UtilExcel.aplicarEstiloARegion(hojaPlan, filaDatosIni1, ultimaFila1, 1, HEADERS1.length - 1, izquierdaBorde, true);
             }
 
-            // Tabla estilizada + filtros (ITEM sin filtro)
+            // Tabla + filtros (ITEM sin filtro)
             if (ultimaFila1 >= filaDatosIni1) {
-                boolean[] filtros = new boolean[encabezados1.length];
-                for (int i = 0; i < filtros.length; i++) filtros[i] = true;
-                filtros[0] = false;
-
+                boolean[] filtros1 = new boolean[HEADERS1.length];
+                for (int i = 0; i < filtros1.length; i++) filtros1[i] = true;
+                filtros1[0] = false;
                 UtilExcel.crearTablaEstilizada(
-                        hojaPlan,
-                        "ListaHorarios",
-                        filaEnc1, 0,
-                        ultimaFila1, encabezados1.length - 1,
-                        true,
-                        filtros
+                    hojaPlan,
+                    "ListaHorarios",
+                    FILA_ENC_1, 0,
+                    ultimaFila1, HEADERS1.length - 1,
+                    true,
+                    filtros1
                 );
             }
 
-            // === Hoja 2: Detalle Horarios ===
-            XSSFSheet hojaDet = libro.createSheet("Detalle Horarios");
-            UtilExcel.insertarLogoEstandar(libro, hojaDet, logo); // A1:B5
+            // =========================
+            // === Hoja 2: Detalle
+            // =========================
+            XSSFSheet hojaDet = libro.createSheet(HOJA_DET);
+            hojaDet.createFreezePane(0, FILA_ENC_2 + 1);
 
-            // Merges B1:F5
-            for (int row = 0; row <= 4; row++) {
-                UtilExcel.combinarCeldas(hojaDet, row, row, 1, 5);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hojaDet, logo);
+            }
+
+            for (int row = M2_FIL_INI; row <= M2_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hojaDet, row, row, M2_COL_INI, M2_COL_FIN);
             }
 
             UtilExcel.establecerTexto(hojaDet, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
-            UtilExcel.establecerTexto(hojaDet, 1, 1, "PLANIFICACION HORARIA", estiloTitulo);
+            UtilExcel.establecerTexto(hojaDet, 1, 1, TITULO_PLAN, estiloTitulo);
             UtilExcel.establecerTexto(hojaDet, 2, 1, periodo, estiloTitulo);
 
-            final int filaEnc2 = 5;
-            String[] encabezados2 = { "ITEM", "CÓDIGO", "ENTRADA (E)", "INICIO ALIMENTACIÓN (I/A)", "FIN ALIMENTACIÓN (F/A)", "SALIDA (S)" };
-            int[] anchos2 = { 10, 20, 20, 40, 40, 20 };
+            final String[] HEADERS2 = { "ITEM", "CÓDIGO", "ENTRADA (E)", "INICIO ALIMENTACIÓN (I/A)", "FIN ALIMENTACIÓN (F/A)", "SALIDA (S)" };
+            final int[]    ANCHOS2  = {   10,      20,          20,                     40,                       40,                 20 };
 
-            Row header2 = UtilExcel.asegurarFila(hojaDet, filaEnc2);
-            for (int c = 0; c < encabezados2.length; c++) {
-                UtilExcel.establecerTexto(header2, c, encabezados2[c], null);
+            Row header2 = UtilExcel.asegurarFila(hojaDet, FILA_ENC_2);
+            for (int c = 0; c < HEADERS2.length; c++) {
+                UtilExcel.establecerTexto(header2, c, HEADERS2[c], null);
             }
-            UtilExcel.aplicarEstiloAFila(header2, encabezados2.length, estiloHeader);
-            UtilExcel.establecerAnchosColumnas(hojaDet, anchos2);
-            hojaDet.getRow(filaEnc2).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(header2, HEADERS2.length, estiloHeader);
+            UtilExcel.establecerAnchosColumnas(hojaDet, ANCHOS2);
+            hojaDet.getRow(FILA_ENC_2).setHeightInPoints(18f);
 
-            int filaDatosIni2 = filaEnc2 + 1;
+            int filaDatosIni2 = FILA_ENC_2 + 1;
             int filaAct2 = filaDatosIni2;
             int item2 = 1;
 
             List<PlanificacionDetalleDTO> detalle = request.getDetalle_acciones();
             if (detalle != null) {
                 for (PlanificacionDetalleDTO d : detalle) {
+                    if (d == null) continue;
                     Row r = UtilExcel.asegurarFila(hojaDet, filaAct2++);
-                    UtilExcel.establecerValor (r, 0, item2++, null);
-                    UtilExcel.establecerTexto (r, 1, safe(d.getHorario()), null);
-                    UtilExcel.establecerTexto (r, 2, safe(d.getEntrada_()), null);
-                    UtilExcel.establecerTexto (r, 3, safe(d.getInicio_comida()), null);
-                    UtilExcel.establecerTexto (r, 4, safe(d.getFin_comida()), null);
-                    UtilExcel.establecerTexto (r, 5, safe(d.getSalida_()), null);
+                    UtilExcel.establecerValor(r, 0, item2++, null);
+                    UtilExcel.establecerTexto(r, 1, safe(d.getHorario()), null);
+                    UtilExcel.establecerTexto(r, 2, safe(d.getEntrada_()), null);
+                    UtilExcel.establecerTexto(r, 3, safe(d.getInicio_comida()), null);
+                    UtilExcel.establecerTexto(r, 4, safe(d.getFin_comida()), null);
+                    UtilExcel.establecerTexto(r, 5, safe(d.getSalida_()), null);
                 }
             }
 
-            int ultimaFila2 = (filaAct2 == filaDatosIni2) ? filaEnc2 : (filaAct2 - 1);
+            int ultimaFila2 = (filaAct2 == filaDatosIni2) ? FILA_ENC_2 : (filaAct2 - 1);
 
-            UtilExcel.aplicarEstiloARegion(hojaDet, filaEnc2, filaEnc2, 0, encabezados2.length - 1, centroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hojaDet, FILA_ENC_2, FILA_ENC_2, 0, HEADERS2.length - 1, centroBorde, true);
             if (ultimaFila2 >= filaDatosIni2) {
                 UtilExcel.aplicarEstiloARegion(hojaDet, filaDatosIni2, ultimaFila2, 0, 0, centroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hojaDet, filaDatosIni2, ultimaFila2, 1, encabezados2.length - 1, izqBorde, true);
-            }
-
-            if (ultimaFila2 >= filaDatosIni2) {
-                boolean[] filtros = new boolean[encabezados2.length];
-                for (int i = 0; i < filtros.length; i++) filtros[i] = true;
-                filtros[0] = false;
+                UtilExcel.aplicarEstiloARegion(hojaDet, filaDatosIni2, ultimaFila2, 1, HEADERS2.length - 1, izquierdaBorde, true);
+                boolean[] filtros2 = new boolean[HEADERS2.length];
+                for (int i = 0; i < filtros2.length; i++) filtros2[i] = true;
+                filtros2[0] = false;
                 UtilExcel.crearTablaEstilizada(
-                        hojaDet,
-                        "ListaDetaHorarios",
-                        filaEnc2, 0,
-                        ultimaFila2, encabezados2.length - 1,
-                        true,
-                        filtros
+                    hojaDet,
+                    "ListaDetaHorarios",
+                    FILA_ENC_2, 0,
+                    ultimaFila2, HEADERS2.length - 1,
+                    true,
+                    filtros2
                 );
             }
 
-            // === Hoja 3: Definiciones ===
-            XSSFSheet hojaDef = libro.createSheet("Definiciones");
-            UtilExcel.insertarLogoEstandar(libro, hojaDef, logo); // A1:B5
+            // =========================
+            // === Hoja 3: Definiciones
+            // =========================
+            XSSFSheet hojaDef = libro.createSheet(HOJA_DEF);
+            hojaDef.createFreezePane(0, FILA_ENC_3 + 1);
 
-            // Merges B1:C5
-            for (int row = 0; row <= 4; row++) {
-                UtilExcel.combinarCeldas(hojaDef, row, row, 1, 2);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hojaDef, logo);
+            }
+
+            for (int row = M3_FIL_INI; row <= M3_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hojaDef, row, row, M3_COL_INI, M3_COL_FIN);
             }
 
             UtilExcel.establecerTexto(hojaDef, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
             UtilExcel.establecerTexto(hojaDef, 1, 1, "DEFINICIONES", estiloTitulo);
             UtilExcel.establecerTexto(hojaDef, 2, 1, periodo, estiloTitulo);
 
-            final int filaEnc3 = 5;
-            String[] encabezados3 = { "ITEM", "NOMENCLATURA", "DESCRIPCIÓN" };
-            int[] anchos3 = { 20, 30, 40 };
+            final String[] HEADERS3 = { "ITEM", "NOMENCLATURA", "DESCRIPCIÓN" };
+            final int[]    ANCHOS3  = {   20,        30,            40      };
 
-            Row header3 = UtilExcel.asegurarFila(hojaDef, filaEnc3);
-            for (int c = 0; c < encabezados3.length; c++) {
-                UtilExcel.establecerTexto(header3, c, encabezados3[c], null);
+            Row header3 = UtilExcel.asegurarFila(hojaDef, FILA_ENC_3);
+            for (int c = 0; c < HEADERS3.length; c++) {
+                UtilExcel.establecerTexto(header3, c, HEADERS3[c], null);
             }
-            UtilExcel.aplicarEstiloAFila(header3, encabezados3.length, estiloHeader);
-            UtilExcel.establecerAnchosColumnas(hojaDef, anchos3);
-            hojaDef.getRow(filaEnc3).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(header3, HEADERS3.length, estiloHeader);
+            UtilExcel.establecerAnchosColumnas(hojaDef, ANCHOS3);
+            hojaDef.getRow(FILA_ENC_3).setHeightInPoints(18f);
 
-            int filaDatosIni3 = filaEnc3 + 1;
+            int filaDatosIni3 = FILA_ENC_3 + 1;
             int filaAct3 = filaDatosIni3;
             int item3 = 1;
 
             List<Map<String, String>> nomen = request.getNomenclatura();
             if (nomen != null) {
                 for (Map<String, String> it : nomen) {
+                    if (it == null) continue;
                     Row r = UtilExcel.asegurarFila(hojaDef, filaAct3++);
-                    UtilExcel.establecerValor (r, 0, item3++, null);
-                    UtilExcel.establecerTexto (r, 1, safe(it.get("nombre")), null);
-                    UtilExcel.establecerTexto (r, 2, safe(it.get("descripcion")), null);
+                    UtilExcel.establecerValor(r, 0, item3++, null);
+                    UtilExcel.establecerTexto(r, 1, safe(it.get("nombre")), null);
+                    UtilExcel.establecerTexto(r, 2, safe(it.get("descripcion")), null);
                 }
             }
 
-            int ultimaFila3 = (filaAct3 == filaDatosIni3) ? filaEnc3 : (filaAct3 - 1);
+            int ultimaFila3 = (filaAct3 == filaDatosIni3) ? FILA_ENC_3 : (filaAct3 - 1);
 
-            UtilExcel.aplicarEstiloARegion(hojaDef, filaEnc3, filaEnc3, 0, encabezados3.length - 1, centroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hojaDef, FILA_ENC_3, FILA_ENC_3, 0, HEADERS3.length - 1, centroBorde, true);
             if (ultimaFila3 >= filaDatosIni3) {
-                UtilExcel.aplicarEstiloARegion(hojaDef, filaDatosIni3, ultimaFila3, 0, 0,    centroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hojaDef, filaDatosIni3, ultimaFila3, 1, 2,    izqBorde,   true);
-            }
-
-            if (ultimaFila3 >= filaDatosIni3) {
-                boolean[] filtros = new boolean[encabezados3.length];
-                for (int i = 0; i < filtros.length; i++) filtros[i] = true;
-                filtros[0] = false;
+                UtilExcel.aplicarEstiloARegion(hojaDef, filaDatosIni3, ultimaFila3, 0, 0, centroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hojaDef, filaDatosIni3, ultimaFila3, 1, 2, izquierdaBorde, true);
+                boolean[] filtros3 = new boolean[HEADERS3.length];
+                for (int i = 0; i < filtros3.length; i++) filtros3[i] = true;
+                filtros3[0] = false;
                 UtilExcel.crearTablaEstilizada(
-                        hojaDef,
-                        "ListaDefinicionesHorarios",
-                        filaEnc3, 0,
-                        ultimaFila3, encabezados3.length - 1,
-                        true,
-                        filtros
+                    hojaDef,
+                    "ListaDefinicionesHorarios",
+                    FILA_ENC_3, 0,
+                    ultimaFila3, HEADERS3.length - 1,
+                    true,
+                    filtros3
                 );
             }
 
@@ -501,12 +523,14 @@ public class ReportePlanificacionService {
             libro.write(baos);
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            throw e; // Validación → 400
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar Planificacion.xlsx", e); // Interno → 500
         }
     }
 
+    
     // Helpers
 
     private static String[] construirHeadersPlanificacion() {

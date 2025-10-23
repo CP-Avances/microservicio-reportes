@@ -257,49 +257,70 @@ public class ReporteSalidasAnticipadasService {
     // XLSX (nuevo)
     // =========================
     public byte[] generarReporteXLSX(ReporteSalidasAnticipadasRequest request) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA     = "Salidas_Anticipadas"; // ≤ 31 chars
+        final int    FILA_ENCABEZADO = 5;                     // fila 6 (idx 5)
+
+        // MERGES exactos (B1:O5) → (row 0..4, col 1..14)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 14;
+
+        final String[] HEADERS = {
+            "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
+            "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
+            "FECHA HORARIO", "HORA HORARIO",
+            "FECHA TIMBRE", "HORA TIMBRE",
+            "SALIDA ANTICIPADA HH:MM:SS", "SALIDA ANTICIPADA MINUTOS"
+        };
+        final int[] ANCHOS = { 10,20,20,20, 20,20,20,20,20, 20,20, 20,20, 25,25 };
+
+        // Filtros: ITEM sin filtro; resto con filtro
+        final boolean[] FILTROS = new boolean[] {
+            false, true, true, true,
+            true,  true, true, true, true,
+            true,  true,
+            true,  true,
+            true,  true
+        };
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            XSSFSheet hoja = libro.createSheet("Salidas_Anticipadas");
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
 
             // 1) Logo estándar A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
-
-            // 2) Merges B1:O5  (B=1 .. O=14 en 0-based)
-            for (int row = 0; row <= 4; row++) {
-                UtilExcel.combinarCeldas(hoja, row, row, 1, 14);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
             }
 
-            // 3) Títulos
+            // 2) MERGES exactos (B1:O5)
+            for (int row = MERGE_FIL_INI; row <= MERGE_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hoja, row, row, MERGE_COL_INI, MERGE_COL_FIN);
+            }
+
+            // 3) TÍTULOS en B1..B3
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
-            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE SALIDAS ANTICIPADAS", estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
+            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE SALIDAS ANTICIPADAS", estiloTitulo);                     // B2
             String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL " + safe(request.getFechaFin());
-            UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);                                           // B3
 
-            // 4) Encabezados (fila 6 -> idx 5) + anchos
-            final int filaEnc = 5;
-            String[] headers = {
-                    "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
-                    "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
-                    "FECHA HORARIO", "HORA HORARIO",
-                    "FECHA TIMBRE", "HORA TIMBRE",
-                    "SALIDA ANTICIPADA HH:MM:SS", "SALIDA ANTICIPADA MINUTOS"
-            };
-            int[] anchos = { 10,20,20,20, 20,20,20,20,20, 20,20, 20,20, 20,20 };
-
-            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEnc);
-            for (int c = 0; c < headers.length; c++) {
-                UtilExcel.establecerTexto(filaHeader, c, headers[c], null);
+            // 4) ENCABEZADOS + ANCHOS (fila 6 → idx 5)
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
-            CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(filaHeader, headers.length, estiloHeader);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEnc).setHeightInPoints(18f);
+            CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // 5) Cuerpo (aplanado grupos → empleados → salidas)
-            int filaDatosIni = filaEnc + 1;
+            // 5) CUERPO (aplanado grupos → empleados → salidas)
+            int filaDatosIni = FILA_ENCABEZADO + 1; // 6 → idx 6
             int filaAct = filaDatosIni;
             int item = 1;
 
@@ -309,17 +330,15 @@ public class ReporteSalidasAnticipadasService {
 
                     for (EmpleadoSalidaDTO usu : grupo.getEmpleados()) {
                         String apenom = (safe(usu.getApellido()) + " " + safe(usu.getNombre())).trim();
-
                         if (usu.getSalidas() == null) continue;
 
                         for (SalidaDTO sal : usu.getSalidas()) {
                             Row r = UtilExcel.asegurarFila(hoja, filaAct++);
                             int col = 0;
 
-                            // === Cálculos (como en TS) ===
+                            // === Cálculos (manteniendo helpers existentes) ===
                             String[] ph = splitFechaHora(sal.getFecha_hora_horario());
                             String[] pt = splitFechaHora(sal.getFecha_hora_timbre());
-
                             String horaHorario = ph[1];
                             String horaTimbre  = pt[1];
 
@@ -327,7 +346,7 @@ public class ReporteSalidasAnticipadasService {
                             String tiempo   = convertirMinutosATiempo(minutos);
 
                             // === Escritura ===
-                            UtilExcel.establecerValor(r, col++, item++, null);                // ITEM
+                            UtilExcel.establecerValor(r, col++, item++, null);                     // ITEM
                             UtilExcel.establecerTexto(r, col++, safe(usu.getIdentificacion()), null);
                             UtilExcel.establecerTexto(r, col++, safe(usu.getCodigo()), null);
                             UtilExcel.establecerTexto(r, col++, apenom, null);
@@ -337,59 +356,56 @@ public class ReporteSalidasAnticipadasService {
                             UtilExcel.establecerTexto(r, col++, safe(usu.getDepartamento()), null);
                             UtilExcel.establecerTexto(r, col++, safe(usu.getCargo()), null);
 
-                            UtilExcel.establecerTexto(r, col++, ph[0], null);                 // FECHA HORARIO
-                            UtilExcel.establecerTexto(r, col++, horaHorario, null);           // HORA HORARIO
-                            UtilExcel.establecerTexto(r, col++, pt[0], null);                 // FECHA TIMBRE
-                            UtilExcel.establecerTexto(r, col++, horaTimbre, null);            // HORA TIMBRE
-                            UtilExcel.establecerTexto(r, col++, tiempo, null);                // HH:MM:SS
-                            UtilExcel.establecerTexto(r, col++, String.format("%.2f", minutos), null); // minutos con decimales
+                            UtilExcel.establecerTexto(r, col++, ph[0], null);                      // FECHA HORARIO
+                            UtilExcel.establecerTexto(r, col++, horaHorario, null);                // HORA HORARIO
+                            UtilExcel.establecerTexto(r, col++, pt[0], null);                      // FECHA TIMBRE
+                            UtilExcel.establecerTexto(r, col++, horaTimbre, null);                 // HORA TIMBRE
+                            UtilExcel.establecerTexto(r, col++, tiempo, null);                     // HH:MM:SS
+                            UtilExcel.establecerTexto(r, col++, String.format("%.2f", minutos), null); // MINUTOS
                         }
                     }
                 }
             }
 
-            int ultimaFila = (filaAct == filaDatosIni) ? filaEnc : (filaAct - 1);
+            int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
-            // 6) Estilos de cuerpo
+            // 6) ALINEACIONES + BORDES (header centrado; cuerpo col 0 centrado, resto izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
             CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            // Header centrado
-            UtilExcel.aplicarEstiloARegion(hoja, filaEnc, filaEnc, 0, headers.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
 
             if (ultimaFila >= filaDatosIni) {
-                // ITEM centrado
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
-                // resto izquierda
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, headers.length - 1, estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);             // ITEM centrado
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde, true); // resto izquierda
             }
 
-            // 7) Tabla estilizada + filtros (ITEM sin filtro)
+            // 7) TABLA estilizada + AutoFilter
             if (ultimaFila >= filaDatosIni) {
-                boolean[] filtros = new boolean[headers.length];
-                for (int i = 0; i < filtros.length; i++) filtros[i] = true;
-                filtros[0] = false;
-
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "SalidaAnticipadaReporteTabla",
-                        filaEnc, 0,
-                        ultimaFila, headers.length - 1,
-                        true,
-                        filtros
+                    hoja,
+                    "SalidaAnticipadaReporteTabla",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    FILTROS
                 );
             }
 
-            // 8) Finalizar
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validación → 400 (lo maneja el controller)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Internos → 500 uniforme
+            throw new ReportBuildException("No se pudo generar SalidasAnticipadas.xlsx", e);
         }
     }
 
+    
     // ===== Helpers locales =====
     private String safe(Object v) {
         if (v == null) return "";

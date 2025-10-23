@@ -111,92 +111,119 @@ public class ReporteTituloService {
     }
 
     // =========================
-    // XLSX (idéntico al front)
+    // XLSX
     // =========================
     public byte[] generarReporteTitulosXLSX(ReporteTitulosRequest request) {
-        try (XSSFWorkbook libro = new XSSFWorkbook();
-                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA     = "Títulos"; // ≤ 31 chars
+        final int    FILA_ENCABEZADO = 5;        // fila 6 (idx 5)
 
-            XSSFSheet hoja = libro.createSheet("Títulos");
+        // MERGES exactos (B1:D1 ... B5:D5) => (row 0..4, col 1..3)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 3;
+
+        final String[] HEADERS = { "ITEM", "CÓDIGO", "NIVEL", "TÍTULO" };
+        final int[]    ANCHOS  = {    10,     20,      30,      30     };
+
+        // Filtros: ITEM sin filtro; resto con filtro
+        final boolean[] FILTROS = new boolean[] { false, true, true, true };
+
+        try (XSSFWorkbook libro = new XSSFWorkbook();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
 
             // 1) Logo A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            }
 
-            // 2) Merges B1:D1 ... B5:D5 (3 columnas de texto, A es el logo)
-            for (int r = 0; r < 5; r++) {
-                UtilExcel.combinarCeldas(hoja, r, r, 1, 3);
+            // 2) Merges B1:D1 ... B5:D5
+            for (int r = MERGE_FIL_INI; r <= MERGE_FIL_FIN; r++) {
+                UtilExcel.combinarCeldas(hoja, r, r, MERGE_COL_INI, MERGE_COL_FIN);
             }
 
             // 3) Títulos (B1 empresa, B2 "Lista de Títulos")
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
-            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE TÍTULOS", estiloTitulo);
+            UtilExcel.establecerTexto(
+                hoja, 0, 1,
+                UtilExcel.aMayusculasSeguras(request.getEmpresa()),
+                estiloTitulo
+            ); // B1
+            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE TÍTULOS", estiloTitulo); // B2
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
-            final int filaEncabezado = 5;
-            String[] encabezados = { "ITEM", "CÓDIGO", "NIVEL", "TÍTULO" };
-            int[] anchos = { 10, 20, 30, 30 };
-
-            Row header = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(header, c, encabezados[c], null);
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
-            CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(header, encabezados.length, estiloHeader);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // 5) Cuerpo (en el front no se ordenaba explícitamente; respetamos el orden
-            // recibido)
-            int filaDatosInicio = filaEncabezado + 1;
+            // 5) Cuerpo (respetar el orden recibido)
+            int filaDatosInicio = FILA_ENCABEZADO + 1;
             int filaActual = filaDatosInicio;
+            int item = 1;
 
             List<TituloDTO> titulos = request.getTitulos();
             if (titulos != null) {
-                for (int i = 0; i < titulos.size(); i++) {
-                    TituloDTO t = titulos.get(i);
+                for (TituloDTO t : titulos) {
                     Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                    UtilExcel.establecerValor(r, 0, i + 1, null); // ITEM
-                    UtilExcel.establecerValor(r, 1, t.getId(), null);
-                    UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(t.getNivel()), null);
-                    UtilExcel.establecerValor(r, 3, UtilExcel.nuloComoVacio(t.getNombre()), null);
+                    UtilExcel.establecerValor(r, 0, item++, null);                                   // ITEM
+                    UtilExcel.establecerValor(r, 1, t.getId(), null);                                // CÓDIGO
+                    UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(t.getNivel()), null);    // NIVEL
+                    UtilExcel.establecerValor(r, 3, UtilExcel.nuloComoVacio(t.getNombre()), null);   // TÍTULO
                 }
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
-            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto
-            // izquierda)
+            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            // Encabezado centrado con borde
+            UtilExcel.aplicarEstiloARegion(
+                hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
+                0, HEADERS.length - 1, estiloCentroBorde, true
+            );
 
+            // Cuerpo: col 0 centrada; col 1..3 izquierda
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 3, estiloIzqBorde, true);
 
                 // 7) Tabla estilizada (A6:Dn), zebra y AutoFilter (ITEM sin filtro)
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "TitulosTabla",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
-                        true,
-                        new boolean[] { false, true, true, true });
+                    hoja,
+                    "TitulosTabla",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    FILTROS
+                );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validaciones → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Internos → 500 uniforme
+            throw new ReportBuildException("No se pudo generar Titulos.xlsx", e);
         }
     }
 
+    
     // =========================
     // CSV (orden simple de keys)
     // =========================

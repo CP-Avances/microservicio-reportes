@@ -116,88 +116,110 @@ public class ReporteNivelTituloService {
     // XLSX (calcado al front)
     // =========================
     public byte[] generarReporteNivelTituloXLSX(ReporteNivelesTitulosRequest request) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA     = "Niveles Títulos"; // nombre exacto (≤31)
+        final int    FILA_ENCABEZADO = 5;
+
+        // Merges B1:C1 ... B5:C5 => (row 0..4, col 1..2)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 2;
+
+        final String TITULO_REPORTE = "LISTA DE NIVELES DE TÍTULOS PROFESIONALES";
+        final String[] HEADERS = { "ITEM", "CODIGO", "NOMBRE" };
+        final int[]    ANCHOS  = {   20,      30,       40    };
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
-                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            XSSFSheet hoja = libro.createSheet("Niveles Títulos"); // nombre exacto
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener encabezado visible
 
-            // 1) Logo estándar A1:B5
+            // 1) Logo estándar A1:B5 (si existe)
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            }
 
             // 2) Merges B1:C1 ... B5:C5
-            for (int r = 0; r < 5; r++) {
-                UtilExcel.combinarCeldas(hoja, r, r, 1, 2);
+            for (int r = MERGE_FIL_INI; r <= MERGE_FIL_FIN; r++) {
+                UtilExcel.combinarCeldas(hoja, r, r, MERGE_COL_INI, MERGE_COL_FIN);
             }
 
             // 3) Títulos
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
-            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE NIVELES DE TÍTULOS PROFESIONALES", estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo);
 
-            // 4) Encabezados + anchos (fila 6 → idx 5)
-            final int filaEncabezado = 5;
-            String[] encabezados = { "ITEM", "CODIGO", "NOMBRE" };
-            int[] anchos = { 20, 30, 40 };
-
-            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(filaHeader, c, encabezados[c], null);
+            // 4) Encabezados + anchos
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
             CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(filaHeader, encabezados.length, estiloEncabezado);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // 5) Ordenar por id ASC (como OrdenarDatos del front) antes de pintar
+            // 5) Cuerpo (ordenar por id ASC; nulls al final)
             List<NivelTituloDTO> datos = request.getNivelesTitulos();
-            List<NivelTituloDTO> ordenados = new ArrayList<>(datos == null ? List.of() : datos);
-            ordenados.sort(Comparator.comparingLong(n -> n.getId() == null ? Long.MAX_VALUE : n.getId()));
+            List<NivelTituloDTO> ordenados = new java.util.ArrayList<>(datos == null ? java.util.List.of() : datos);
+            ordenados.sort(java.util.Comparator.comparing(
+                    NivelTituloDTO::getId,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())
+            ));
 
-            int filaDatosInicio = filaEncabezado + 1;
+            int filaDatosInicio = FILA_ENCABEZADO + 1;
             int filaActual = filaDatosInicio;
+            int item = 1;
 
-            for (int i = 0; i < ordenados.size(); i++) {
-                NivelTituloDTO n = ordenados.get(i);
+            for (NivelTituloDTO n : ordenados) {
+                if (n == null) continue;
                 Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                UtilExcel.establecerValor(r, 0, i + 1, null); // ITEM
-                UtilExcel.establecerValor(r, 1, n.getId(), null); // CODIGO
+                UtilExcel.establecerValor(r, 0, item++, null);                              // ITEM
+                UtilExcel.establecerValor(r, 1, n.getId(), null);                           // CODIGO
                 UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(n.getNombre()), null); // NOMBRE
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
             // 6) Alineaciones + bordes
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            // Header centrado
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            // Encabezado centrado con borde
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
 
+            // Cuerpo: col 0 centrado; col 1..2 izquierda
             if (ultimaFila >= filaDatosInicio) {
-                // Cuerpo: col 0 centrada; resto izquierda
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 2, estiloIzqBorde, true);
 
-                // 7) Tabla estilizada (A6:Cn), zebra y filtros (ITEM sin filtro)
+                // 7) Tabla estilizada + filtros (ITEM sin filtro)
+                boolean[] filtros = new boolean[] { false, true, true };
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "NivelesTitulosTabla",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
-                        true,
-                        new boolean[] { false, true, true });
+                    hoja,
+                    "NivelesTitulosTabla",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    filtros
+                );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+            throw e; // Validación → 400
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar NivelesTitulos.xlsx", e); // Interno → 500
         }
     }
 
+    
     // =========================
     // CSV (orden simple de keys como en front dinámico)
     // =========================

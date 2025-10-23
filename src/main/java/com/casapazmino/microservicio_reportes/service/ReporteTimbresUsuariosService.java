@@ -248,7 +248,7 @@ public class ReporteTimbresUsuariosService {
 
         final boolean conDispositivo = request.getTimbreDispositivo();
 
-        // 1) Definir columnas según el flag
+        // 1) Definir columnas según el flag (igual que antes)
         String[] headers = conDispositivo
                 ? new String[] { "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "CIUDAD", "SUCURSAL", "RÉGIMEN",
                         "DEPARTAMENTO", "CARGO", "FECHA TIMBRE", "HORA TIMBRE", "RELOJ", "ACCIÓN", "OBSERVACIÓN",
@@ -258,34 +258,37 @@ public class ReporteTimbresUsuariosService {
                         "LATITUD", "LONGITUD" };
         int lastCol = headers.length - 1;
 
-        // 2) Workbook base + streaming
-        XSSFWorkbook wbBase = new XSSFWorkbook();
-        try (SXSSFWorkbook wb = new SXSSFWorkbook(wbBase, 200, true, false)) {
-            Sheet hoja = wb.createSheet("Timbres");
+        // 2) Libro base + streaming (cerrando ambos recursos)
+        try (XSSFWorkbook wbBase = new XSSFWorkbook();
+            SXSSFWorkbook wb = new SXSSFWorkbook(wbBase, 200, true, false)) {
 
-            // === ESTILOS (como el otro reporte) ===
+            Sheet hoja = wb.createSheet("Timbres");
+            // Fijar encabezado (fila 6 → idx 5)
+            hoja.createFreezePane(0, 6);
+
+            // === ESTILOS (igual base, reusables) ===
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(wbBase);
 
-        XSSFColor azulCorporativo = new XSSFColor(new java.awt.Color(14, 91, 166), null);
-        CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(wbBase);
-        if (estiloHeader instanceof org.apache.poi.xssf.usermodel.XSSFCellStyle) {
-            org.apache.poi.xssf.usermodel.XSSFCellStyle x = (org.apache.poi.xssf.usermodel.XSSFCellStyle) estiloHeader;
-            x.setFillForegroundColor(new org.apache.poi.xssf.usermodel.XSSFColor(hexToAwtColor(safe(azulCorporativo)), null));
-            x.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        } else {
-            estiloHeader.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        }
-        Font fHeader = wbBase.createFont();
-        fHeader.setBold(true);
-        fHeader.setColor(IndexedColors.WHITE.getIndex());
-        estiloHeader.setFont(fHeader);
-        estiloHeader.setWrapText(true);
+            XSSFColor azulCorporativo = new XSSFColor(new java.awt.Color(14, 91, 166), null);
+            CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(wbBase);
+            if (estiloHeader instanceof org.apache.poi.xssf.usermodel.XSSFCellStyle) {
+                org.apache.poi.xssf.usermodel.XSSFCellStyle x = (org.apache.poi.xssf.usermodel.XSSFCellStyle) estiloHeader;
+                x.setFillForegroundColor(new org.apache.poi.xssf.usermodel.XSSFColor(hexToAwtColor(safe(azulCorporativo)), null));
+                x.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            } else {
+                estiloHeader.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            }
+            Font fHeader = wbBase.createFont();
+            fHeader.setBold(true);
+            fHeader.setColor(IndexedColors.WHITE.getIndex());
+            estiloHeader.setFont(fHeader);
+            estiloHeader.setWrapText(true);
 
             // Bordes para cuerpo (base)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(wbBase);
-            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(wbBase);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(wbBase);
 
-            // Zebra: clonar y agregar relleno (muy suave)
+            // Zebra (suave)
             CellStyle estiloCentroZebra = wbBase.createCellStyle();
             estiloCentroZebra.cloneStyleFrom(estiloCentroBorde);
             estiloCentroZebra.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -309,8 +312,7 @@ public class ReporteTimbresUsuariosService {
 
             // === TÍTULOS (B1..B3) ===
             String empresa = UtilExcel.aMayusculasSeguras(request.getEmpresa());
-            String activosInactivos = ("1".equals(String.valueOf(request.getOpcionBusqueda()))) ? "ACTIVOS"
-                    : "INACTIVOS";
+            String activosInactivos = ("1".equals(String.valueOf(request.getOpcionBusqueda()))) ? "ACTIVOS" : "INACTIVOS";
             String periodo = "PERIODO DEL REPORTE: " +
                     (request.getPeriodo() != null ? safe(request.getPeriodo()::getInicio) : "") +
                     " AL " +
@@ -318,8 +320,7 @@ public class ReporteTimbresUsuariosService {
 
             UtilExcel.establecerTexto(hoja, 0, 1, empresa, estiloTitulo);
             hoja.getRow(0).setHeightInPoints(22f);
-            UtilExcel.establecerTexto(hoja, 1, 1, ("LISTA DE TIMBRES - " + activosInactivos).toUpperCase(),
-                    estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 1, 1, ("LISTA DE TIMBRES - " + activosInactivos).toUpperCase(), estiloTitulo);
             hoja.getRow(1).setHeightInPoints(20f);
             UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
             hoja.getRow(2).setHeightInPoints(18f);
@@ -329,34 +330,21 @@ public class ReporteTimbresUsuariosService {
             final int filaEnc = 5;
             Row filaHeader = UtilExcel.asegurarFila(hoja, filaEnc);
             filaHeader.setHeightInPoints(18f);
-
-            // ¡Aplica el estilo del header directamente a cada celda!
             for (int c = 0; c < headers.length; c++) {
                 UtilExcel.establecerTexto(filaHeader, c, headers[c], estiloHeader);
             }
 
-            // Anchos (mismos criterios del otro)
+            // Anchos (criterios del original)
             int[] anchos = new int[headers.length];
             for (int c = 0; c < headers.length; c++) {
                 int width;
                 switch (c) {
-                    case 0:
-                        width = 10;
-                        break; // ITEM
-                    case 3:
-                        width = 28;
-                        break; // APELLIDO NOMBRE
-                    case 13:
-                        width = 26;
-                        break; // OBSERVACIÓN
-                    case 16:
-                        width = 28;
-                        break; // FECHA TIMBRE DISPOSITIVO
-                    case 17:
-                        width = 24;
-                        break; // HORA TIMBRE DISPOSITIVO
-                    default:
-                        width = 20;
+                    case 0:  width = 10; break; // ITEM
+                    case 3:  width = 28; break; // APELLIDO NOMBRE
+                    case 13: width = 26; break; // OBSERVACIÓN
+                    case 16: width = 28; break; // FECHA TIMBRE DISPOSITIVO
+                    case 17: width = 24; break; // HORA TIMBRE DISPOSITIVO
+                    default: width = 20;
                 }
                 anchos[c] = width;
             }
@@ -368,120 +356,84 @@ public class ReporteTimbresUsuariosService {
 
             if (request.getData_pdf() != null) {
                 for (GrupoTimbresDTO grupo : request.getData_pdf()) {
-                    if (grupo == null || grupo.getEmpleados() == null)
-                        continue;
+                    if (grupo == null || grupo.getEmpleados() == null) continue;
 
                     for (EmpleadoTimbreDTO emp : grupo.getEmpleados()) {
-                        if (emp == null || emp.getTimbres() == null)
-                            continue;
+                        if (emp == null || emp.getTimbres() == null) continue;
 
-                        String apenom = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
-                        String ciudad = firstNonEmpty(safe(emp.getCiudad()), safe(grupo.getCiudad()));
+                        String apenom   = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
+                        String ciudad   = firstNonEmpty(safe(emp.getCiudad()), safe(grupo.getCiudad()));
                         String sucursal = firstNonEmpty(safe(emp.getSucursal()), safe(grupo.getSucursal()));
 
                         for (TimbreUsuarioDTO t : emp.getTimbres()) {
-                            if (t == null)
-                                continue;
+                            if (t == null) continue;
 
-                            String fhVal = safe(t.getFecha_hora_timbre_validado());
-                            String fechaSrv = fechaDeFechaHora(fhVal);
+                            String fhVal   = safe(t.getFecha_hora_timbre_validado());
+                            String fechaSrv= fechaDeFechaHora(fhVal);
                             String horaSrv = horaDeFechaHora(fhVal);
 
-                            String fhDev = safe(t.getFecha_hora_timbre());
-                            String fechaDev = fechaDeFechaHora(fhDev);
+                            String fhDev   = safe(t.getFecha_hora_timbre());
+                            String fechaDev= fechaDeFechaHora(fhDev);
                             String horaDev = horaDeFechaHora(fhDev);
 
-                            String fechaFmt = ReporteUtil
-                                    .formatearFechaConDia(fechaSrv.isBlank() ? fechaDev : fechaSrv);
-                            String hora = horaSrv.isBlank() ? horaDev : horaSrv;
-                            String accionTxt = ReporteUtil.traducirAccion(safe(t.getAccion()));
+                            String fechaFmt= ReporteUtil.formatearFechaConDia(fechaSrv.isBlank() ? fechaDev : fechaSrv);
+                            String hora    = horaSrv.isBlank() ? horaDev : horaSrv;
+                            String accion  = ReporteUtil.traducirAccion(safe(t.getAccion()));
 
                             Row r = hoja.createRow(rowIdx++);
                             int col = 0;
 
-                            // Alterna cebra (fila 0 del cuerpo = rowIdx == filaEnc+1)
                             boolean zebra = ((rowIdx - (filaEnc + 1)) % 2) == 1;
                             CellStyle csCenter = zebra ? estiloCentroZebra : estiloCentroBorde;
-                            CellStyle csLeft = zebra ? estiloIzqZebra : estiloIzqBorde;
+                            CellStyle csLeft   = zebra ? estiloIzqZebra   : estiloIzqBorde;
 
-                            // ITEM (centrado)
-                            Cell c0 = r.createCell(col++);
-                            c0.setCellValue(item++);
-                            c0.setCellStyle(csCenter);
+                            Cell c0 = r.createCell(col++); c0.setCellValue(item++);                     c0.setCellStyle(csCenter);
+                            Cell c1 = r.createCell(col++); c1.setCellValue(safe(emp.getIdentificacion())); c1.setCellStyle(csLeft);
+                            Cell c2 = r.createCell(col++); c2.setCellValue(safe(emp.getCodigo()));        c2.setCellStyle(csLeft);
+                            Cell c3 = r.createCell(col++); c3.setCellValue(apenom);                       c3.setCellStyle(csLeft);
+                            Cell c4 = r.createCell(col++); c4.setCellValue(ciudad);                       c4.setCellStyle(csLeft);
+                            Cell c5 = r.createCell(col++); c5.setCellValue(sucursal);                     c5.setCellStyle(csLeft);
+                            Cell c6 = r.createCell(col++); c6.setCellValue(safe(emp.getRegimen()));       c6.setCellStyle(csLeft);
+                            Cell c7 = r.createCell(col++); c7.setCellValue(safe(emp.getDepartamento()));  c7.setCellStyle(csLeft);
+                            Cell c8 = r.createCell(col++); c8.setCellValue(safe(emp.getCargo()));         c8.setCellStyle(csLeft);
+                            Cell c9 = r.createCell(col++); c9.setCellValue(fechaFmt);                     c9.setCellStyle(csLeft);
+                            Cell c10= r.createCell(col++); c10.setCellValue(hora);                        c10.setCellStyle(csLeft);
+                            Cell c11= r.createCell(col++); c11.setCellValue(safe(t.getId_reloj()));       c11.setCellStyle(csLeft);
+                            Cell c12= r.createCell(col++); c12.setCellValue(accion);                      c12.setCellStyle(csLeft);
+                            Cell c13= r.createCell(col++); c13.setCellValue(safe(t.getObservacion()));    c13.setCellStyle(csLeft);
 
-                            // resto (izquierda)
-                            Cell c1 = r.createCell(col++);
-                            c1.setCellValue(safe(emp.getIdentificacion()));
-                            c1.setCellStyle(csLeft);
-                            Cell c2 = r.createCell(col++);
-                            c2.setCellValue(safe(emp.getCodigo()));
-                            c2.setCellStyle(csLeft);
-                            Cell c3 = r.createCell(col++);
-                            c3.setCellValue(apenom);
-                            c3.setCellStyle(csLeft);
-                            Cell c4 = r.createCell(col++);
-                            c4.setCellValue(ciudad);
-                            c4.setCellStyle(csLeft);
-                            Cell c5 = r.createCell(col++);
-                            c5.setCellValue(sucursal);
-                            c5.setCellStyle(csLeft);
-                            Cell c6 = r.createCell(col++);
-                            c6.setCellValue(safe(emp.getRegimen()));
-                            c6.setCellStyle(csLeft);
-                            Cell c7 = r.createCell(col++);
-                            c7.setCellValue(safe(emp.getDepartamento()));
-                            c7.setCellStyle(csLeft);
-                            Cell c8 = r.createCell(col++);
-                            c8.setCellValue(safe(emp.getCargo()));
-                            c8.setCellStyle(csLeft);
-                            Cell c9 = r.createCell(col++);
-                            c9.setCellValue(fechaFmt);
-                            c9.setCellStyle(csLeft);
-                            Cell c10 = r.createCell(col++);
-                            c10.setCellValue(hora);
-                            c10.setCellStyle(csLeft);
-                            Cell c11 = r.createCell(col++);
-                            c11.setCellValue(safe(t.getId_reloj()));
-                            c11.setCellStyle(csLeft);
-                            Cell c12 = r.createCell(col++);
-                            c12.setCellValue(accionTxt);
-                            c12.setCellStyle(csLeft);
-                            Cell c13 = r.createCell(col++);
-                            c13.setCellValue(safe(t.getObservacion()));
-                            c13.setCellStyle(csLeft);
-
-                            // lat / lon numéricos si se puede
-                            Cell c14 = r.createCell(col++);
-                            setNumericIfPossible(c14, safe(t.getLatitud()));
-                            c14.setCellStyle(csLeft);
-                            Cell c15 = r.createCell(col++);
-                            setNumericIfPossible(c15, safe(t.getLongitud()));
-                            c15.setCellStyle(csLeft);
+                            Cell c14= r.createCell(col++); setNumericIfPossible(c14, safe(t.getLatitud()));  c14.setCellStyle(csLeft);
+                            Cell c15= r.createCell(col++); setNumericIfPossible(c15, safe(t.getLongitud())); c15.setCellStyle(csLeft);
 
                             if (conDispositivo) {
-                                Cell c16 = r.createCell(col++);
-                                c16.setCellValue(fechaDev);
-                                c16.setCellStyle(csLeft);
-                                Cell c17 = r.createCell(col++);
-                                c17.setCellValue(horaDev);
-                                c17.setCellStyle(csLeft);
+                                Cell c16= r.createCell(col++); c16.setCellValue(fechaDev); c16.setCellStyle(csLeft);
+                                Cell c17= r.createCell(col++); c17.setCellValue(horaDev);  c17.setCellStyle(csLeft);
                             }
                         }
                     }
                 }
             }
 
-            // === AutoFilter (no tocamos filas viejas) ===
+            // === AutoFilter (sin UtilExcel.crearTablaEstilizada; evita conflicto XSSF/SXSSF) ===
             if (rowIdx > filaEnc + 1) {
                 hoja.setAutoFilter(new CellRangeAddress(filaEnc, rowIdx - 1, 0, lastCol));
             }
 
-            // === Escribir ===
+            // === Escribir en el OutputStream ===
             wb.write(out);
             wb.dispose();
+
+        } catch (IllegalArgumentException e) {
+            // Validación → que el controller mapee a 400
+            throw e;
+        } catch (Exception e) {
+            // Internos → 500 uniforme
+            throw new ReportBuildException("No se pudo generar TimbresUsuarios.xlsx", e);
         }
     }
 
+    
+    
     /* ========================== Helpers ========================== */
     private String safe(Object v) {
         if (v == null)

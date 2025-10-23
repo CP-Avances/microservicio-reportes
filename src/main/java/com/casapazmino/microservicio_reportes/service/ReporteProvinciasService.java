@@ -113,71 +113,86 @@ public class ReporteProvinciasService {
             }
         }
     }
+    
     // =========================
     //          XLSX (igual al ExcelJS del front)
     // =========================
     public byte[] generarReporteXLSX(ReporteProvinciasRequest request) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA = "Provincias";       // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5;                  // fila 6 (idx 5)
+
+        // MERGES exactos (B1:E1 ... B5:E5) => (row 0..4, col 1..4)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 4;
+
+        final String[] HEADERS = { "ITEM", "ID", "NOMBRE", "ID_PAIS", "PAIS" };
+        final int[]    ANCHOS  = {     10,   20,      20,        20,      20 };
+
+        // Filtros: ITEM sin filtro; resto con filtro
+        final boolean[] FILTROS = new boolean[] { false, true, true, true, true };
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            XSSFSheet hoja = libro.createSheet("Provincias");
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
 
-            // 1) LOGO estándar A1:B5
+            // 1) Logo estándar A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            }
 
-            // 2) MERGES EXACTOS (B1:E1 ... B5:E5)
-            UtilExcel.combinarCeldas(hoja, 0, 0, 1, 4); // B1:E1
-            UtilExcel.combinarCeldas(hoja, 1, 1, 1, 4); // B2:E2
-            UtilExcel.combinarCeldas(hoja, 2, 2, 1, 4); // B3:E3
-            UtilExcel.combinarCeldas(hoja, 3, 3, 1, 4); // B4:E4
-            UtilExcel.combinarCeldas(hoja, 4, 4, 1, 4); // B5:E5
+            // 2) MERGES exactos (B1:E1 ... B5:E5)
+            for (int row = MERGE_FIL_INI; row <= MERGE_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hoja, row, row, MERGE_COL_INI, MERGE_COL_FIN);
+            }
 
             // 3) TÍTULOS en B1 y B2
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
+            UtilExcel.establecerTexto(hoja, 0, 1,
+                    UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
             UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE PROVINCIAS", estiloTitulo); // B2
 
-            // 4) ENCABEZADOS + ANCHOS (fila 6 → índice 5)
-            final int filaEncabezado = 5;
-            String[] encabezados = { "ITEM", "ID", "NOMBRE", "ID_PAIS", "PAIS" };
-            int[] anchos =      {     10,   20,      20,        20,      20 };
-
-            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(filaHeader, c, encabezados[c], null);
+            // 4) ENCABEZADOS + ANCHOS (fila 6 → idx 5)
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
             CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(filaHeader, encabezados.length, estiloEncabezado);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // 5) CUERPO (datos = [index+1, id, nombre, id_pais, pais])
-            int filaDatosInicio = filaEncabezado + 1; // 6 → índice 6
+            // 5) CUERPO (datos = [item, id, nombre, id_pais, pais])
+            int filaDatosInicio = FILA_ENCABEZADO + 1; // 6 → idx 6
             int filaActual = filaDatosInicio;
+            int item = 1;
 
             List<ProvinciaDTO> provincias = request.getProvincias();
             if (provincias != null) {
-                for (int i = 0; i < provincias.size(); i++) {
-                    ProvinciaDTO p = provincias.get(i);
+                for (ProvinciaDTO p : provincias) {
                     Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                    UtilExcel.establecerValor(r, 0, i + 1, null);                             // ITEM
-                    UtilExcel.establecerValor(r, 1, p.getId(), null);                         // ID
+                    UtilExcel.establecerValor(r, 0, item++, null);                                 // ITEM (secuencial)
+                    UtilExcel.establecerValor(r, 1, p.getId(), null);                              // ID
                     UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(p.getNombre()), null); // NOMBRE
-                    UtilExcel.establecerValor(r, 3, p.getId_pais(), null);                    // ID_PAIS
+                    UtilExcel.establecerValor(r, 3, p.getId_pais(), null);                         // ID_PAIS
                     UtilExcel.establecerValor(r, 4, UtilExcel.nuloComoVacio(p.getPais()), null);   // PAIS
                 }
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
             // 6) ALINEACIONES + BORDES (header centrado; cuerpo col 0 centrado, resto izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde   = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
+                    0, HEADERS.length - 1, estiloCentroBorde, true);
 
             // Cuerpo: col 0 centrado; col 1..4 izquierda
             if (ultimaFila >= filaDatosInicio) {
@@ -185,26 +200,32 @@ public class ReporteProvinciasService {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 4, estiloIzqBorde, true);
             }
 
-            // 7) TABLA estilizada (TableStyleMedium16), zebra y AutoFilter (A6:En)
+            // 7) TABLA estilizada + AutoFilter (ITEM sin filtro)
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.crearTablaEstilizada(
                         hoja,
                         "ProvinciasTabla",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
                         true,
-                        new boolean[] { false, true, true, true, true } // filtro: ITEM off, resto on
+                        FILTROS
                 );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+            // Errores de validación → que el controller mapee a 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Errores internos → 500 uniforme
+            throw new ReportBuildException("No se pudo generar Provincias.xlsx", e);
         }
     }
 
+    
     // =========================
     //           CSV (como tu ExportToCSV dinámico)
     // =========================

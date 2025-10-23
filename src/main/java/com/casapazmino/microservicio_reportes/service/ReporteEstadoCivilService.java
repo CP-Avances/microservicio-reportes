@@ -110,80 +110,113 @@ public class ReporteEstadoCivilService {
             }
         }
     }
+    
     // =========================
-    // XLSX (idéntico al estilo del front)
+    // XLSX
     // =========================
     public byte[] generarReporteXLSX(ReporteEstadosCivilRequest request) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA = "Estado Civil";       // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5;
+
+        // Merges exactos (B1:C1 ... B5:C5) => (row 0..4, col 1..2)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 2;
+
+        final String[] HEADERS = { "ITEM", "CODIGO", "ESTADO CIVIL" };   // labels exactos
+        final int[]    ANCHOS  = { 20, 30, 40 };                         // anchos exactos
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
-                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            XSSFSheet hoja = libro.createSheet("Estado Civil"); // <- nombre exacto
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
 
+            // 1) Logo estándar (A1:B5) - solo si hay imagen
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            }
 
-            // Merges B1:C1 ... B5:C5
-            for (int r = 0; r < 5; r++)
-                UtilExcel.combinarCeldas(hoja, r, r, 1, 2);
+            // 2) Merges exactos B1:C1 ... B5:C5
+            for (int r = MERGE_FIL_INI; r <= MERGE_FIL_FIN; r++) {
+                UtilExcel.combinarCeldas(hoja, r, r, MERGE_COL_INI, MERGE_COL_FIN);
+            }
 
+            // 3) Títulos (B1 empresa, B2 título)
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
-            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE ESTADOS CIVIL", estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
+            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE ESTADOS CIVIL", estiloTitulo);                           // B2
 
-            final int filaEncabezado = 5;
-            String[] encabezados = { "ITEM", "CODIGO", "ESTADO CIVIL" }; // <- labels exactos
-            int[] anchos = { 20, 30, 40 }; // <- anchos exactos
-
-            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(filaHeader, c, encabezados[c], null);
+            // 4) Encabezados + anchos
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
             CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(filaHeader, encabezados.length, estiloEncabezado);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // Ordenar por id ASC como en el front
+            // 5) Cuerpo (ordenar por id ASC como en el front)
             List<EstadoCivilDTO> estados = request.getEstadosCivil();
-            java.util.List<EstadoCivilDTO> ordenados = new java.util.ArrayList<>(
+            List<EstadoCivilDTO> ordenados = new java.util.ArrayList<>(
                     estados == null ? java.util.List.of() : estados);
             ordenados.sort(java.util.Comparator.comparing(e -> e.getId() == null ? Integer.MAX_VALUE : e.getId()));
 
-            int filaDatosInicio = filaEncabezado + 1;
+            int filaDatosInicio = FILA_ENCABEZADO + 1;
             int filaActual = filaDatosInicio;
+            int item = 1;
 
-            for (int i = 0; i < ordenados.size(); i++) {
-                EstadoCivilDTO e = ordenados.get(i);
+            for (EstadoCivilDTO e : ordenados) {
                 Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                UtilExcel.establecerValor(r, 0, i + 1, null); // ITEM
-                UtilExcel.establecerValor(r, 1, e.getId(), null); // CODIGO
+                UtilExcel.establecerValor(r, 0, item++, null);                                      // ITEM
+                UtilExcel.establecerValor(r, 1, e.getId(), null);                                   // CODIGO
                 UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(e.getEstadoCivil()), null); // ESTADO CIVIL
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
+            // 6) Estilos reutilizables
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+
+            // Encabezado centrado con borde
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+
+            // Cuerpo: col 0 centrado; col 1..2 izquierda
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 2, estiloIzqBorde, true);
-                // tabla visible A6:Cn
+
+                // 7) Tabla estilizada + filtros (ITEM sin filtro)
+                boolean[] filtros = new boolean[] { false, true, true };
                 UtilExcel.crearTablaEstilizada(
-                        hoja, "NivelesTitulosTabla", // nombre como en el front viejo
-                        filaEncabezado, 0, ultimaFila, encabezados.length - 1,
-                        true, new boolean[] { false, true, true });
+                        hoja,
+                        "EstadoCivilTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros
+                );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+            // Validación → el controller puede mapear a 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500 uniforme
+            throw new ReportBuildException("No se pudo generar EstadosCivil.xlsx", e);
         }
     }
 
+    
     // =========================
     // CSV
     // =========================

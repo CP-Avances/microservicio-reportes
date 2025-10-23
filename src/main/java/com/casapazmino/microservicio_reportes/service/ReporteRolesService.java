@@ -162,85 +162,125 @@ public class ReporteRolesService {
 
 
     public byte[] generarReporteRolesXLSX(ReporteRolesRequest request) {
-        try (XSSFWorkbook wb = new XSSFWorkbook()) {
-            XSSFSheet hoja = wb.createSheet("Funcionalidades de Rol");
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA    = "Funcionalidades de Rol"; // ≤ 31 chars
+        final int    FILA_ENCABEZADO = 5;                       // fila 6 (idx 5)
 
-            // 1) Logo A1:B5
+        // Merges para cabecera (B1:G1 ... B5:G5) → col 1..6 (B..G)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 6;
+
+        final String[] HEADERS = {
+            "ITEM", "ROL", "PÁGINA", "FUNCIÓN", "MÓDULO", "APLICACIÓN WEB", "APLICACIÓN MÓVIL"
+        };
+
+        final int[] ANCHOS = { 10, 30, 40, 60, 30, 20, 20 };
+
+        // Filtros: ITEM sin filtro; resto con filtro
+        final boolean[] FILTROS = new boolean[] { false, true, true, true, true, true, true };
+
+        try (XSSFWorkbook libro = new XSSFWorkbook();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
+
+            // 1) Logo estándar A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(wb, hoja, logo);
-
-            // 2) Estilos
-            CellStyle estTitulo = ConfiguracionExcel.crearEstiloTitulo(wb);
-            CellStyle estEnc = ConfiguracionExcel.crearEstiloEncabezadoTabla(wb);
-            CellStyle estC = ConfiguracionExcel.crearEstiloCentroConBorde(wb);
-            CellStyle estI = ConfiguracionExcel.crearEstiloIzquierdaConBorde(wb);
-
-            // 3) Títulos (B1:G1 y B2:G2)
-            UtilExcel.combinarCeldas(hoja, 0, 0, 1, 6); // B1:G1
-            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estTitulo);
-
-            UtilExcel.combinarCeldas(hoja, 1, 1, 1, 6); // B2:G2
-            UtilExcel.establecerTexto(hoja, 1, 1, "PERMISOS O FUNCIONALIDADES DEL ROL", estTitulo);
-
-            // 4) Encabezados (fila 6 visual -> índice 5)
-            final int filaEnc = 5;
-            String[] headers = { "ITEM", "ROL", "PÁGINA", "FUNCIÓN", "MÓDULO", "APLICACIÓN WEB", "APLICACIÓN MÓVIL" };
-            for (int c = 0; c < headers.length; c++) {
-                UtilExcel.establecerTexto(hoja, filaEnc, c, headers[c], estEnc); // esta sobrecarga sí acepta
-                                                                                 // Sheet+índices
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
             }
-            // aplicarEstiloAFila espera Row + #columnas
-            Row filaEncRow = UtilExcel.asegurarFila(hoja, filaEnc);
-            UtilExcel.aplicarEstiloAFila(filaEncRow, headers.length, estEnc);
 
-            // 5) Datos (establecerValor espera Row)
-            int fila = filaEnc + 1;
+            // 2) MERGES exactos (B1:G1 ... B5:G5)
+            for (int r = MERGE_FIL_INI; r <= MERGE_FIL_FIN; r++) {
+                UtilExcel.combinarCeldas(hoja, r, r, MERGE_COL_INI, MERGE_COL_FIN);
+            }
+
+            // 3) TÍTULOS (mismo estilo que el resto)
+            CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
+            UtilExcel.establecerTexto(
+                hoja, 0, 1,
+                UtilExcel.aMayusculasSeguras(request.getEmpresa()),
+                estiloTitulo
+            ); // B1
+            UtilExcel.establecerTexto(hoja, 1, 1, "PERMISOS O FUNCIONALIDADES DEL ROL", estiloTitulo); // B2
+
+            // 4) ENCABEZADOS + ANCHOS (fila 6 → idx 5)
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
+            }
+            CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
+
+            // 5) CUERPO
+            int filaDatosInicio = FILA_ENCABEZADO + 1;
+            int filaActual = filaDatosInicio;
             int item = 1;
+
+            CellStyle estCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
+            CellStyle estIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+
             if (request.getRoles() != null) {
                 for (RolDTO rol : request.getRoles()) {
-                    if (rol.getFunciones() == null)
-                        continue;
+                    if (rol.getFunciones() == null) continue;
+
                     for (FuncionDTO f : rol.getFunciones()) {
-                        Row r = UtilExcel.asegurarFila(hoja, fila);
+                        Row r = UtilExcel.asegurarFila(hoja, filaActual++);
 
-                        UtilExcel.establecerValor(r, 0, item++, estC); // ITEM
-                        UtilExcel.establecerValor(r, 1, rol.getNombre(), estI); // ROL
-                        UtilExcel.establecerValor(r, 2, f.getPagina(), estI); // PÁGINA
-                        UtilExcel.establecerValor(r, 3, f.getAccion(), estI); // FUNCIÓN
-                        UtilExcel.establecerValor(r, 4, transformarModulo(f.getNombre_modulo()), estI); // MÓDULO
-                        UtilExcel.establecerValor(r, 5, f.getMovil() ? "" : "Sí", estC); // APP WEB
-                        UtilExcel.establecerValor(r, 6, f.getMovil() ? "Sí" : "", estC); // APP MÓVIL
-
-                        fila++;
+                        UtilExcel.establecerValor(r, 0, item++,            estCentroBorde); // ITEM
+                        UtilExcel.establecerValor(r, 1, rol.getNombre(),   estIzqBorde);    // ROL
+                        UtilExcel.establecerValor(r, 2, f.getPagina(),     estIzqBorde);    // PÁGINA
+                        UtilExcel.establecerValor(r, 3, f.getAccion(),     estIzqBorde);    // FUNCIÓN
+                        UtilExcel.establecerValor(r, 4, transformarModulo(f.getNombre_modulo()), estIzqBorde); // MÓDULO
+                        UtilExcel.establecerValor(r, 5, f.getMovil() ? "" : "Sí", estCentroBorde); // APP WEB
+                        UtilExcel.establecerValor(r, 6, f.getMovil() ? "Sí" : "", estCentroBorde); // APP MÓVIL
                     }
                 }
             }
 
-            // 6) Tabla visual (firma real: ... , boolean mostrarRayadoFilas, boolean[]
-            // filtroPorColumna)
-            UtilExcel.crearTablaEstilizada(
+            int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
+
+            // 6) ALINEACIONES + BORDES por regiones (como en Provincias)
+            // Encabezado centrado con borde
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estCentroBorde, true);
+
+            // Cuerpo: col 0 centrada; resto izquierda
+            if (ultimaFila >= filaDatosInicio) {
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, HEADERS.length - 1, estIzqBorde, true);
+            }
+
+            // 7) TABLA estilizada + AutoFilter (ITEM sin filtro)
+            if (ultimaFila >= filaDatosInicio) {
+                UtilExcel.crearTablaEstilizada(
                     hoja,
                     "RolesTabla",
-                    filaEnc, 0,
-                    Math.max(fila - 1, filaEnc), 6,
-                    true, // mostrar rayado (zebra)
-                    null // filtros por columna (no usado en esta versión)
-            );
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    FILTROS
+                );
+            }
 
-            // 7) Anchos
-            UtilExcel.establecerAnchosColumnas(hoja, new int[] { 10, 30, 40, 60, 30, 20, 20 });
+            // 8) Cierre + retorno
+            libro.write(baos);
+            return baos.toByteArray();
 
-            // 8) Salida
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            wb.write(out);
-            return out.toByteArray();
-
+        } catch (IllegalArgumentException e) {
+            // Validaciones → 400 (deja pasar)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500 uniforme
+            throw new ReportBuildException("No se pudo generar Roles.xlsx", e);
         }
     }
 
+    
     // ======================= CSV =======================
     public byte[] generarReporteRolesCSV(ReporteRolesRequest request) {
         try {

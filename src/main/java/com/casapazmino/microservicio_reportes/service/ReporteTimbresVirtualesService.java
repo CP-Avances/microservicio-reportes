@@ -208,86 +208,95 @@ public class ReporteTimbresVirtualesService {
 
 
     public byte[] generarReporteXLSX(ReporteTimbresVirtualesRequest request) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA     = "Timbres Virtuales"; // ≤ 31 chars
+        final int    FILA_ENCABEZADO = 5;                   // fila 6 (idx 5)
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
-                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            XSSFSheet hoja = libro.createSheet("Timbres Virtuales");
-
-            // 1) Logo estándar A1:B5
-            byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
 
             final boolean conDispositivo = request.getTimbreDispositivo();
 
-            // 2) Merges cabecera (5 filas)
-            // Con dispositivo -> B..R (indices 1..17)
-            // Sin dispositivo -> B..P (indices 1..15)
-            if (conDispositivo) {
-                for (int fila = 0; fila <= 4; fila++)
-                    UtilExcel.combinarCeldas(hoja, fila, fila, 1, 17);
-            } else {
-                for (int fila = 0; fila <= 4; fila++)
-                    UtilExcel.combinarCeldas(hoja, fila, fila, 1, 15);
+            // 1) Logo estándar A1:B5
+            byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            }
+
+            // 2) Merges cabecera (5 filas): con disp → B..R (1..17) | sin disp → B..P (1..15)
+            final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+            final int MERGE_COL_INI = 1;
+            final int MERGE_COL_FIN = conDispositivo ? 17 : 15;
+            for (int fila = MERGE_FIL_INI; fila <= MERGE_FIL_FIN; fila++) {
+                UtilExcel.combinarCeldas(hoja, fila, fila, MERGE_COL_INI, MERGE_COL_FIN);
             }
 
             // 3) Títulos
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
-            String titulo = "LISTA DE TIMBRES VIRTUALES";
-            UtilExcel.establecerTexto(hoja, 1, 1, UtilExcel.aMayusculasSeguras(titulo), estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 1, 1, UtilExcel.aMayusculasSeguras("LISTA DE TIMBRES VIRTUALES"), estiloTitulo);
             if (request.getPeriodo() != null) {
-                UtilExcel.establecerTexto(hoja, 2, 1,
-                        "PERIODO DEL REPORTE: " + safe(request.getPeriodo().getInicio()) + " AL "
-                                + safe(request.getPeriodo().getFin()),
-                        null);
+                String periodo = "PERIODO DEL REPORTE: " + safe(request.getPeriodo().getInicio()) +
+                                " AL " + safe(request.getPeriodo().getFin());
+                UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
             }
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
-            final int filaEncabezado = 5;
-
-            String[] headersSinDisp = new String[] {
-                    "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
-                    "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
-                    "SERVIDOR FECHA", "SERVIDOR HORA", "ID RELOJ", "ACCIÓN", "OBSERVACIÓN", "LATITUD", "LONGITUD"
+            final String[] HEADERS_SIN_DISP = {
+                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
+                "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
+                "SERVIDOR FECHA", "SERVIDOR HORA", "ID RELOJ", "ACCIÓN", "OBSERVACIÓN",
+                "LATITUD", "LONGITUD"
             };
-            int[] anchosSinDisp = new int[] { 10, 20, 20, 22, 18, 18, 18, 20, 18, 18, 14, 14, 18, 24, 14, 14 };
-
-            String[] headersConDisp = new String[] {
-                    "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
-                    "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
-                    "SERVIDOR FECHA", "SERVIDOR HORA", "ID RELOJ", "ACCIÓN", "OBSERVACIÓN", "LATITUD", "LONGITUD",
-                    "FECHA TIMBRE DISPOSITIVO", "HORA TIMBRE DISPOSITIVO"
+            final int[] ANCHOS_SIN_DISP = { 10, 20, 20, 22, 18, 18, 18, 20, 18, 18, 14, 14, 18, 24, 14, 14 };
+            final boolean[] FILTROS_SIN_DISP = {
+                false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true
             };
-            int[] anchosConDisp = new int[] { 10, 20, 20, 22, 18, 18, 18, 20, 18, 18, 14, 14, 18, 24, 14, 14, 20, 18 };
 
-            String[] headers = conDispositivo ? headersConDisp : headersSinDisp;
-            int[] anchos = conDispositivo ? anchosConDisp : anchosSinDisp;
+            final String[] HEADERS_CON_DISP = {
+                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
+                "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
+                "SERVIDOR FECHA", "SERVIDOR HORA", "ID RELOJ", "ACCIÓN", "OBSERVACIÓN",
+                "LATITUD", "LONGITUD", "FECHA TIMBRE DISPOSITIVO", "HORA TIMBRE DISPOSITIVO"
+            };
+            final int[] ANCHOS_CON_DISP = { 10, 20, 20, 22, 18, 18, 18, 20, 18, 18, 14, 14, 18, 24, 14, 14, 20, 18 };
+            final boolean[] FILTROS_CON_DISP = {
+                false, true, true, true, true, true, true, true, true,
+                true, true, true, true, true, true, true, true, true
+            };
 
-            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < headers.length; c++) {
-                UtilExcel.establecerTexto(filaHeader, c, headers[c], null);
+            final String[] HEADERS = conDispositivo ? HEADERS_CON_DISP : HEADERS_SIN_DISP;
+            final int[]    ANCHOS  = conDispositivo ? ANCHOS_CON_DISP  : ANCHOS_SIN_DISP;
+            final boolean[] FILTROS = conDispositivo ? FILTROS_CON_DISP : FILTROS_SIN_DISP;
+
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
             CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(filaHeader, headers.length, estiloEncabezado);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
             // 5) Cuerpo (aplanado grupo → empleado → timbre)
-            int filaDatosInicio = filaEncabezado + 1;
-            int filaActual = filaDatosInicio;
+            int filaDatosIni = FILA_ENCABEZADO + 1;
+            int filaAct = filaDatosIni;
             int item = 1;
 
             if (request.getData_pdf() != null) {
                 for (GrupoTimbresDTO grupo : request.getData_pdf()) {
-                    if (grupo.getEmpleados() == null)
-                        continue;
+                    if (grupo == null || grupo.getEmpleados() == null) continue;
 
                     for (EmpleadoTimbreDTO usu : grupo.getEmpleados()) {
                         String apenom = (safe(usu.getApellido()) + " " + safe(usu.getNombre())).trim();
 
                         if (usu.getTimbres() == null || usu.getTimbres().isEmpty()) {
-                            // fila vacía si no hay timbres
-                            Row r = UtilExcel.asegurarFila(hoja, filaActual++);
+                            Row r = UtilExcel.asegurarFila(hoja, filaAct++);
                             int c = 0;
                             UtilExcel.establecerValor(r, c++, item++, null);
                             UtilExcel.establecerTexto(r, c++, safe(usu.getIdentificacion()), null);
@@ -301,8 +310,8 @@ public class ReporteTimbresVirtualesService {
                             UtilExcel.establecerTexto(r, c++, "", null); // servidor fecha
                             UtilExcel.establecerTexto(r, c++, "", null); // servidor hora
                             UtilExcel.establecerTexto(r, c++, "", null); // id reloj
-                            UtilExcel.establecerTexto(r, c++, "", null); // accion
-                            UtilExcel.establecerTexto(r, c++, "", null); // obs
+                            UtilExcel.establecerTexto(r, c++, "", null); // acción
+                            UtilExcel.establecerTexto(r, c++, "", null); // observación
                             UtilExcel.establecerTexto(r, c++, "", null); // lat
                             UtilExcel.establecerTexto(r, c++, "", null); // lon
                             if (conDispositivo) {
@@ -313,8 +322,9 @@ public class ReporteTimbresVirtualesService {
                         }
 
                         for (TimbreUsuarioDTO t : usu.getTimbres()) {
-                            Row r = UtilExcel.asegurarFila(hoja, filaActual++);
+                            Row r = UtilExcel.asegurarFila(hoja, filaAct++);
                             int c = 0;
+
                             UtilExcel.establecerValor(r, c++, item++, null);
                             UtilExcel.establecerTexto(r, c++, safe(usu.getIdentificacion()), null);
                             UtilExcel.establecerTexto(r, c++, safe(usu.getCodigo()), null);
@@ -325,7 +335,7 @@ public class ReporteTimbresVirtualesService {
                             UtilExcel.establecerTexto(r, c++, safe(usu.getDepartamento()), null);
                             UtilExcel.establecerTexto(r, c++, safe(usu.getCargo()), null);
 
-                            // servidor fecha/hora desde "fecha_hora_timbre_validado"
+                            // Servidor fecha/hora desde "fecha_hora_timbre_validado"
                             String fhServ = safe(t.getFecha_hora_timbre_validado());
                             UtilExcel.establecerTexto(r, c++, fechaCortaExcel(fhServ), null);
                             UtilExcel.establecerTexto(r, c++, extraerHora(fhServ), null);
@@ -346,50 +356,49 @@ public class ReporteTimbresVirtualesService {
                 }
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
-            // 6) Alineaciones + bordes
+            // 6) Alineaciones + bordes (por región)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            // Header centrado
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, headers.length - 1,
-                    estiloCentroBorde, true);
+            // Encabezado centrado con bordes
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
 
-            if (ultimaFila >= filaDatosInicio) {
+            if (ultimaFila >= filaDatosIni) {
                 // ITEM centrado
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
                 // resto izquierda
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, headers.length - 1, estiloIzqBorde,
-                        true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde, true);
             }
 
-            // 7) Tabla estilizada (zebra + AutoFilter)
-            String tableName = conDispositivo ? "TimbresVirtualesReporteTabla" : "TimbresVirtualesReporteTabla";
-            if (ultimaFila >= filaDatosInicio) {
-                boolean[] filtros = new boolean[headers.length];
-                for (int i = 0; i < filtros.length; i++)
-                    filtros[i] = true;
-                filtros[0] = false; // ITEM sin filtro
-
+            // 7) Tabla estilizada + AutoFilter (ITEM sin filtro)
+            if (ultimaFila >= filaDatosIni) {
+                String tableName = "TimbresVirtualesReporteTabla";
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        tableName,
-                        filaEncabezado, 0,
-                        ultimaFila, headers.length - 1,
-                        true,
-                        filtros);
+                    hoja,
+                    tableName,
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    FILTROS
+                );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Internos → 500 uniforme
+            throw new ReportBuildException("No se pudo generar TimbresVirtuales.xlsx", e);
         }
     }
 
+    
     /* ====================== Helpers locales ====================== */
     private String safe(String v) {
         return (v == null || v.equalsIgnoreCase("null")) ? "" : v;

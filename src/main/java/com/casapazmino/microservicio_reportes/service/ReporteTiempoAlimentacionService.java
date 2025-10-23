@@ -230,8 +230,6 @@ public class ReporteTiempoAlimentacionService {
         }
     }
 
-
-
     private String extraerHora(String fechaHora) {
         if (fechaHora == null || !fechaHora.contains(" "))
             return fechaHora;
@@ -239,173 +237,190 @@ public class ReporteTiempoAlimentacionService {
     }
 
     public byte[] generarReporteTiempoAlimentacionXLSX(ReporteTiempoAlimentacionRequest request) {
-        System.out.println("Generando XLSX de Tiempo de Alimentación...");
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA     = "Tiempo_Alimentacion"; // ≤ 31 chars
+        final int    FILA_ENCABEZADO = 5;                     // fila 6 (idx 5)
+
+        // MERGES exactos (B1:O5) → (row 0..4, col 1..14)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 14;
+
+        final String[] HEADERS = {
+            "ITEM","IDENTIFICACIÓN","CÓDIGO","APELLIDO NOMBRE",
+            "CIUDAD","SUCURSAL","RÉGIMEN","DEPARTAMENTO","CARGO",
+            "FECHA","INICIO ALIMENTACIÓN","FIN ALIMENTACIÓN",
+            "MIN. PERMITIDOS","MIN. TOMADOS","MIN. EXCESO"
+        };
+        final int[] ANCHOS = {
+            10,20,20,28, 18,18,18,20,18, 16,22,22, 18,18,18
+        };
+        // Filtros: ITEM sin filtro; resto con filtro
+        final boolean[] FILTROS = new boolean[] {
+            false, true, true, true,
+            true,  true, true, true, true,
+            true,  true, true,
+            true,  true, true
+        };
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
-         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-        // =========================
-        // Hoja: Detalle de alimentación
-        // =========================
-        XSSFSheet hoja = libro.createSheet("Tiempo_Alimentacion");
+            // =========================
+            // Hoja
+            // =========================
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible el encabezado
 
-        // 1) Logo estándar A1:B5
-        byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-        UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            // 1) Logo estándar A1:B5
+            byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            }
 
-        // 2) Merges B1:O5 (B=1 .. O=14 en 0-based)
-        for (int row = 0; row <= 4; row++) {
-            UtilExcel.combinarCeldas(hoja, row, row, 1, 14);
-        }
+            // 2) Merges B1:O5
+            for (int row = MERGE_FIL_INI; row <= MERGE_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hoja, row, row, MERGE_COL_INI, MERGE_COL_FIN);
+            }
 
-        // 3) Títulos
-        CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-        UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())), estiloTitulo);
+            // 3) Títulos
+            CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
+            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())), estiloTitulo);
 
-        String activosInactivos = ("1".equals(safe(request.getOpcionBusqueda())) || "1".equals(String.valueOf(request.getOpcionBusqueda())))
-                ? "ACTIVOS" : "INACTIVOS";
-        UtilExcel.establecerTexto(hoja, 1, 1,
-                "TIEMPO DE ALIMENTACIÓN - " + activosInactivos,
-                estiloTitulo);
+            String ob = safe(request.getOpcionBusqueda());
+            String activosInactivos = ("1".equals(ob) || "1".equals(String.valueOf(ob))) ? "ACTIVOS" : "INACTIVOS";
+            UtilExcel.establecerTexto(hoja, 1, 1, "TIEMPO DE ALIMENTACIÓN - " + activosInactivos, estiloTitulo);
 
-        String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL " + safe(request.getFechaFin());
-        UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
+            String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL " + safe(request.getFechaFin());
+            UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
 
-        // 4) Encabezados + anchos (fila 6 → idx 5)
-        final int filaEnc = 5;
-        String[] headers = {
-                "ITEM","IDENTIFICACIÓN","CÓDIGO","APELLIDO NOMBRE",
-                "CIUDAD","SUCURSAL","RÉGIMEN","DEPARTAMENTO","CARGO",
-                "FECHA","INICIO ALIMENTACIÓN","FIN ALIMENTACIÓN",
-                "MIN. PERMITIDOS","MIN. TOMADOS","MIN. EXCESO"
-        };
-        int[] anchos = {
-                10,20,20,28, 18,18,18,20,18, 16,22,22, 18,18,18
-        };
+            // 4) Encabezados + anchos (fila 6 → idx 5)
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
+            }
+            CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-        Row fh = UtilExcel.asegurarFila(hoja, filaEnc);
-        for (int c = 0; c < headers.length; c++) {
-            UtilExcel.establecerTexto(fh, c, headers[c], null);
-        }
-        CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-        UtilExcel.aplicarEstiloAFila(fh, headers.length, estiloHeader);
-        UtilExcel.establecerAnchosColumnas(hoja, anchos);
-        hoja.getRow(filaEnc).setHeightInPoints(18f);
+            // 5) Cuerpo (aplanado grupos → empleados → alimentación)
+            int filaDatosIni = FILA_ENCABEZADO + 1;
+            int filaAct = filaDatosIni;
+            int item = 1;
 
-        // 5) Cuerpo (aplanado grupos → empleados → alimentacion)
-        int filaDatosIni = filaEnc + 1;
-        int filaAct = filaDatosIni;
-        int item = 1;
+            if (request.getGrupos() != null) {
+                for (GrupoAlimentacionDTO grupo : request.getGrupos()) {
+                    if (grupo == null || grupo.getEmpleados() == null) continue;
 
-        if (request.getGrupos() != null) {
-            for (GrupoAlimentacionDTO grupo : request.getGrupos()) {
-                if (grupo == null || grupo.getEmpleados() == null) continue;
+                    for (EmpleadoAlimentacionDTO emp : grupo.getEmpleados()) {
+                        if (emp == null) continue;
 
-                for (EmpleadoAlimentacionDTO emp : grupo.getEmpleados()) {
-                    if (emp == null) continue;
+                        String apenom = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
+                        if (emp.getAlimentacion() == null) continue;
 
-                    String apenom = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
+                        for (RegistroAlimentacionDTO reg : emp.getAlimentacion()) {
+                            if (reg == null) continue;
 
-                    if (emp.getAlimentacion() == null) continue;
-                    for (RegistroAlimentacionDTO reg : emp.getAlimentacion()) {
-                        if (reg == null) continue;
+                            Row r = UtilExcel.asegurarFila(hoja, filaAct++);
+                            int col = 0;
 
-                        Row r = UtilExcel.asegurarFila(hoja, filaAct++);
-                        int col = 0;
+                            // === Valores (siguiendo la lógica actual) ===
+                            String fecha    = safe(reg.getFecha());                 // ya formateada en payload
+                            String inicioAli = toHoraOrFT(reg.getInicioAlimentacion()); // "FT" si null/empty
+                            String finAli    = toHoraOrFT(reg.getFinAlimentacion());    // "FT" si null/empty
 
-                        // === Valores (siguiendo la lógica del PDF) ===
-                        String fecha = safe(reg.getFecha()); // en el payload ya viene formateada
-                        String inicioAli = toHoraOrFT(reg.getInicioAlimentacion()); // "FT" si null/empty
-                        String finAli    = toHoraOrFT(reg.getFinAlimentacion());    // "FT" si null/empty
+                            // Permitidos entero; Tomados/Exceso con 2 decimales (punto)
+                            String minPermitidos = (reg.getMinutosPermitidos() == null)
+                                    ? "0"
+                                    : String.valueOf(reg.getMinutosPermitidos().intValue());
+                            String minTomados = format2(reg.getMinutosTomados());
+                            String minExceso  = format2(reg.getMinutosExceso());
 
-                        // Permitidos entero; Tomados/Exceso con 2 decimales (punto)
-                        String minPermitidos = reg.getMinutosPermitidos() == null
-                                ? "0"
-                                : String.valueOf(reg.getMinutosPermitidos().intValue());
-                        String minTomados = format2(reg.getMinutosTomados());
-                        String minExceso  = format2(reg.getMinutosExceso());
+                            // === Escritura ===
+                            UtilExcel.establecerValor(r, col++, item++, null);
+                            UtilExcel.establecerTexto(r, col++, safe(emp.getIdentificacion()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(emp.getCodigo()), null);
+                            UtilExcel.establecerTexto(r, col++, apenom, null);
+                            UtilExcel.establecerTexto(r, col++, safe(emp.getCiudad()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(emp.getSucursal()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(emp.getRegimen()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(emp.getDepartamento()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(emp.getCargo()), null);
 
-                        // === Escritura de fila ===
-                        UtilExcel.establecerValor(r, col++, item++, null);
-                        UtilExcel.establecerTexto(r, col++, safe(emp.getIdentificacion()), null);
-                        UtilExcel.establecerTexto(r, col++, safe(emp.getCodigo()), null);
-                        UtilExcel.establecerTexto(r, col++, apenom, null);
-                        UtilExcel.establecerTexto(r, col++, safe(emp.getCiudad()), null);
-                        UtilExcel.establecerTexto(r, col++, safe(emp.getSucursal()), null);
-                        UtilExcel.establecerTexto(r, col++, safe(emp.getRegimen()), null);
-                        UtilExcel.establecerTexto(r, col++, safe(emp.getDepartamento()), null);
-                        UtilExcel.establecerTexto(r, col++, safe(emp.getCargo()), null);
-
-                        UtilExcel.establecerTexto(r, col++, fecha, null);
-                        UtilExcel.establecerTexto(r, col++, inicioAli, null);
-                        UtilExcel.establecerTexto(r, col++, finAli, null);
-                        UtilExcel.establecerTexto(r, col++, minPermitidos, null);
-                        UtilExcel.establecerTexto(r, col++, minTomados, null);
-                        UtilExcel.establecerTexto(r, col++, minExceso, null);
+                            UtilExcel.establecerTexto(r, col++, fecha, null);
+                            UtilExcel.establecerTexto(r, col++, inicioAli, null);
+                            UtilExcel.establecerTexto(r, col++, finAli, null);
+                            UtilExcel.establecerTexto(r, col++, minPermitidos, null);
+                            UtilExcel.establecerTexto(r, col++, minTomados, null);
+                            UtilExcel.establecerTexto(r, col++, minExceso, null);
+                        }
                     }
                 }
             }
-        }
 
-        int ultimaFila = (filaAct == filaDatosIni) ? filaEnc : (filaAct - 1);
+            int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
-        // 6) Estilos cuerpo
-        CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-        CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            // 6) Estilos de cuerpo (por región)
+            CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-        // Header centrado
-        UtilExcel.aplicarEstiloARegion(hoja, filaEnc, filaEnc, 0, headers.length - 1, estiloCentroBorde, true);
+            // Encabezado centrado con borde
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
 
-        if (ultimaFila >= filaDatosIni) {
-            // ITEM centrado
-            UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
-            // resto izquierda
-            UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, headers.length - 1, estiloIzqBorde, true);
-        }
+            if (ultimaFila >= filaDatosIni) {
+                // ITEM centrado
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
+                // Resto izquierda
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde, true);
+            }
 
-        // 7) Tabla estilizada + filtros (ITEM sin filtro)
-        if (ultimaFila >= filaDatosIni) {
-            boolean[] filtros = new boolean[headers.length];
-            for (int i = 0; i < filtros.length; i++) filtros[i] = true;
-            filtros[0] = false; // ITEM sin filtro
-
-            UtilExcel.crearTablaEstilizada(
+            // 7) Tabla estilizada + filtros
+            if (ultimaFila >= filaDatosIni) {
+                UtilExcel.crearTablaEstilizada(
                     hoja,
                     "TiempoAlimentacionTabla",
-                    filaEnc, 0,
-                    ultimaFila, headers.length - 1,
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
                     true,
-                    filtros
-            );
+                    FILTROS
+                );
+            }
+
+            // 8) Cierre + retorno
+            libro.write(baos);
+            return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400 (lo mapea el controller)
+            throw e;
+        } catch (Exception e) {
+            // Internos → 500 uniforme
+            throw new ReportBuildException("No se pudo generar TiempoAlimentacion.xlsx", e);
         }
-
-        // 8) Finalizar
-        libro.write(baos);
-        return baos.toByteArray();
-
-    } catch (Exception e) {
-        e.printStackTrace();
-        return null;
     }
-}
 
-private String safe(Object v) {
-    if (v == null) return "";
-    String s = String.valueOf(v).trim();
-    return "null".equalsIgnoreCase(s) ? "" : s;
-}
+    
 
-// Si viene "yyyy-MM-dd HH:mm:ss" -> devuelve "HH:mm:ss"; si null/"" -> "FT"
-private String toHoraOrFT(String fechaHora) {
-    if (fechaHora == null || fechaHora.trim().isEmpty()) return "FT";
-    int idx = fechaHora.indexOf(' ');
-    if (idx < 0 || idx + 1 >= fechaHora.length()) return "FT";
-    return fechaHora.substring(idx + 1);
-}
+    private String safe(Object v) {
+        if (v == null) return "";
+        String s = String.valueOf(v).trim();
+        return "null".equalsIgnoreCase(s) ? "" : s;
+    }
 
-private String format2(Double v) {
-    if (v == null) return "0.00";
-    return String.format("%.2f", v).replace(",", ".");
-}
+    // Si viene "yyyy-MM-dd HH:mm:ss" -> devuelve "HH:mm:ss"; si null/"" -> "FT"
+    private String toHoraOrFT(String fechaHora) {
+        if (fechaHora == null || fechaHora.trim().isEmpty()) return "FT";
+        int idx = fechaHora.indexOf(' ');
+        if (idx < 0 || idx + 1 >= fechaHora.length()) return "FT";
+        return fechaHora.substring(idx + 1);
+    }
+
+    private String format2(Double v) {
+        if (v == null) return "0.00";
+        return String.format("%.2f", v).replace(",", ".");
+    }
 
 
     

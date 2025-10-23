@@ -229,71 +229,90 @@ public class ReporteVacunacionUsuariosService {
     // XLSX (nuevo)
     // =========================
     public byte[] generarReporteXLSX(ReporteVacunacionUsuariosRequest request) {
-        try (XSSFWorkbook libro = new XSSFWorkbook();
-                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA     = "Vacunación"; // ≤ 31 chars
+        final int    FILA_ENCABEZADO = 5;            // fila 6 (idx 5)
 
-            XSSFSheet hoja = libro.createSheet("Vacunación");
+        // MERGES exactos (B1:P5) → 16 columnas totales (0..15) => B es 1 → 1..15
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 15;
+
+        final String[] HEADERS = {
+            "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "GÉNERO",
+            "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
+            "ROL", "CORREO", "CARNET", "TIPO VACUNA", "FECHA", "DESCRIPCIÓN"
+        };
+        final int[] ANCHOS = {
+            10, 20, 20, 25, 15,
+            18, 18, 15, 20, 18,
+            14, 28, 12, 18, 15, 24
+        };
+        // Filtros: ITEM sin filtro; resto con filtro
+        final boolean[] FILTROS = new boolean[] {
+            false, true, true, true, true, true, true, true, true,
+            true,  true, true, true, true, true, true
+        };
+
+        try (XSSFWorkbook libro = new XSSFWorkbook();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
 
             // 1) Logo estándar A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            }
 
-            // 2) Merges B1:Px (dos líneas de título)
-            // 16 columnas totales -> columnas 0..15; B es 1 -> 1..15
-            UtilExcel.combinarCeldas(hoja, 0, 0, 1, 15);
-            UtilExcel.combinarCeldas(hoja, 1, 1, 1, 15);
-            UtilExcel.combinarCeldas(hoja, 2, 2, 1, 15);
-            UtilExcel.combinarCeldas(hoja, 3, 3, 1, 15);
-            UtilExcel.combinarCeldas(hoja, 4, 4, 1, 15);
+            // 2) MERGES exactos B1:P5
+            for (int row = MERGE_FIL_INI; row <= MERGE_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hoja, row, row, MERGE_COL_INI, MERGE_COL_FIN);
+            }
 
-            // 3) Títulos
+            // 3) TÍTULOS
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 0, 1,
+                    UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
+
             String titulo = (request.getTitulo() == null || request.getTitulo().isEmpty())
                     ? "REGISTRO DE VACUNACIÓN"
                     : request.getTitulo();
-            UtilExcel.establecerTexto(hoja, 1, 1, UtilExcel.aMayusculasSeguras(titulo), estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 1, 1,
+                    UtilExcel.aMayusculasSeguras(titulo), estiloTitulo);               // B2
 
-            // 4) Encabezados + anchos (fila 6 → idx 5)
-            final int filaEncabezado = 5;
-            String[] encabezados = {
-                    "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "GÉNERO",
-                    "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
-                    "ROL", "CORREO", "CARNET", "TIPO VACUNA", "FECHA", "DESCRIPCIÓN"
-            };
-            int[] anchos = {
-                    10, 20, 20, 25, 15,
-                    18, 18, 15, 20, 18,
-                    14, 28, 12, 18, 15, 24
-            };
+            // (Si tu módulo usa periodo visible, puedes añadir una 3ra línea cuando aplique:)
+            // UtilExcel.establecerTexto(hoja, 2, 1, "PERIODO: ...", estiloTitulo);
 
-            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(filaHeader, c, encabezados[c], null);
+            // 4) ENCABEZADOS + ANCHOS (fila 6 → idx 5)
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
             CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(filaHeader, encabezados.length, estiloEncabezado);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // 5) Cuerpo (aplanado grupo → empleado → vacuna)
-            int filaDatosInicio = filaEncabezado + 1;
-            int filaActual = filaDatosInicio;
+            // 5) CUERPO (aplanado grupo → empleado → vacuna)
+            int filaDatosIni = FILA_ENCABEZADO + 1;
+            int filaAct = filaDatosIni;
             int item = 1;
 
             if (request.getDatos() != null) {
                 for (AgrupadorVacunaUsuarioDTO grupo : request.getDatos()) {
-
-                    if (grupo.getEmpleados() == null)
-                        continue;
+                    if (grupo == null || grupo.getEmpleados() == null) continue;
 
                     for (EmpleadoVacunaUsuarioDTO e : grupo.getEmpleados()) {
+                        if (e == null) continue;
 
                         String apenom = (safe(e.getApellido()) + " " + safe(e.getNombre())).trim();
 
                         if (e.getVacunas() == null || e.getVacunas().isEmpty()) {
-                            // fila "vacía" sin vacunas (si hace falta listar igual)
-                            Row r = UtilExcel.asegurarFila(hoja, filaActual++);
+                            // Fila "vacía" sin vacunas (si se requiere listar igual)
+                            Row r = UtilExcel.asegurarFila(hoja, filaAct++);
                             UtilExcel.establecerValor(r, 0, item++, null);
                             UtilExcel.establecerTexto(r, 1, safe(e.getIdentificacion()), null);
                             UtilExcel.establecerTexto(r, 2, safe(e.getCodigo()), null);
@@ -304,17 +323,19 @@ public class ReporteVacunacionUsuariosService {
                             UtilExcel.establecerTexto(r, 7, safe(e.getRegimen()), null);
                             UtilExcel.establecerTexto(r, 8, safe(e.getDepartamento()), null);
                             UtilExcel.establecerTexto(r, 9, safe(e.getCargo()), null);
-                            UtilExcel.establecerTexto(r, 10, safe(e.getRol()), null);
-                            UtilExcel.establecerTexto(r, 11, safe(e.getCorreo()), null);
-                            UtilExcel.establecerTexto(r, 12, "", null);
-                            UtilExcel.establecerTexto(r, 13, "", null);
-                            UtilExcel.establecerTexto(r, 14, "", null);
-                            UtilExcel.establecerTexto(r, 15, "", null);
+                            UtilExcel.establecerTexto(r,10, safe(e.getRol()), null);
+                            UtilExcel.establecerTexto(r,11, safe(e.getCorreo()), null);
+                            UtilExcel.establecerTexto(r,12, "", null); // CARNET
+                            UtilExcel.establecerTexto(r,13, "", null); // TIPO VACUNA
+                            UtilExcel.establecerTexto(r,14, "", null); // FECHA
+                            UtilExcel.establecerTexto(r,15, "", null); // DESCRIPCIÓN
                             continue;
                         }
 
                         for (VacunaUsuarioDTO v : e.getVacunas()) {
-                            Row r = UtilExcel.asegurarFila(hoja, filaActual++);
+                            if (v == null) continue;
+
+                            Row r = UtilExcel.asegurarFila(hoja, filaAct++);
                             UtilExcel.establecerValor(r, 0, item++, null);
                             UtilExcel.establecerTexto(r, 1, safe(e.getIdentificacion()), null);
                             UtilExcel.establecerTexto(r, 2, safe(e.getCodigo()), null);
@@ -325,63 +346,64 @@ public class ReporteVacunacionUsuariosService {
                             UtilExcel.establecerTexto(r, 7, safe(e.getRegimen()), null);
                             UtilExcel.establecerTexto(r, 8, safe(e.getDepartamento()), null);
                             UtilExcel.establecerTexto(r, 9, safe(e.getCargo()), null);
-                            UtilExcel.establecerTexto(r, 10, safe(e.getRol()), null);
-                            UtilExcel.establecerTexto(r, 11, safe(e.getCorreo()), null);
+                            UtilExcel.establecerTexto(r,10, safe(e.getRol()), null);
+                            UtilExcel.establecerTexto(r,11, safe(e.getCorreo()), null);
 
-                            // carnet Sí/No (si el backend trae el campo; si no, queda vacío)
+                            // CARNET Sí/No
                             String carnetSN = (v.getCarnet() != null && !v.getCarnet().trim().isEmpty()) ? "Si" : "No";
-                            UtilExcel.establecerTexto(r, 12, carnetSN, null);          // CARNET (Sí/No)
-                            UtilExcel.establecerTexto(r, 13, safe(v.getTipo_vacuna()), null);
-                            UtilExcel.establecerTexto(r, 14, fechaCortaExcel(v.getFecha()), null);
-                            UtilExcel.establecerTexto(r, 15, safe(v.getDescripcion()), null);
+                            UtilExcel.establecerTexto(r,12, carnetSN, null);
+                            UtilExcel.establecerTexto(r,13, safe(v.getTipo_vacuna()), null);
+                            UtilExcel.establecerTexto(r,14, fechaCortaExcel(v.getFecha()), null);
+                            UtilExcel.establecerTexto(r,15, safe(v.getDescripcion()), null);
                         }
                     }
                 }
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
-            // 6) Alineaciones + bordes
+            // 6) Alineaciones + bordes (por región)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            // Header centrado
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            // Encabezado centrado con bordes
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
+                    0, HEADERS.length - 1, estiloCentroBorde, true);
 
-            if (ultimaFila >= filaDatosInicio) {
+            if (ultimaFila >= filaDatosIni) {
                 // ITEM centrado
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
                 // resto izquierda
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, encabezados.length - 1,
-                        estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde, true);
             }
 
-            // 7) Tabla estilizada (zebra + AutoFilter)
-            if (ultimaFila >= filaDatosInicio) {
-                boolean[] filtros = new boolean[encabezados.length];
-                for (int i = 0; i < filtros.length; i++)
-                    filtros[i] = true;
-                filtros[0] = false; // ITEM sin filtro
-
+            // 7) Tabla estilizada + AutoFilter (ITEM sin filtro)
+            if (ultimaFila >= filaDatosIni) {
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "VacunasReporteTabla",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
-                        true,
-                        filtros);
+                    hoja,
+                    "VacunasReporteTabla",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    FILTROS
+                );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Internos → 500 uniforme
+            throw new ReportBuildException("No se pudo generar VacunacionUsuarios.xlsx", e);
         }
     }
 
+    
+    
     private PdfPCell celdaSinBordeIzquierda(String texto, Font fuente, Color fondo) {
         PdfPCell celda = new PdfPCell(new Phrase(texto, fuente));
         celda.setBackgroundColor(fondo);

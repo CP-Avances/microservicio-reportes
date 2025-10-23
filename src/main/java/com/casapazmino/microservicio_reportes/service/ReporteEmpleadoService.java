@@ -121,25 +121,43 @@ public class ReporteEmpleadoService {
             }
         }
     }
+    
     // =========================
-    //          XLSX (LEGACY)
+    //          XLSX
     // =========================
     public byte[] generarReporteEmpleadosXLSX(ReporteEmpleadosRequest request) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA = "Empleados";
+        final int FILA_ENCABEZADO = 5;
+
+        // Merges B1:M1 ... B5:M5  => (row 0..4, col 1..12)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 12;
+
+        final String[] HEADERS = {
+            "ITEM","CODIGO","IDENTIFICACION","APELLIDO","NOMBRE","FECHA_NACIMIENTO",
+            "ESTADO_CIVIL","GENERO","CORREO","ESTADO","DOMICILIO","TELEFONO","NACIONALIDAD"
+        };
+        final int[] ANCHOS = { 10,20,20,20,20,20,20,20,20,20,20,20,20 };
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            XSSFSheet hoja = libro.createSheet("Empleados");
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
 
-            // 1) Logo A1:B5
+            // 1) Logo estándar A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            }
 
-            // 2) Merges B1:M1 ... B5:M5 (13 columnas totales A..M)
-            UtilExcel.combinarCeldas(hoja, 0, 0, 1, 12);
-            UtilExcel.combinarCeldas(hoja, 1, 1, 1, 12);
-            UtilExcel.combinarCeldas(hoja, 2, 2, 1, 12);
-            UtilExcel.combinarCeldas(hoja, 3, 3, 1, 12);
-            UtilExcel.combinarCeldas(hoja, 4, 4, 1, 12);
+            // 2) Merges B1:M1 ... B5:M5
+            for (int row = MERGE_FIL_INI; row <= MERGE_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hoja, row, row, MERGE_COL_INI, MERGE_COL_FIN);
+            }
 
             // 3) Títulos
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
@@ -147,33 +165,25 @@ public class ReporteEmpleadoService {
             UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE EMPLEADOS", estiloTitulo);
 
             // 4) Encabezados + anchos
-            final int filaEncabezado = 5; // A6
-            String[] encabezados = {
-                "ITEM","CODIGO","IDENTIFICACION","APELLIDO","NOMBRE","FECHA_NACIMIENTO",
-                "ESTADO_CIVIL","GENERO","CORREO","ESTADO","DOMICILIO","TELEFONO","NACIONALIDAD"
-            };
-            int[] anchos = {10,20,20,20,20,20,20,20,20,20,20,20,20};
-
-            Row rowHeader = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(rowHeader, c, encabezados[c], null);
+            Row rowHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(rowHeader, c, HEADERS[c], null);
             }
             CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(rowHeader, encabezados.length, estiloHeader);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(rowHeader, HEADERS.length, estiloHeader);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
             // 5) Cuerpo
-            int filaDatosInicio = filaEncabezado + 1;
-            int fila = filaDatosInicio;
+            int filaDatosIni = FILA_ENCABEZADO + 1;
+            int filaAct = filaDatosIni;
 
             List<EmpleadoDTO> items = request.getEmpleados();
             if (items != null) {
                 for (int i = 0; i < items.size(); i++) {
                     EmpleadoDTO e = items.get(i);
-
-                    Row r = UtilExcel.asegurarFila(hoja, fila++);
-                    UtilExcel.establecerValor(r, 0, i + 1, null); // ITEM
+                    Row r = UtilExcel.asegurarFila(hoja, filaAct++);
+                    UtilExcel.establecerValor(r, 0, i + 1, null);             // ITEM
                     UtilExcel.establecerValor(r, 1, nvl(e.getCodigo()), null);
                     UtilExcel.establecerValor(r, 2, nvl(e.getIdentificacion()), null);
                     UtilExcel.establecerValor(r, 3, nvl(e.getApellido()), null);
@@ -189,40 +199,47 @@ public class ReporteEmpleadoService {
                 }
             }
 
-            int ultimaFila = (fila == filaDatosInicio) ? filaEncabezado : (fila - 1);
+            int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
             // 6) Alineación + bordes
             CellStyle centroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
             CellStyle izqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Header centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1, centroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, centroBorde, true);
 
             // Cuerpo: col 0 centrada; resto izquierda
-            if (ultimaFila >= filaDatosInicio) {
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, centroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 12, izqBorde, true);
+            if (ultimaFila >= filaDatosIni) {
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, centroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 12, izqBorde, true);
             }
 
             // 7) Tabla estilizada + filtros (ITEM sin filtro)
-            if (ultimaFila >= filaDatosInicio) {
+            if (ultimaFila >= filaDatosIni) {
+                boolean[] filtros = new boolean[] {
+                    false, true, true, true, true, true, true, true, true, true, true, true, true
+                };
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "Empleados",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
-                        true,
-                        new boolean[]{false, true, true, true, true, true, true, true, true, true, true, true, true}
+                    hoja,
+                    "Empleados",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    filtros
                 );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+            throw e; // Validación → 400
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar Empleados.xlsx", e); // Interno → 500
         }
     }
+
 
     // =========================
     //          CSV (LEGACY)

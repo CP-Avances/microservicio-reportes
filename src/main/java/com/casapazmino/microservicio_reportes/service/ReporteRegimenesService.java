@@ -3,12 +3,19 @@ package com.casapazmino.microservicio_reportes.service;
 import com.casapazmino.microservicio_reportes.model.RegimenLaboral.*;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
+import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.util.List;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 @Service
 public class ReporteRegimenesService {
@@ -304,126 +311,171 @@ public class ReporteRegimenesService {
                 }
         }
         }
+        
         // ======================= XLSX =======================
         public byte[] generarReporteRegimenesXLSX(ReporteRegimenesRequest request) {
-                try (org.apache.poi.xssf.usermodel.XSSFWorkbook wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
-                                ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA   = "Régimen";   // ≤ 31 chars
+        final int    FILA_ENC      = 5;           // fila visual 6 (idx 5)
 
-                        org.apache.poi.xssf.usermodel.XSSFSheet hoja = wb.createSheet("Régimen");
+        // Merges para reservar cabecera (B1:Y1 ... B5:Y5) igual al patrón A1:B5 del logo
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 24; // B..Y
 
-                        // 1) Logo estándar A1:B5 (igual que en otros módulos)
-                        byte[] logo = com.casapazmino.microservicio_reportes.util.UtilExcel
-                                        .decodificarImagenBase64(request.getLogoBase64());
-                        com.casapazmino.microservicio_reportes.util.UtilExcel.insertarLogoEstandar(wb, hoja, logo);
+        final String[] HEADERS = {
+                "ITEM", "CÓDIGO", "RÉGIMEN", "PAÍS", "CONTINUIDAD LABORAL",
+                "ANTIGÜEDAD LABORAL", "PERIODO LABORAL", "DÍAS POR MES",
+                "TRABAJO MÍNIMO (MES)", "TRABAJO MÍNIMO (HORAS)", "DÍAS HÁBILES",
+                "DÍAS LIBRES", "DÍAS CALENDARIO", "ACUMULA VACACIONES",
+                "MÁXIMO DÍAS ACUMULABLES", "VACACIONES POR PERÍODOS",
+                "DETALLE PERÍODOS", "VACACIONES HÁBILES MES",
+                "VACACIONES CALENDARIO MES", "VACACIONES HÁBILES DÍA",
+                "VACACIONES CALENDARIO DÍA", "TIPO ANTIGÜEDAD",
+                "AÑOS ANTIGÜEDAD", "DÍAS ADICIONALES", "DETALLE RANGOS VARIABLE"
+        };
 
-                        // 2) Estilos
-                        org.apache.poi.ss.usermodel.CellStyle estTitulo = com.casapazmino.microservicio_reportes.util.ConfiguracionExcel
-                                        .crearEstiloTitulo(wb);
-                        org.apache.poi.ss.usermodel.CellStyle estEnc = com.casapazmino.microservicio_reportes.util.ConfiguracionExcel
-                                        .crearEstiloEncabezadoTabla(wb);
-                        org.apache.poi.ss.usermodel.CellStyle estCentro = com.casapazmino.microservicio_reportes.util.ConfiguracionExcel
-                                        .crearEstiloCentroConBorde(wb);
-                        org.apache.poi.ss.usermodel.CellStyle estIzquierda = com.casapazmino.microservicio_reportes.util.ConfiguracionExcel
-                                        .crearEstiloIzquierdaConBorde(wb);
+        // Anchos exactamente como los tenías
+        final int[] ANCHOS = {
+                7, 8, 20, 10, 25, 25, 17, 15, 25, 25, 15, 15, 20, 25, 30, 30,
+                50, 27, 30, 27, 30, 20, 20, 20, 55
+        };
 
-                        // 3) Títulos (B1:Y1 y B2:Y2 → 25 columnas A..Y)
-                        com.casapazmino.microservicio_reportes.util.UtilExcel.combinarCeldas(hoja, 0, 0, 1, 24); // B1:Y1
-                        com.casapazmino.microservicio_reportes.util.UtilExcel.establecerTexto(hoja, 0, 1,
-                                        com.casapazmino.microservicio_reportes.util.UtilExcel
-                                                        .aMayusculasSeguras(request.getEmpresa()),
-                                        estTitulo);
+        // Filtros: ITEM sin filtro; resto con filtro (igual patrón Provincias)
+        final boolean[] FILTROS = {
+                false, true, true, true, true, true, true, true, true, true,
+                true,  true, true, true, true, true, true, true, true, true,
+                true,  true, true, true, true
+        };
 
-                        com.casapazmino.microservicio_reportes.util.UtilExcel.combinarCeldas(hoja, 1, 1, 1, 24); // B2:Y2
-                        com.casapazmino.microservicio_reportes.util.UtilExcel.establecerTexto(hoja, 1, 1,
-                                        "LISTA DE RÉGIMEN LABORAL", estTitulo);
+        try (XSSFWorkbook libro = new XSSFWorkbook();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-                        // 4) Encabezados (fila visual 6 → índice 5)
-                        final int filaEnc = 5;
-                        String[] headers = {
-                                        "ITEM", "CÓDIGO", "RÉGIMEN", "PAÍS", "CONTINUIDAD LABORAL",
-                                        "ANTIGÜEDAD LABORAL",
-                                        "PERIODO LABORAL", "DÍAS POR MES", "TRABAJO MÍNIMO (MES)",
-                                        "TRABAJO MÍNIMO (HORAS)",
-                                        "DÍAS HÁBILES", "DÍAS LIBRES", "DÍAS CALENDARIO", "ACUMULA VACACIONES",
-                                        "MÁXIMO DÍAS ACUMULABLES", "VACACIONES POR PERÍODOS", "DETALLE PERÍODOS",
-                                        "VACACIONES HÁBILES MES", "VACACIONES CALENDARIO MES", "VACACIONES HÁBILES DÍA",
-                                        "VACACIONES CALENDARIO DÍA", "TIPO ANTIGÜEDAD", "AÑOS ANTIGÜEDAD",
-                                        "DÍAS ADICIONALES",
-                                        "DETALLE RANGOS VARIABLE"
-                        };
-                        for (int c = 0; c < headers.length; c++) {
-                                com.casapazmino.microservicio_reportes.util.UtilExcel.establecerTexto(hoja, filaEnc, c,
-                                                headers[c], estEnc);
-                        }
-                        org.apache.poi.ss.usermodel.Row filaEncRow = com.casapazmino.microservicio_reportes.util.UtilExcel
-                                        .asegurarFila(hoja, filaEnc);
-                        com.casapazmino.microservicio_reportes.util.UtilExcel.aplicarEstiloAFila(filaEncRow,
-                                        headers.length, estEnc);
+                XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+                hoja.createFreezePane(0, FILA_ENC + 1); // mantener visible encabezado (como Provincias)
 
-                        // 5) Datos
-                        int fila = filaEnc + 1;
-                        int item = 1;
-                        if (request.getRegimenes() != null) {
-                                for (RegimenDTO r : request.getRegimenes()) {
-                                        String textoPeriodos = construirTextoPeriodos(r);
-                                        String textoRangos = construirTextoRangos(r);
-                                        String tipoAntig = tipoAntiguedad(r);
-
-                                        org.apache.poi.ss.usermodel.Row row = com.casapazmino.microservicio_reportes.util.UtilExcel
-                                                        .asegurarFila(hoja, fila++);
-
-                                        set(row, 0, item++, estCentro);
-                                        set(row, 1, r.getId(), estCentro);
-                                        set(row, 2, nz(r.getDescripcion()), estIzquierda);
-                                        set(row, 3, nz(r.getPais()), estIzquierda);
-                                        set(row, 4, siNo(bool(r.getContinuidad_laboral())), estCentro);
-                                        set(row, 5, siNo(bool(r.getAntiguedad())), estCentro);
-                                        set(row, 6, str(r.getMes_periodo()), estIzquierda);
-                                        set(row, 7, r.getDias_mes(), estCentro);
-                                        set(row, 8, r.getTrabajo_minimo_mes(), estCentro);
-                                        set(row, 9, r.getTrabajo_minimo_horas(), estCentro);
-                                        set(row, 10, r.getVacacion_dias_laboral(), estCentro);
-                                        set(row, 11, r.getVacacion_dias_libre(), estCentro);
-                                        set(row, 12, r.getVacacion_dias_calendario(), estCentro);
-                                        set(row, 13, siNo(bool(r.getAcumular())), estCentro);
-                                        set(row, 14, r.getDias_maximo_acumulacion(), estCentro);
-                                        set(row, 15, siNo(bool(r.getVacacion_divisible())), estCentro);
-                                        set(row, 16, textoPeriodos, estIzquierda);
-                                        set(row, 17, r.getVacacion_dias_laboral_mes(), estCentro);
-                                        set(row, 18, r.getVacacion_dias_calendario_mes(), estCentro);
-                                        set(row, 19, r.getLaboral_dias(), estCentro);
-                                        set(row, 20, r.getCalendario_dias(), estCentro);
-                                        set(row, 21, tipoAntig, estCentro);
-                                        set(row, 22, r.getAnio_antiguedad(), estCentro);
-                                        set(row, 23, r.getDias_antiguedad(), estCentro);
-                                        set(row, 24, textoRangos, estIzquierda);
-                                }
-                        }
-
-                        // 6) Tabla visual (zebra)
-                        int ultimaFila = Math.max(fila - 1, filaEnc);
-                        com.casapazmino.microservicio_reportes.util.UtilExcel.crearTablaEstilizada(
-                                        hoja, "RegimenTabla", filaEnc, 0, ultimaFila, headers.length - 1, true, null);
-
-                        // 7) Anchos (25 columnas)
-                        com.casapazmino.microservicio_reportes.util.UtilExcel.establecerAnchosColumnas(hoja, new int[] {
-                                        7, 8, 20, 10, 25, 25, 17, 15, 25, 25, 15, 15, 20, 25, 30, 30, 50, 27, 30, 27,
-                                        30, 20, 20, 20, 55
-                        });
-
-                        wb.write(out);
-                        return out.toByteArray();
-
-                } catch (Exception e) {
-                        e.printStackTrace();
-                        return null;
+                // 1) Logo estándar A1:B5
+                byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
+                if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
                 }
+
+                // 2) MERGES exactos (B1:Y1 ... B5:Y5) para armonizar con diseño de cabeceras
+                for (int row = MERGE_FIL_INI; row <= MERGE_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hoja, row, row, MERGE_COL_INI, MERGE_COL_FIN);
+                }
+
+                // 3) TÍTULOS (mismos estilos que el resto)
+                CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
+                UtilExcel.establecerTexto(
+                hoja, 0, 1,
+                UtilExcel.aMayusculasSeguras(request.getEmpresa()),
+                estiloTitulo
+                ); // B1
+                UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE RÉGIMEN LABORAL", estiloTitulo); // B2
+
+                // 4) ENCABEZADOS + ANCHOS (fila 6 → idx 5)
+                Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENC);
+                for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
+                }
+                CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+                UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+                UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+                hoja.getRow(FILA_ENC).setHeightInPoints(18f);
+
+                // 5) CUERPO
+                int filaDatosInicio = FILA_ENC + 1; // 6 → idx 6
+                int filaActual = filaDatosInicio;
+                int item = 1;
+
+                List<RegimenDTO> regimenes = request.getRegimenes();
+                if (regimenes != null) {
+                for (RegimenDTO r : regimenes) {
+                        String textoPeriodos = construirTextoPeriodos(r);
+                        String textoRangos   = construirTextoRangos(r);
+                        String tipoAntig     = tipoAntiguedad(r);
+
+                        Row row = UtilExcel.asegurarFila(hoja, filaActual++);
+
+                        // Alineaciones: col 0 centrada (ITEM), varias num/boolean centradas; textos a la izquierda
+                        CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
+                        CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+
+                        UtilExcel.establecerValor(row, 0,  item++,                  estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 1,  r.getId(),               estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 2,  nz(r.getDescripcion()),  estiloIzqBorde);
+                        UtilExcel.establecerValor(row, 3,  nz(r.getPais()),         estiloIzqBorde);
+                        UtilExcel.establecerValor(row, 4,  siNo(bool(r.getContinuidad_laboral())), estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 5,  siNo(bool(r.getAntiguedad())),          estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 6,  str(r.getMes_periodo()), estiloIzqBorde);
+                        UtilExcel.establecerValor(row, 7,  r.getDias_mes(),         estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 8,  r.getTrabajo_minimo_mes(),   estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 9,  r.getTrabajo_minimo_horas(), estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 10, r.getVacacion_dias_laboral(),    estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 11, r.getVacacion_dias_libre(),      estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 12, r.getVacacion_dias_calendario(), estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 13, siNo(bool(r.getAcumular())),     estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 14, r.getDias_maximo_acumulacion(),  estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 15, siNo(bool(r.getVacacion_divisible())), estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 16, textoPeriodos,            estiloIzqBorde);
+                        UtilExcel.establecerValor(row, 17, r.getVacacion_dias_laboral_mes(),    estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 18, r.getVacacion_dias_calendario_mes(), estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 19, r.getLaboral_dias(),      estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 20, r.getCalendario_dias(),   estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 21, tipoAntig,                estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 22, r.getAnio_antiguedad(),   estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 23, r.getDias_antiguedad(),   estiloCentroBorde);
+                        UtilExcel.establecerValor(row, 24, textoRangos,              estiloIzqBorde);
+                }
+                }
+
+                int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENC : (filaActual - 1);
+
+                // 6) ALINEACIONES + BORDES (como en Provincias: header centrado/borde + cuerpo por regiones)
+                CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
+                CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+
+                // Encabezado centrado con borde
+                UtilExcel.aplicarEstiloARegion(hoja, FILA_ENC, FILA_ENC, 0, HEADERS.length - 1, estiloCentroBorde, true);
+
+                // Cuerpo: col 0 centrada; resto izquierda por defecto, pero mantenemos tus columnas centradas
+                if (ultimaFila >= filaDatosInicio) {
+                // Col 0 centrada
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
+                // Texto a la izquierda en columnas 2,3,16,24 (y otras textuales)
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 2, 3,  estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 16,16, estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 24,24, estiloIzqBorde, true);
+                // El resto ya lo fijamos celda a celda arriba (números/booleans centrados)
+                }
+
+                // 7) TABLA estilizada + AutoFilter (ITEM sin filtro)
+                if (ultimaFila >= filaDatosInicio) {
+                UtilExcel.crearTablaEstilizada(
+                        hoja,
+                        "RegimenTabla",
+                        FILA_ENC, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        FILTROS
+                );
+                }
+
+                // 8) Cierre + retorno
+                libro.write(baos);
+                return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+                throw e; // Validación → 400
+        } catch (Exception e) {
+                throw new ReportBuildException("No se pudo generar Regimenes.xlsx", e); // Interno → 500
+        }
         }
 
-        private void set(org.apache.poi.ss.usermodel.Row r, int c, Object v, org.apache.poi.ss.usermodel.CellStyle st) {
-                com.casapazmino.microservicio_reportes.util.UtilExcel.establecerValor(r, c, v, st);
-        }
-
+        
+        
         // ======================= CSV =======================
         public byte[] generarReporteRegimenesCSV(ReporteRegimenesRequest request) {
                 try {

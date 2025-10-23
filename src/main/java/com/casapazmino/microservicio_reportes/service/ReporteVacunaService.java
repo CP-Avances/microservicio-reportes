@@ -116,87 +116,119 @@ public class ReporteVacunaService {
     // XLSX
     // =========================
     public byte[] generarReporteVacunasXLSX(ReporteVacunasRequest request) {
-        try (XSSFWorkbook libro = new XSSFWorkbook();
-                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA     = "Vacunas"; // ≤ 31 chars
+        final int    FILA_ENCABEZADO = 5;        // fila 6 (idx 5)
 
-            XSSFSheet hoja = libro.createSheet("Vacunas");
+        // MERGES exactos (B1:C1 ... B5:C5) => (row 0..4, col 1..2)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 2;
+
+        final String[] HEADERS = { "ITEM", "CODIGO", "NOMBRE" };
+        final int[]    ANCHOS  = {    20,      30,      40   };
+
+        // Filtros: ITEM sin filtro; resto con filtro
+        final boolean[] FILTROS = new boolean[] { false, true, true };
+
+        try (XSSFWorkbook libro = new XSSFWorkbook();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
 
             // 1) Logo estándar A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo);
-
-            // 2) Merges B1:C1 ... B5:C5 (3 columnas)
-            for (int r = 0; r < 5; r++) {
-                UtilExcel.combinarCeldas(hoja, r, r, 1, 2);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
             }
 
-            // 3) Títulos
+            // 2) MERGES exactos (B1:C1 ... B5:C5)
+            for (int r = MERGE_FIL_INI; r <= MERGE_FIL_FIN; r++) {
+                UtilExcel.combinarCeldas(hoja, r, r, MERGE_COL_INI, MERGE_COL_FIN);
+            }
+
+            // 3) TÍTULOS
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
-            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA TIPOS DE VACUNAS", estiloTitulo);
+            UtilExcel.establecerTexto(
+                hoja, 0, 1,
+                UtilExcel.aMayusculasSeguras(request.getEmpresa()),
+                estiloTitulo
+            ); // B1
+            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA TIPOS DE VACUNAS", estiloTitulo); // B2
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
-            final int filaEncabezado = 5;
-            String[] encabezados = { "ITEM", "CODIGO", "NOMBRE" };
-            int[] anchos = { 20, 30, 40 };
-
-            Row header = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(header, c, encabezados[c], null);
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
-            CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(header, encabezados.length, estiloHeader);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // 5) Datos (ordenar por id de forma segura)
+            // 5) Datos (ordenar por id de forma null-safe)
             List<VacunaDTO> datos = request.getVacunas();
             List<VacunaDTO> ordenados = new ArrayList<>(datos == null ? List.of() : datos);
-            ordenados.sort(Comparator.comparingLong(this::safeLongId));
+            ordenados.sort(Comparator.comparingLong(v -> {
+                Integer id = v.getId();
+                return (id == null) ? Long.MIN_VALUE : id.longValue();
+            }));
 
-            int filaDatosInicio = filaEncabezado + 1;
+            int filaDatosInicio = FILA_ENCABEZADO + 1;
             int filaActual = filaDatosInicio;
+            int item = 1;
 
-            for (int i = 0; i < ordenados.size(); i++) {
-                VacunaDTO v = ordenados.get(i);
+            for (VacunaDTO v : ordenados) {
                 Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                UtilExcel.establecerValor(r, 0, i + 1, null); // ITEM
-                UtilExcel.establecerValor(r, 1, v.getId(), null); // CODIGO
+                UtilExcel.establecerValor(r, 0, item++, null);                               // ITEM
+                UtilExcel.establecerValor(r, 1, v.getId(), null);                            // CODIGO
                 UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(v.getNombre()), null); // NOMBRE
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
-            // 6) Alineaciones + bordes
+            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            // Encabezado
+            UtilExcel.aplicarEstiloARegion(
+                hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
+                0, HEADERS.length - 1, estiloCentroBorde, true
+            );
 
+            // Cuerpo
             if (ultimaFila >= filaDatosInicio) {
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 2, estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true); // ITEM
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 2, estiloIzqBorde, true);    // CODIGO..NOMBRE
 
                 // 7) Tabla estilizada (A6:Cn), zebra y AutoFilter (ITEM sin filtro)
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "VacunasTabla",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
-                        true,
-                        new boolean[] { false, true, true });
+                    hoja,
+                    "VacunasTabla",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    FILTROS
+                );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validaciones → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Internos → 500 uniforme
+            throw new ReportBuildException("No se pudo generar Vacunas.xlsx", e);
         }
     }
 
+    
     // =========================
     // CSV
     // =========================

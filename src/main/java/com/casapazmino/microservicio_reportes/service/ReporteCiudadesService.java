@@ -103,25 +103,40 @@ public class ReporteCiudadesService {
             }
         }
     }
+    
     // =========================
     //          XLSX (idéntico al front)
     // =========================
     public byte[] generarReporteXLSX(ReporteCiudadesRequest request) {
-        try (XSSFWorkbook libro = new XSSFWorkbook();
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA = "Ciudades";
+        final int FILA_ENCABEZADO = 5;
 
-            XSSFSheet hoja = libro.createSheet("Ciudades");
+        // Merges B1:E1 ... B5:E5  => (row 0..4, col 1..4)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 4;
+
+        final String[] HEADERS = { "ITEM", "ID", "NOMBRE", "PROVINCIA", "ID_PROVINCIA" };
+        final int[] ANCHOS      = {   10,   20,      20,        20,            20     };
+
+        try (XSSFWorkbook libro = new XSSFWorkbook();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
 
             // 1) Logo estándar A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo);
+            }
 
             // 2) Merges B1:E1 ... B5:E5
-            UtilExcel.combinarCeldas(hoja, 0, 0, 1, 4);
-            UtilExcel.combinarCeldas(hoja, 1, 1, 1, 4);
-            UtilExcel.combinarCeldas(hoja, 2, 2, 1, 4);
-            UtilExcel.combinarCeldas(hoja, 3, 3, 1, 4);
-            UtilExcel.combinarCeldas(hoja, 4, 4, 1, 4);
+            for (int row = MERGE_FIL_INI; row <= MERGE_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hoja, row, row, MERGE_COL_INI, MERGE_COL_FIN);
+            }
 
             // 3) Títulos en B1 y B2 (upper)
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
@@ -129,28 +144,24 @@ public class ReporteCiudadesService {
             UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE CIUDADES", estiloTitulo);
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
-            final int filaEncabezado = 5;
-            String[] encabezados = { "ITEM", "ID", "NOMBRE", "PROVINCIA", "ID_PROVINCIA" };
-            int[] anchos          = {    10,   20,      20,        20,            20     };
-
-            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(filaHeader, c, encabezados[c], null);
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
             CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(filaHeader, encabezados.length, estiloEncabezado);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
             // 5) Cuerpo (datos = [index+1, id, nombre, provincia, id_prov])
-            int filaDatosInicio = filaEncabezado + 1;
-            int filaActual = filaDatosInicio;
+            int filaDatosIni = FILA_ENCABEZADO + 1;
+            int filaAct = filaDatosIni;
 
             List<CiudadDTO> ciudades = request.getCiudades();
             if (ciudades != null) {
                 for (int i = 0; i < ciudades.size(); i++) {
                     CiudadDTO c = ciudades.get(i);
-                    Row r = UtilExcel.asegurarFila(hoja, filaActual++);
+                    Row r = UtilExcel.asegurarFila(hoja, filaAct++);
                     UtilExcel.establecerValor(r, 0, i + 1, null);
                     UtilExcel.establecerValor(r, 1, c.getId(), null);
                     UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(c.getNombre()), null);
@@ -159,41 +170,45 @@ public class ReporteCiudadesService {
                 }
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
             // 6) Alineaciones + bordes
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
             CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Header centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
 
             // Cuerpo: col 0 centrado; col 1..4 izquierda
-            if (ultimaFila >= filaDatosInicio) {
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 4, estiloIzqBorde, true);
+            if (ultimaFila >= filaDatosIni) {
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 4, estiloIzqBorde, true);
             }
 
             // 7) Tabla estilizada (A6:En), zebra y AutoFilter
-            if (ultimaFila >= filaDatosInicio) {
+            if (ultimaFila >= filaDatosIni) {
+                boolean[] filtros = new boolean[] { false, true, true, true, true };
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "CiudadesTabla",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
-                        true,
-                        new boolean[] { false, true, true, true, true }
+                    hoja,
+                    "CiudadesTabla",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    filtros
                 );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+            throw e; // Validación → 400
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar Ciudades.xlsx", e); // Interno → 500
         }
     }
+
 
     // =========================
     //           CSV (dinámico del front → orden fijo aquí)

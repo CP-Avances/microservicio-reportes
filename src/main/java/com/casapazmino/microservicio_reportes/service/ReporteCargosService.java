@@ -109,91 +109,105 @@ public class ReporteCargosService {
     //          XLSX (Como ExcelJS del front)
     // =========================
     public byte[] generarReporteXLSX(ReporteCargosRequest request) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA = "Tipos de Cargos";
+        final int FILA_ENCABEZADO = 5;
+
+        // Merges exactos (B1:C1 ... B5:C5) => (row 0..4, col 1..2)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 2;
+
+        final String[] HEADERS = { "ITEM", "CÓDIGO", "CARGO" };
+        final int[] ANCHOS = { 10, 30, 45 };
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            XSSFSheet hoja = libro.createSheet("Tipos de Cargos");
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
 
-            // 1) LOGO estándar A1:B5
+            // 1) Logo estándar A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            }
 
-            // 2) MERGES EXACTOS (B1:C1 ... B5:C5)
-            UtilExcel.combinarCeldas(hoja, 0, 0, 1, 2); // B1:C1
-            UtilExcel.combinarCeldas(hoja, 1, 1, 1, 2); // B2:C2
-            UtilExcel.combinarCeldas(hoja, 2, 2, 1, 2); // B3:C3
-            UtilExcel.combinarCeldas(hoja, 3, 3, 1, 2); // B4:C4
-            UtilExcel.combinarCeldas(hoja, 4, 4, 1, 2); // B5:C5
+            // 2) Merges exactos B1:C1 ... B5:C5
+            for (int row = MERGE_FIL_INI; row <= MERGE_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hoja, row, row, MERGE_COL_INI, MERGE_COL_FIN);
+            }
 
-            // 3) TÍTULOS en B1 y B2
+            // 3) Títulos en B1 y B2
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
-            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE TIPOS DE CARGOS", estiloTitulo); // B2
+            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE TIPOS DE CARGOS", estiloTitulo);                         // B2
 
-            // 4) ENCABEZADOS + ANCHOS (fila 6 → índice 5)
-            final int filaEncabezado = 5;
-            String[] encabezados = { "ITEM", "CÓDIGO", "CARGO" };
-            int[] anchos = { 10, 30, 45 };
-
-            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(filaHeader, c, encabezados[c], null);
+            // 4) Encabezados + anchos (fila 6 → idx 5)
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
             CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(filaHeader, encabezados.length, estiloEncabezado);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // 5) CUERPO (datos = [n++, id, cargo])
-            int filaDatosInicio = filaEncabezado + 1; // 6 → índice 6
-            int filaActual = filaDatosInicio;
-            int n = 1;
+            // 5) Cuerpo (datos = [n++, id, cargo])
+            int filaDatosIni = FILA_ENCABEZADO + 1; // 6 → idx 6
+            int filaAct = filaDatosIni;
+            int item = 1;
 
             List<CargoDTO> cargos = request.getCargos();
             if (cargos != null) {
                 for (CargoDTO c : cargos) {
-                    Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                    UtilExcel.establecerValor(r, 0, n++, null);                                   // ITEM (secuencial)
-                    UtilExcel.establecerValor(r, 1, c.getId(), null);                               // CÓDIGO (id)
-                    UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(c.getCargo()), null);   // CARGO
+                    Row r = UtilExcel.asegurarFila(hoja, filaAct++);
+                    UtilExcel.establecerValor(r, 0, item++, null);                                   // ITEM (secuencial)
+                    UtilExcel.establecerValor(r, 1, c.getId(), null);                                // CÓDIGO (id)
+                    UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(c.getCargo()), null);    // CARGO (se mantiene helper actual)
                 }
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
-            // 6) ALINEACIONES + BORDES (como obtenerAlineacionHorizontalEmpleados del front)
+            // 6) Alineaciones + bordes
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde   = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
 
             // Cuerpo: col 0 centrado; col 1..2 izquierda
-            if (ultimaFila >= filaDatosInicio) {
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 2, estiloIzqBorde, true);
+            if (ultimaFila >= filaDatosIni) {
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 2, estiloIzqBorde, true);
             }
 
-            // 7) TABLA estilizada (TableStyleMedium16), zebra y AutoFilter (A6:Cn)
-            if (ultimaFila >= filaDatosInicio) {
+            // 7) Tabla estilizada + filtros (ITEM sin filtro)
+            if (ultimaFila >= filaDatosIni) {
+                boolean[] filtros = new boolean[] { false, true, true };
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "TipoCargoTabla",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
-                        true,
-                        new boolean[] { false, true, true } // filtro: ITEM off, CÓDIGO/CARGO on
+                    hoja,
+                    "TipoCargoTabla",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    filtros
                 );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+            throw e; // Validación → 400
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar TiposDeCargos.xlsx", e); // Interno → 500
         }
     }
+        
 
     // =========================
     //           CSV (idéntico al front)

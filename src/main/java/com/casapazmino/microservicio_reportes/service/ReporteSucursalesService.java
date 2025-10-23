@@ -26,7 +26,7 @@ import java.util.List;
 public class ReporteSucursalesService {
 
     // =========================
-    //          PDF (SIN CAMBIOS)
+    //          PDF
     // =========================
     public byte[] generarReportePDF(ReporteSucursalesRequest request) {
 
@@ -114,96 +114,121 @@ public class ReporteSucursalesService {
     }
 
     // =========================
-    //          XLSX (idéntico al ExcelJS del front)
+    //          XLSX
     // =========================
     public byte[] generarReporteXLSX(ReporteSucursalesRequest request) {
-        try (XSSFWorkbook libro = new XSSFWorkbook();
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA     = "Sucursales";  // ≤ 31 chars
+        final int    FILA_ENCABEZADO = 5;            // fila visual 6 (idx 5)
 
-            XSSFSheet hoja = libro.createSheet("Sucursales");
+        // MERGES exactos (B1:D1 ... B5:D5) => (row 0..4, col 1..3)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 3;
+
+        final String[] HEADERS = { "ITEM", "ID", "CIUDAD", "NOMBRE" };
+        final int[]    ANCHOS  = {    10,   20,     20,      30  };
+
+        // Filtros: ITEM sin filtro; resto con filtro
+        final boolean[] FILTROS = new boolean[] { false, true, true, true };
+
+        try (XSSFWorkbook libro = new XSSFWorkbook();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
 
             // 1) Logo estándar A1:B5
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
+            }
 
-            // 2) Merges EXACTOS (B1:D1 ... B5:D5)
-            UtilExcel.combinarCeldas(hoja, 0, 0, 1, 3); // B1:D1
-            UtilExcel.combinarCeldas(hoja, 1, 1, 1, 3); // B2:D2
-            UtilExcel.combinarCeldas(hoja, 2, 2, 1, 3); // B3:D3
-            UtilExcel.combinarCeldas(hoja, 3, 3, 1, 3); // B4:D4
-            UtilExcel.combinarCeldas(hoja, 4, 4, 1, 3); // B5:D5
+            // 2) MERGES exactos (B1:D1 ... B5:D5)
+            for (int r = MERGE_FIL_INI; r <= MERGE_FIL_FIN; r++) {
+                UtilExcel.combinarCeldas(hoja, r, r, MERGE_COL_INI, MERGE_COL_FIN);
+            }
 
             // 3) Títulos (B1 EMPRESA, B2 LISTA DE SUCURSALES)
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
+            UtilExcel.establecerTexto(
+                hoja, 0, 1,
+                UtilExcel.aMayusculasSeguras(request.getEmpresa()),
+                estiloTitulo
+            ); // B1
             UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE SUCURSALES", estiloTitulo); // B2
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
-            final int filaEncabezado = 5;
-            String[] encabezados = { "ITEM", "ID", "CIUDAD", "NOMBRE" };
-            int[] anchos          = {    10,   20,     20,      30  };
-
-            Row filaHeader = UtilExcel.asegurarFila(hoja, filaEncabezado);
-            for (int c = 0; c < encabezados.length; c++) {
-                UtilExcel.establecerTexto(filaHeader, c, encabezados[c], null);
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
             CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(filaHeader, encabezados.length, estiloEncabezado);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEncabezado).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloEncabezado);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // 5) Cuerpo (datos = [index+1, id, descripcion→CIUDAD, nombre])
-            int filaDatosInicio = filaEncabezado + 1;
+            // 5) Cuerpo (datos = [index+1, id, ciudad=descripcion, nombre])
+            int filaDatosInicio = FILA_ENCABEZADO + 1;
             int filaActual = filaDatosInicio;
+            int item = 1;
 
             List<SucursalDTO> sucursales = request.getSucursales();
             if (sucursales != null) {
-                for (int i = 0; i < sucursales.size(); i++) {
-                    SucursalDTO s = sucursales.get(i);
+                for (SucursalDTO s : sucursales) {
                     Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                    UtilExcel.establecerValor(r, 0, i + 1, null); // ITEM
-                    UtilExcel.establecerValor(r, 1, s.getId(), null); // ID
+                    UtilExcel.establecerValor(r, 0, item++, null);                                    // ITEM
+                    UtilExcel.establecerValor(r, 1, s.getId(), null);                                 // ID
                     UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(s.getDescripcion()), null); // CIUDAD
-                    UtilExcel.establecerValor(r, 3, UtilExcel.nuloComoVacio(s.getNombre()), null); // NOMBRE
+                    UtilExcel.establecerValor(r, 3, UtilExcel.nuloComoVacio(s.getNombre()), null);      // NOMBRE
                 }
             }
 
-            int ultimaFila = (filaActual == filaDatosInicio) ? filaEncabezado : (filaActual - 1);
+            int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
             // 6) Alineaciones + bordes (header centrado; cuerpo: col 0 centrada, resto izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
             CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Header
-            UtilExcel.aplicarEstiloARegion(hoja, filaEncabezado, filaEncabezado, 0, encabezados.length - 1,
-                    estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(
+                hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                estiloCentroBorde, true
+            );
 
             // Cuerpo
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true); // ITEM
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 3, estiloIzqBorde, true);   // ID..NOMBRE
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 3, estiloIzqBorde, true);    // ID..NOMBRE
             }
 
-            // 7) Tabla estilizada (TableStyleMedium16), zebra y AutoFilter (A6:Dn)
+            // 7) Tabla estilizada (zebra) + AutoFilter (ITEM sin filtro)
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "SucursalesTabla",
-                        filaEncabezado, 0,
-                        ultimaFila, encabezados.length - 1,
-                        true,
-                        new boolean[] { false, true, true, true } // filtro: ITEM off; resto on
+                    hoja,
+                    "SucursalesTabla",
+                    FILA_ENCABEZADO, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    FILTROS
                 );
             }
 
+            // 8) Cierre + retorno
             libro.write(baos);
             return baos.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+            // Validaciones → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Internos → 500 uniforme
+            throw new ReportBuildException("No se pudo generar Sucursales.xlsx", e);
         }
     }
 
+    
     // =========================
     //           CSV (como el front: id, ciudad, nombre)
     // =========================

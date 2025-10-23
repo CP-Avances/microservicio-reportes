@@ -191,52 +191,68 @@ public class ReporteFaltasService {
         }
     }
 
+
     public byte[] generarReporteFaltasExcel(ReporteFaltasRequest request) {
-        System.out.println("Generando XLSX de Faltas (una hoja)...");
+        // =========================
+        // 0) Constantes DRY locales
+        // =========================
+        final String NOMBRE_HOJA   = "Faltas"; // ≤ 31 chars
+        final int    FILA_ENC      = 5;
+
+        // Merges B1:J5 (row 0..4, col 1..9)
+        final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 9;
+
+        final String TITULO_REPORTE = "LISTA DE FALTAS";
+
+        final String[] HEADERS = {
+            "ITEM","IDENTIFICACIÓN","CÓDIGO","APELLIDO NOMBRE",
+            "GÉNERO","CIUDAD","NACIONALIDAD","SUCURSAL",
+            "RÉGIMEN","DEPARTAMENTO","CARGO","FECHA"
+        };
+        final int[] ANCHOS = { 10,20,20,28, 18,18,20,18, 18,20,20,18 };
+
         try (XSSFWorkbook libro = new XSSFWorkbook();
             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             // =========================
-            // Hoja única: Faltas
+            // 1) Inicialización de hoja
             // =========================
-            XSSFSheet hoja = libro.createSheet("Faltas");
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENC + 1); // mantener encabezado visible
 
-            // 1) Logo estándar A1:B5
+            // 2) Logo estándar A1:B5 (si existe)
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            UtilExcel.insertarLogoEstandar(libro, hoja, logo); // A1:B5
-
-            // 2) Merges B1:J5 (B=1 .. J=9 en 0-based)
-            for (int row = 0; row <= 4; row++) {
-                UtilExcel.combinarCeldas(hoja, row, row, 1, 9);
+            if (logo != null && logo.length > 0) {
+                UtilExcel.insertarLogoEstandar(libro, hoja, logo);
             }
 
-            // 3) Títulos
+            // 3) Merges B1:J5
+            for (int row = MERGE_FIL_INI; row <= MERGE_FIL_FIN; row++) {
+                UtilExcel.combinarCeldas(hoja, row, row, MERGE_COL_INI, MERGE_COL_FIN);
+            }
+
+            // 4) Títulos
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())), estiloTitulo);
-            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE FALTAS", estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo);
             String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL " + safe(request.getFechaFin());
             UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
 
-            // 4) Encabezados + anchos (fila 6 → idx 5)
-            final int filaEnc = 5;
-            String[] headers = {
-                    "ITEM","IDENTIFICACIÓN","CÓDIGO","APELLIDO NOMBRE",
-                    "GÉNERO","CIUDAD","NACIONALIDAD","SUCURSAL",
-                    "RÉGIMEN","DEPARTAMENTO","CARGO","FECHA"
-            };
-            int[] anchos = {10,20,20,28, 18,18,20,18, 18,20,20,18};
-
-            Row fh = UtilExcel.asegurarFila(hoja, filaEnc);
-            for (int c = 0; c < headers.length; c++) {
-                UtilExcel.establecerTexto(fh, c, headers[c], null);
+            // 5) Encabezados + anchos
+            Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENC);
+            for (int c = 0; c < HEADERS.length; c++) {
+                UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
             }
             CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
-            UtilExcel.aplicarEstiloAFila(fh, headers.length, estiloHeader);
-            UtilExcel.establecerAnchosColumnas(hoja, anchos);
-            hoja.getRow(filaEnc).setHeightInPoints(18f);
+            UtilExcel.aplicarEstiloAFila(filaHeader, HEADERS.length, estiloHeader);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            hoja.getRow(FILA_ENC).setHeightInPoints(18f);
 
-            // 5) Cuerpo (aplanado grupos → empleados → faltas)
-            int filaDatosIni = filaEnc + 1;
+            // =========================
+            // 6) Cuerpo del reporte
+            // =========================
+            int filaDatosIni = FILA_ENC + 1;
             int filaAct = filaDatosIni;
             int item = 1;
 
@@ -247,16 +263,15 @@ public class ReporteFaltasService {
                     for (EmpleadoFaltasDTO emp : grupo.getEmpleados()) {
                         if (emp == null || emp.getFaltas() == null) continue;
 
-                        String apenom     = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
-                        String ciudad     = firstNonEmpty(safe(emp.getCiudad()),     safe(grupo.getCiudad()));
-                        String sucursal   = firstNonEmpty(safe(emp.getSucursal()),   safe(grupo.getSucursal()));
-                        String generoNom  = safe(emp.getGeneroNombre());
-                        String nacNom     = safe(emp.getNacionalidadNombre());
+                        String apenom    = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
+                        String ciudad    = firstNonEmpty(safe(emp.getCiudad()),   safe(grupo.getCiudad()));
+                        String sucursal  = firstNonEmpty(safe(emp.getSucursal()), safe(grupo.getSucursal()));
+                        String generoNom = safe(emp.getGeneroNombre());
+                        String nacNom    = safe(emp.getNacionalidadNombre());
 
                         for (FaltaDTO falta : emp.getFaltas()) {
                             if (falta == null) continue;
 
-                            // Fecha formateada con día (similar a PDF)
                             String fechaFmt = ReporteUtil.formatearFechaConDia(safe(falta.getFecha()));
 
                             Row r = UtilExcel.asegurarFila(hoja, filaAct++);
@@ -279,19 +294,21 @@ public class ReporteFaltasService {
                 }
             }
 
-            int ultimaFila = (filaAct == filaDatosIni) ? filaEnc : (filaAct - 1);
+            int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENC : (filaAct - 1);
 
-            // 6) Estilos de cuerpo
+            // =========================
+            // 7) Estilos reutilizables
+            // =========================
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
             CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            // Header centrado con bordes
-            UtilExcel.aplicarEstiloARegion(hoja, filaEnc, filaEnc, 0, headers.length - 1, estiloCentroBorde, true);
+            // Encabezado centrado con borde
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENC, FILA_ENC, 0, HEADERS.length - 1, estiloCentroBorde, true);
 
             if (ultimaFila >= filaDatosIni) {
                 // ITEM centrado
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
-                // APELLIDO NOMBRE / DEPTO / CARGO a la izquierda
+                // APELLIDO NOMBRE / DEPARTAMENTO / CARGO a la izquierda
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 3, 3,  estiloIzqBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 9, 10, estiloIzqBorde, true);
                 // Resto centrado
@@ -299,31 +316,37 @@ public class ReporteFaltasService {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 4, 8,  estiloCentroBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 11, 11, estiloCentroBorde, true);
 
-                // 7) Tabla con filtros (ITEM sin filtro)
-                boolean[] filtros = new boolean[headers.length];
+                // 8) Tabla estilizada + filtros (ITEM sin filtro)
+                boolean[] filtros = new boolean[HEADERS.length];
                 for (int i = 0; i < filtros.length; i++) filtros[i] = true;
-                filtros[0] = false; // ITEM sin filtro
+                filtros[0] = false;
 
                 UtilExcel.crearTablaEstilizada(
-                        hoja,
-                        "FaltasReporteTabla",
-                        filaEnc, 0,
-                        ultimaFila, headers.length - 1,
-                        true,
-                        filtros
+                    hoja,
+                    "FaltasReporteTabla",
+                    FILA_ENC, 0,
+                    ultimaFila, HEADERS.length - 1,
+                    true,
+                    filtros
                 );
             }
 
-            // 8) Finalizar
+            // =========================
+            // 9) Cierre + retorno
+            // =========================
             libro.write(baos);
             return baos.toByteArray();
 
+        } catch (IllegalArgumentException e) {
+            // Validación → el controller puede mapear a 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500 uniforme
+            throw new ReportBuildException("No se pudo generar Faltas.xlsx", e);
         }
     }
 
+    
     /* ===== Helpers locales ===== */
     private String safe(Object v) {
         if (v == null) return "";
