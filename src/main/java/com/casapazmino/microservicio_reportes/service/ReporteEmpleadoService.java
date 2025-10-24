@@ -4,6 +4,7 @@ import com.casapazmino.microservicio_reportes.model.Empleado.EmpleadoDTO;
 import com.casapazmino.microservicio_reportes.model.Empleado.ReporteEmpleadosRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -245,36 +246,70 @@ public class ReporteEmpleadoService {
     //          CSV (LEGACY)
     // =========================
     public byte[] generarReporteEmpleadosCSV(ReporteEmpleadosRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Empleados.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = {
+            "CODIGO","IDENTIFICACION","APELLIDO","NOMBRE","FECHA_NACIMIENTO","ESTADO_CIVIL",
+            "GENERO","CORREO","ESTADO","DOMICILIO","TELEFONO","NACIONALIDAD"
+        };
+
         try {
             StringBuilder sb = new StringBuilder();
-            // Encabezados legacy (sin ITEM)
-            sb.append("CODIGO,IDENTIFICACION,APELLIDO,NOMBRE,FECHA_NACIMIENTO,ESTADO_CIVIL,GENERO,CORREO,ESTADO,DOMICILIO,TELEFONO,NACIONALIDAD\n");
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             List<EmpleadoDTO> items = request.getEmpleados();
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 for (EmpleadoDTO e : items) {
+                    String codigo          = (e.getCodigo() == null)          ? "" : e.getCodigo();
+                    String identificacion  = (e.getIdentificacion() == null)  ? "" : e.getIdentificacion();
+                    String apellido        = (e.getApellido() == null)        ? "" : e.getApellido();
+                    String nombre          = (e.getNombre() == null)          ? "" : e.getNombre();
+                    String fechaNac        = (e.getFechaNacimiento() == null) ? "" : e.getFechaNacimiento();
+                    String estadoCivil     = (e.getEstadoCivil() == null)     ? "" : e.getEstadoCivil();
+                    String genero          = (e.getGenero() == null)          ? "" : e.getGenero();
+                    String correo          = (e.getCorreo() == null)          ? "" : e.getCorreo();
+                    String estadoTexto     = (e.getEstadoTexto() == null)     ? "" : e.getEstadoTexto();
+                    String domicilio       = (e.getDomicilio() == null)       ? "" : e.getDomicilio();
+                    String telefono        = (e.getTelefono() == null)        ? "" : e.getTelefono();
+                    String nacionalidad    = (e.getNacionalidad() == null)    ? "" : e.getNacionalidad();
 
-                    sb.append(csv(nvl(e.getCodigo()))).append(',')
-                      .append(csv(nvl(e.getIdentificacion()))).append(',')
-                      .append(csv((nvl(e.getApellido())))).append(',')
-                      .append(csv((nvl(e.getNombre())))).append(',')
-                      .append(csv(nvl(e.getFechaNacimiento()))).append(',')
-                      .append(csv(nvl(e.getEstadoCivil()))).append(',')
-                      .append(csv(nvl(e.getGenero()))).append(',')
-                      .append(csv(nvl(e.getCorreo()))).append(',')
-                      .append(csv(nvl(e.getEstadoTexto()))).append(',')
-                      .append(csv(nvl(e.getDomicilio()))).append(',')
-                      .append(csv(nvl(e.getTelefono()))).append(',')
-                      .append(csv(nvl(e.getNacionalidad()))).append('\n');
+                    sb.append(UtilCsv.csvEscape(codigo)).append(DELIM)
+                    .append(UtilCsv.csvEscape(identificacion)).append(DELIM)
+                    .append(UtilCsv.csvEscape(apellido)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nombre)).append(DELIM)
+                    .append(UtilCsv.csvEscape(fechaNac)).append(DELIM)
+                    .append(UtilCsv.csvEscape(estadoCivil)).append(DELIM)
+                    .append(UtilCsv.csvEscape(genero)).append(DELIM)
+                    .append(UtilCsv.csvEscape(correo)).append(DELIM)
+                    .append(UtilCsv.csvEscape(estadoTexto)).append(DELIM)
+                    .append(UtilCsv.csvEscape(domicilio)).append(DELIM)
+                    .append(UtilCsv.csvEscape(telefono)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nacionalidad)).append(EOL);
                 }
             }
+
+            // Retorno (nunca null)
             return sb.toString().getBytes(StandardCharsets.UTF_8);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
+        } catch (Exception e) {
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+    
     // =========================
     //           XML (LEGACY)
     // =========================
@@ -320,13 +355,6 @@ public class ReporteEmpleadoService {
         return (s == null) ? "" : s;
     }
 
-
-    private String csv(String v) {
-        if (v == null) return "";
-        boolean quote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return quote ? "\"" + s + "\"" : s;
-    }
 
     private String xml(String v) {
         String s = (v == null) ? "" : v;

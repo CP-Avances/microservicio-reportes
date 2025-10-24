@@ -4,6 +4,7 @@ import com.casapazmino.microservicio_reportes.model.Discapacidad.DiscapacidadDTO
 import com.casapazmino.microservicio_reportes.model.Discapacidad.ReporteDiscapacidadesRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -218,28 +219,47 @@ public class ReporteDiscapacidadService {
     // CSV (keys simples)
     // =========================
     public byte[] generarReporteDiscapacidadesCSV(ReporteDiscapacidadesRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Discapacidades.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = { "id", "nombre" };
+
         try {
             StringBuilder sb = new StringBuilder();
-            sb.append("id,nombre\n");
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             List<DiscapacidadDTO> items = request.getDiscapacidades();
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 for (DiscapacidadDTO d : items) {
-                    String id = d.getId() == null ? "" : String.valueOf(d.getId());
-                    String nombre = d.getNombre() == null ? "" : d.getNombre();
-                    sb.append(csv(id)).append(',')
-                            .append(csv(nombre)).append('\n');
+                    String id     = (d.getId() == null)     ? "" : String.valueOf(d.getId());
+                    String nombre = (d.getNombre() == null) ? "" : d.getNombre();
+
+                    sb.append(UtilCsv.csvEscape(id)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nombre)).append(EOL);
                 }
             }
 
+            // Retorno (nunca null)
             return sb.toString().getBytes(StandardCharsets.UTF_8);
 
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+    
     // =========================
     // XML (igual a xml2js: raíz y nodos)
     // =========================
@@ -272,13 +292,6 @@ public class ReporteDiscapacidadService {
     // =========================
     // Helpers CSV/XML
     // =========================
-    private String csv(String v) {
-        if (v == null)
-            return "";
-        boolean quote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return quote ? "\"" + s + "\"" : s;
-    }
 
     private String xml(Object v) {
         String s = (v == null) ? "" : String.valueOf(v);

@@ -4,6 +4,7 @@ import com.casapazmino.microservicio_reportes.model.Coordenada.CoordenadaDTO;
 import com.casapazmino.microservicio_reportes.model.Coordenada.ReporteCoordenadasRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -222,28 +223,47 @@ public class ReporteCoordenadasService {
     //           CSV (orden fijo)
     // =========================
     public byte[] generarReporteCSV(ReporteCoordenadasRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Coordenadas.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = { "id", "latitud", "longitud", "descripcion" };
+
         try {
             StringBuilder sb = new StringBuilder();
-            // Encabezados como en el front: id, latitud, longitud, descripcion
-            sb.append("id,latitud,longitud,descripcion\n");
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             List<CoordenadaDTO> items = request.getCoordenadas();
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 for (CoordenadaDTO c : items) {
-                    String id   = c.getId() == null ? "" : String.valueOf(c.getId());
-                    String lat  = c.getLatitud() == null ? "" : c.getLatitud();
-                    String lon  = c.getLongitud() == null ? "" : c.getLongitud();
-                    String desc = c.getDescripcion() == null ? "" : c.getDescripcion();
-                    sb.append(csv(id)).append(',')
-                      .append(csv(lat)).append(',')
-                      .append(csv(lon)).append(',')
-                      .append(csv(desc)).append('\n');
+                    String id   = (c.getId() == null)          ? "" : String.valueOf(c.getId());
+                    String lat  = (c.getLatitud() == null)     ? "" : c.getLatitud();
+                    String lon  = (c.getLongitud() == null)    ? "" : c.getLongitud();
+                    String desc = (c.getDescripcion() == null) ? "" : c.getDescripcion();
+
+                    sb.append(UtilCsv.csvEscape(id)).append(DELIM)
+                    .append(UtilCsv.csvEscape(lat)).append(DELIM)
+                    .append(UtilCsv.csvEscape(lon)).append(DELIM)
+                    .append(UtilCsv.csvEscape(desc)).append(EOL);
                 }
             }
+
+            // Retorno (nunca null)
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
@@ -278,12 +298,7 @@ public class ReporteCoordenadasService {
     // =========================
     //       Helpers CSV/XML
     // =========================
-    private String csv(String v) {
-        if (v == null) return "";
-        boolean quote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return quote ? "\"" + s + "\"" : s;
-    }
+
 
     private String xml(Object v) {
         String s = (v == null) ? "" : String.valueOf(v);

@@ -5,6 +5,7 @@ import com.casapazmino.microservicio_reportes.model.Parametro.ParametroDTO;
 import com.casapazmino.microservicio_reportes.model.Parametro.ReporteParametrosRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.Document;
@@ -267,40 +268,66 @@ public class ReporteParametrosService {
 
     
     public byte[] generarReporteParametrosCSV(ReporteParametrosRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Parametros.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = { "n", "codigoParametro", "parametro", "detalle", "descripcion" };
+
         try {
             StringBuilder sb = new StringBuilder();
-            // Encabezados EXACTOS del front antiguo:
-            sb.append("n,codigoParametro,parametro,detalle,descripcion\n");
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             int n = 1;
             List<ParametroDTO> parametros = request.getParametros();
-            if (parametros != null) {
+            if (parametros != null && !parametros.isEmpty()) {
                 for (ParametroDTO p : parametros) {
-                    List<DetalleParametroDTO> detalles = p.getDetalles();
+                    String codParam = (p == null || p.getId() == null) ? "" : String.valueOf(p.getId());
+                    String param    = (p == null || p.getDescripcion() == null) ? "" : p.getDescripcion();
+
+                    List<DetalleParametroDTO> detalles = (p == null) ? null : p.getDetalles();
                     if (detalles != null && !detalles.isEmpty()) {
                         for (DetalleParametroDTO d : detalles) {
-                            sb.append(n++).append(',')
-                                    .append(csvEscape(String.valueOf(p.getId()))).append(',')
-                                    .append(csvEscape(p.getDescripcion())).append(',')
-                                    .append(csvEscape(d.getDescripcion())).append(',')
-                                    .append(csvEscape(d.getObservacion())).append('\n');
+                            String det = (d == null || d.getDescripcion() == null) ? "" : d.getDescripcion();
+                            String obs = (d == null || d.getObservacion() == null) ? "" : d.getObservacion();
+
+                            sb.append(n++).append(DELIM)
+                            .append(UtilCsv.csvEscape(codParam)).append(DELIM)
+                            .append(UtilCsv.csvEscape(param)).append(DELIM)
+                            .append(UtilCsv.csvEscape(det)).append(DELIM)
+                            .append(UtilCsv.csvEscape(obs)).append(EOL);
                         }
                     } else {
-                        sb.append(n++).append(',')
-                                .append(csvEscape(String.valueOf(p.getId()))).append(',')
-                                .append(csvEscape(p.getDescripcion())).append(',')
-                                .append(csvEscape("")).append(',')
-                                .append(csvEscape("")).append('\n');
+                        // Fila sin detalle/descripcion
+                        sb.append(n++).append(DELIM)
+                        .append(UtilCsv.csvEscape(codParam)).append(DELIM)
+                        .append(UtilCsv.csvEscape(param)).append(DELIM)
+                        .append(UtilCsv.csvEscape("")).append(DELIM)
+                        .append(UtilCsv.csvEscape("")).append(EOL);
                     }
                 }
             }
+
+            // Retorno (nunca null)
             return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+    
     public byte[] generarReporteParametrosXML(ReporteParametrosRequest request) {
         try {
             StringBuilder sb = new StringBuilder();
@@ -347,12 +374,5 @@ public class ReporteParametrosService {
                 .replace("'", "&apos;");
     }
 
-    private String csvEscape(String v) {
-        if (v == null)
-            return "";
-        boolean mustQuote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return mustQuote ? "\"" + s + "\"" : s;
-    }
 
 }

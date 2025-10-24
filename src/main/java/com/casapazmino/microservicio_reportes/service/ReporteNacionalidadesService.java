@@ -4,6 +4,7 @@ import com.casapazmino.microservicio_reportes.model.Nacionalidad.NacionalidadDTO
 import com.casapazmino.microservicio_reportes.model.Nacionalidad.ReporteNacionalidadesRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -218,25 +219,47 @@ public class ReporteNacionalidadesService {
     // CSV (como el front: keys = id, nombre)
     // =========================
     public byte[] generarReporteNacionalidadesCSV(ReporteNacionalidadesRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Nacionalidades.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = { "id", "nombre" };
+
         try {
             StringBuilder sb = new StringBuilder();
-            sb.append("id,nombre\n"); // orden estable
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             List<NacionalidadDTO> items = request.getNacionalidades();
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 for (NacionalidadDTO n : items) {
-                    String id = n.getId() == null ? "" : String.valueOf(n.getId());
-                    String nom = n.getNombre() == null ? "" : n.getNombre();
-                    sb.append(csv(id)).append(',').append(csv(nom)).append('\n');
+                    String id  = (n == null || n.getId() == null)     ? "" : String.valueOf(n.getId());
+                    String nom = (n == null || n.getNombre() == null) ? "" : n.getNombre();
+
+                    sb.append(UtilCsv.csvEscape(id)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nom)).append(EOL);
                 }
             }
+
+            // Retorno (nunca null)
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+    
     // =========================
     // XML (replica exacta del front, incl. raíz con tilde)
     // =========================
@@ -266,14 +289,6 @@ public class ReporteNacionalidadesService {
     // =========================
     // Helpers CSV/XML
     // =========================
-    private String csv(String v) {
-        if (v == null)
-            return "";
-        boolean quote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return quote ? "\"" + s + "\"" : s;
-    }
-
     private String xml(Object v) {
         String s = (v == null) ? "" : String.valueOf(v);
         return s.replace("&", "&amp;")

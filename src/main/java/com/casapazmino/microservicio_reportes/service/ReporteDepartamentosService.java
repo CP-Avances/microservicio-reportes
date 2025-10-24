@@ -4,6 +4,7 @@ import com.casapazmino.microservicio_reportes.model.Departamento.DepartamentoDTO
 import com.casapazmino.microservicio_reportes.model.Departamento.ReporteDepartamentosRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -229,36 +230,55 @@ public class ReporteDepartamentosService {
     //           CSV (idéntico al front)
     // =========================
     public byte[] generarReporteCSV(ReporteDepartamentosRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Departamentos.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = { "id_sucursal", "nomsucursal", "id", "nombre", "nivel", "departamento_superior" };
+
         try {
             StringBuilder sb = new StringBuilder();
-            // Encabezados EXACTOS y en el mismo orden del front:
-            sb.append("id_sucursal,nomsucursal,id,nombre,nivel,departamento_superior\n");
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             List<DepartamentoDTO> items = request.getDepartamentos();
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 for (DepartamentoDTO d : items) {
-                    String idSuc = d.getId_sucursal() == null ? "" : String.valueOf(d.getId_sucursal());
-                    String nomSuc= d.getNomsucursal() == null ? "" : d.getNomsucursal();
-                    String id    = d.getId() == null ? "" : String.valueOf(d.getId());
-                    String nombre= d.getNombre() == null ? "" : d.getNombre();
-                    String nivel = d.getNivel() == null ? "" : String.valueOf(d.getNivel());
-                    String depSup= d.getDepartamento_padre() == null ? "" : d.getDepartamento_padre();
+                    String idSuc  = (d.getId_sucursal() == null)        ? "" : String.valueOf(d.getId_sucursal());
+                    String nomSuc = (d.getNomsucursal() == null)        ? "" : d.getNomsucursal();
+                    String id     = (d.getId() == null)                 ? "" : String.valueOf(d.getId());
+                    String nombre = (d.getNombre() == null)             ? "" : d.getNombre();
+                    String nivel  = (d.getNivel() == null)              ? "" : String.valueOf(d.getNivel());
+                    String depSup = (d.getDepartamento_padre() == null) ? "" : d.getDepartamento_padre();
 
-                    sb.append(csv(idSuc)).append(',')
-                      .append(csv(nomSuc)).append(',')
-                      .append(csv(id)).append(',')
-                      .append(csv(nombre)).append(',')
-                      .append(csv(nivel)).append(',')
-                      .append(csv(depSup)).append('\n');
+                    sb.append(UtilCsv.csvEscape(idSuc)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nomSuc)).append(DELIM)
+                    .append(UtilCsv.csvEscape(id)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nombre)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nivel)).append(DELIM)
+                    .append(UtilCsv.csvEscape(depSup)).append(EOL);
                 }
             }
+
+            // Retorno (nunca null)
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+    
     // =========================
     //            XML (igual al xml2js del front)
     // =========================
@@ -291,12 +311,6 @@ public class ReporteDepartamentosService {
     // =========================
     //       Helpers CSV/XML (locales por ahora)
     // =========================
-    private String csv(String v) {
-        if (v == null) return "";
-        boolean quote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return quote ? "\"" + s + "\"" : s;
-    }
 
     private String xml(Object v) {
         String s = (v == null) ? "" : String.valueOf(v);

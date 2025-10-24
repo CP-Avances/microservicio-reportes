@@ -3,6 +3,7 @@ package com.casapazmino.microservicio_reportes.service;
 import com.casapazmino.microservicio_reportes.model.RegimenLaboral.*;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -11,6 +12,7 @@ import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
@@ -478,87 +480,92 @@ public class ReporteRegimenesService {
         
         // ======================= CSV =======================
         public byte[] generarReporteRegimenesCSV(ReporteRegimenesRequest request) {
+                // === Contrato del CSV ===
+                final String NOMBRE_REPORTE = "Regimenes.csv";
+                final String DELIM = ",";
+                final String EOL = "\r\n"; // CRLF para Excel/Windows
+                final String[] HEADERS = {
+                        "ITEM", "CÓDIGO", "RÉGIMEN", "PAÍS", "CONTINUIDAD LABORAL",
+                        "ANTIGÜEDAD LABORAL",
+                        "PERIODO LABORAL", "DÍAS POR MES", "TRABAJO MÍNIMO (MES)",
+                        "TRABAJO MÍNIMO (HORAS)",
+                        "DÍAS HÁBILES", "DÍAS LIBRES", "DÍAS CALENDARIO", "ACUMULA VACACIONES",
+                        "MÁXIMO DÍAS ACUMULABLES", "VACACIONES POR PERÍODOS", "DETALLE PERÍODOS",
+                        "VACACIONES HÁBILES MES", "VACACIONES CALENDARIO MES", "VACACIONES HÁBILES DÍA",
+                        "VACACIONES CALENDARIO DÍA", "TIPO ANTIGÜEDAD", "AÑOS ANTIGÜEDAD",
+                        "DÍAS ADICIONALES",
+                        "DETALLE RANGOS VARIABLE"
+                };
+
                 try {
-                        String[] headers = {
-                                        "ITEM", "CÓDIGO", "RÉGIMEN", "PAÍS", "CONTINUIDAD LABORAL",
-                                        "ANTIGÜEDAD LABORAL",
-                                        "PERIODO LABORAL", "DÍAS POR MES", "TRABAJO MÍNIMO (MES)",
-                                        "TRABAJO MÍNIMO (HORAS)",
-                                        "DÍAS HÁBILES", "DÍAS LIBRES", "DÍAS CALENDARIO", "ACUMULA VACACIONES",
-                                        "MÁXIMO DÍAS ACUMULABLES", "VACACIONES POR PERÍODOS", "DETALLE PERÍODOS",
-                                        "VACACIONES HÁBILES MES", "VACACIONES CALENDARIO MES", "VACACIONES HÁBILES DÍA",
-                                        "VACACIONES CALENDARIO DÍA", "TIPO ANTIGÜEDAD", "AÑOS ANTIGÜEDAD",
-                                        "DÍAS ADICIONALES",
-                                        "DETALLE RANGOS VARIABLE"
-                        };
-
                         StringBuilder sb = new StringBuilder();
-                        // encabezado
-                        for (int i = 0; i < headers.length; i++) {
-                                sb.append(csv(headers[i]));
-                                if (i < headers.length - 1)
-                                        sb.append(',');
-                        }
-                        sb.append('\n');
 
+                        // Encabezados (orden exacto)
+                        for (int i = 0; i < HEADERS.length; i++) {
+                        if (i > 0) sb.append(DELIM);
+                        sb.append(HEADERS[i]);
+                        }
+                        sb.append(EOL);
+
+                        // Cuerpo
                         int n = 1;
-                        if (request.getRegimenes() != null) {
-                                for (RegimenDTO r : request.getRegimenes()) {
-                                        String tipoAntig = tipoAntiguedad(r);
-                                        String textoPeriodos = construirTextoPeriodos(r);
-                                        String textoRangos = construirTextoRangos(r);
+                        List<RegimenDTO> items = request.getRegimenes();
+                        if (items != null && !items.isEmpty()) {
+                        for (RegimenDTO r : items) {
+                                String tipoAntig      = (r == null) ? "" : tipoAntiguedad(r);
+                                String textoPeriodos  = (r == null) ? "" : construirTextoPeriodos(r);
+                                String textoRangos    = (r == null) ? "" : construirTextoRangos(r);
 
-                                        String[] row = {
-                                                        String.valueOf(n++),
-                                                        str(r.getId()),
-                                                        nz(r.getDescripcion()),
-                                                        nz(r.getPais()),
-                                                        siNo(bool(r.getContinuidad_laboral())),
-                                                        siNo(bool(r.getAntiguedad())),
-                                                        str(r.getMes_periodo()),
-                                                        str(r.getDias_mes()),
-                                                        str(r.getTrabajo_minimo_mes()),
-                                                        str(r.getTrabajo_minimo_horas()),
-                                                        str(r.getVacacion_dias_laboral()),
-                                                        str(r.getVacacion_dias_libre()),
-                                                        str(r.getVacacion_dias_calendario()),
-                                                        siNo(bool(r.getAcumular())),
-                                                        str(r.getDias_maximo_acumulacion()),
-                                                        siNo(bool(r.getVacacion_divisible())),
-                                                        textoPeriodos,
-                                                        str(r.getVacacion_dias_laboral_mes()),
-                                                        str(r.getVacacion_dias_calendario_mes()),
-                                                        str(r.getLaboral_dias()),
-                                                        str(r.getCalendario_dias()),
-                                                        tipoAntig,
-                                                        str(r.getAnio_antiguedad()),
-                                                        str(r.getDias_antiguedad()),
-                                                        textoRangos
-                                        };
+                                String[] row = new String[] {
+                                String.valueOf(n++),
+                                (r == null) ? "" : str(r.getId()),
+                                (r == null) ? "" : nz(r.getDescripcion()),
+                                (r == null) ? "" : nz(r.getPais()),
+                                (r == null) ? "" : siNo(bool(r.getContinuidad_laboral())),
+                                (r == null) ? "" : siNo(bool(r.getAntiguedad())),
+                                (r == null) ? "" : str(r.getMes_periodo()),
+                                (r == null) ? "" : str(r.getDias_mes()),
+                                (r == null) ? "" : str(r.getTrabajo_minimo_mes()),
+                                (r == null) ? "" : str(r.getTrabajo_minimo_horas()),
+                                (r == null) ? "" : str(r.getVacacion_dias_laboral()),
+                                (r == null) ? "" : str(r.getVacacion_dias_libre()),
+                                (r == null) ? "" : str(r.getVacacion_dias_calendario()),
+                                (r == null) ? "" : siNo(bool(r.getAcumular())),
+                                (r == null) ? "" : str(r.getDias_maximo_acumulacion()),
+                                (r == null) ? "" : siNo(bool(r.getVacacion_divisible())),
+                                textoPeriodos,
+                                (r == null) ? "" : str(r.getVacacion_dias_laboral_mes()),
+                                (r == null) ? "" : str(r.getVacacion_dias_calendario_mes()),
+                                (r == null) ? "" : str(r.getLaboral_dias()),
+                                (r == null) ? "" : str(r.getCalendario_dias()),
+                                tipoAntig,
+                                (r == null) ? "" : str(r.getAnio_antiguedad()),
+                                (r == null) ? "" : str(r.getDias_antiguedad()),
+                                textoRangos
+                                };
 
-                                        for (int i = 0; i < row.length; i++) {
-                                                sb.append(csv(row[i]));
-                                                if (i < row.length - 1)
-                                                        sb.append(',');
-                                        }
-                                        sb.append('\n');
+                                for (int i = 0; i < row.length; i++) {
+                                String cell = (row[i] == null) ? "" : row[i];
+                                sb.append(UtilCsv.csvEscape(cell));
+                                if (i < row.length - 1) sb.append(DELIM);
                                 }
+                                sb.append(EOL);
                         }
-                        return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                        }
 
+                        // Retorno (nunca null)
+                        return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+                } catch (IllegalArgumentException e) {
+                        // Validación → 400
+                        throw e;
                 } catch (Exception e) {
-                        e.printStackTrace();
-                        return null;
+                        // Interno → 500
+                        throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
                 }
         }
 
-        private String csv(String v) {
-                if (v == null)
-                        return "";
-                boolean q = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-                String s = v.replace("\"", "\"\"");
-                return q ? "\"" + s + "\"" : s;
-        }
+
 
         // ======================= XML =======================
         public byte[] generarReporteRegimenesXML(ReporteRegimenesRequest request) {

@@ -4,6 +4,7 @@ import com.casapazmino.microservicio_reportes.model.Cargo.CargoDTO;
 import com.casapazmino.microservicio_reportes.model.Cargo.ReporteCargosRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -213,26 +214,43 @@ public class ReporteCargosService {
     //           CSV (idéntico al front)
     // =========================
     public byte[] generarReporteCSV(ReporteCargosRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Cargos.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n";                 // CRLF para Excel/Windows
+        final String[] HEADERS = { "ITEM", "CARGOS" };
+
         try {
             StringBuilder sb = new StringBuilder();
-            // Encabezados EXACTOS del front antiguo:
-            sb.append("ITEM,CARGOS\n");
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             List<CargoDTO> items = request.getCargos();
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 for (CargoDTO c : items) {
-                    String item = (c.getId() == null) ? "" : String.valueOf(c.getId()); // ITEM = id (así estaba en front)
+                    String item  = (c.getId() == null) ? "" : String.valueOf(c.getId()); // contrato histórico: ITEM = id
                     String cargo = (c.getCargo() == null) ? "" : c.getCargo();
-                    sb.append(csvEscape(item)).append(',').append(csvEscape(cargo)).append('\n');
+
+                    sb.append(UtilCsv.csvEscape(item)).append(DELIM).append(UtilCsv.csvEscape(cargo)).append(EOL);
                 }
             }
+            // Retorno (nunca null)
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            // Validación (el controller puede mapear a 400)
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Error interno uniforme (→ 500 en controller)
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
+    
     // =========================
     //            XML (idéntico a xml2js del front)
     // =========================
@@ -261,15 +279,6 @@ public class ReporteCargosService {
         }
     }
 
-    // =========================
-    //       Helpers CSV/XML (locales, hasta mover a util)
-    // =========================
-    private String csvEscape(String v) {
-        if (v == null) return "";
-        boolean mustQuote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return mustQuote ? "\"" + s + "\"" : s;
-    }
 
     private String xmlEsc(Object v) {
         String s = (v == null) ? "" : String.valueOf(v);

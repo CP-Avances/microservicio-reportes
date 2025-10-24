@@ -4,6 +4,7 @@ import com.casapazmino.microservicio_reportes.model.Ciudad.CiudadDTO;
 import com.casapazmino.microservicio_reportes.model.Ciudad.ReporteCiudadesRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -214,31 +215,51 @@ public class ReporteCiudadesService {
     //           CSV (dinámico del front → orden fijo aquí)
     // =========================
     public byte[] generarReporteCSV(ReporteCiudadesRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Ciudades.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = { "id", "nombre", "provincia", "id_prov" };
+
         try {
             StringBuilder sb = new StringBuilder();
-            // Encabezados como los keys que usabas: id, nombre, provincia, id_prov
-            sb.append("id,nombre,provincia,id_prov\n");
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             List<CiudadDTO> items = request.getCiudades();
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 for (CiudadDTO c : items) {
-                    String id      = c.getId() == null ? "" : String.valueOf(c.getId());
-                    String nombre  = c.getNombre() == null ? "" : c.getNombre();
-                    String prov    = c.getProvincia() == null ? "" : c.getProvincia();
-                    String idProv  = c.getId_prov() == null ? "" : String.valueOf(c.getId_prov());
-                    sb.append(csv(id)).append(',')
-                      .append(csv(nombre)).append(',')
-                      .append(csv(prov)).append(',')
-                      .append(csv(idProv)).append('\n');
+                    String id     = (c.getId() == null)       ? "" : String.valueOf(c.getId());
+                    String nombre = (c.getNombre() == null)   ? "" : c.getNombre();
+                    String prov   = (c.getProvincia() == null)? "" : c.getProvincia();
+                    String idProv = (c.getId_prov() == null)  ? "" : String.valueOf(c.getId_prov());
+
+                    sb.append(UtilCsv.csvEscape(id)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nombre)).append(DELIM)
+                    .append(UtilCsv.csvEscape(prov)).append(DELIM)
+                    .append(UtilCsv.csvEscape(idProv)).append(EOL);
                 }
             }
+
+            // Retorno (nunca null)
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+    
     // =========================
     //            XML (igual a tu xml2js)
     // =========================
@@ -269,12 +290,6 @@ public class ReporteCiudadesService {
     // =========================
     //       Helpers CSV/XML (locales por ahora)
     // =========================
-    private String csv(String v) {
-        if (v == null) return "";
-        boolean quote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return quote ? "\"" + s + "\"" : s;
-    }
 
     private String xml(Object v) {
         String s = (v == null) ? "" : String.valueOf(v);

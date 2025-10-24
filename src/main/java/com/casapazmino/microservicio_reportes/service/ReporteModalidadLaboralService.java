@@ -4,6 +4,7 @@ import com.casapazmino.microservicio_reportes.model.ModalidadLaboral.ModalidadLa
 import com.casapazmino.microservicio_reportes.model.ModalidadLaboral.ReporteModalidadLaboralRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -220,26 +221,48 @@ public class ReporteModalidadLaboralService {
     //           CSV (idéntico a tu ExportToCSV)
     // =========================
     public byte[] generarReporteCSV(ReporteModalidadLaboralRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "ModalidadLaboral.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = { "ITEM", "MODALIDAD_LABORAL" };
+
         try {
             StringBuilder sb = new StringBuilder();
-            // Encabezados EXACTOS del front antiguo:
-            sb.append("ITEM,MODALIDAD_LABORAL\n");
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             List<ModalidadLaboralDTO> items = request.getModalidades();
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 for (ModalidadLaboralDTO m : items) {
-                    String item = (m.getId() == null) ? "" : String.valueOf(m.getId()); // ITEM = id (como tu ExcelJS CSV)
-                    String desc = (m.getDescripcion() == null) ? "" : m.getDescripcion();
-                    sb.append(csvEscape(item)).append(',').append(csvEscape(desc)).append('\n');
+                    String item = (m == null || m.getId() == null) ? "" : String.valueOf(m.getId()); // ITEM = id
+                    String desc = (m == null || m.getDescripcion() == null) ? "" : m.getDescripcion();
+
+                    sb.append(UtilCsv.csvEscape(item)).append(DELIM)
+                    .append(UtilCsv.csvEscape(desc)).append(EOL);
                 }
             }
+
+            // Retorno (nunca null)
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+
+    
     // =========================
     //            XML (idéntico a tu xml2js)
     // =========================
@@ -270,12 +293,6 @@ public class ReporteModalidadLaboralService {
     // =========================
     //          Helpers locales CSV/XML (moveremos a util luego)
     // =========================
-    private String csvEscape(String v) {
-        if (v == null) return "";
-        boolean mustQuote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return mustQuote ? "\"" + s + "\"" : s;
-    }
 
     private String xmlEsc(Object v) {
         String s = (v == null) ? "" : String.valueOf(v);

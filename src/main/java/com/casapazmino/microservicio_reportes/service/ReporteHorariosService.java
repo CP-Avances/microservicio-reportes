@@ -5,6 +5,7 @@ import com.casapazmino.microservicio_reportes.model.Horario.HorarioDTO;
 import com.casapazmino.microservicio_reportes.model.Horario.ReporteHorariosRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -314,59 +315,81 @@ public class ReporteHorariosService {
     //            CSV
     // =========================
     public byte[] generarReporteCSV(ReporteHorariosRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Horarios.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = {
+            "n", "horario", "codigo", "horas_trabajo", "minutos_alimentacion", "horario_noturno",
+            "documento", "orden", "hora", "tolerancia", "accion", "otro_dia",
+            "minutos_antes", "minutos_despues"
+        };
+
         try {
             StringBuilder sb = new StringBuilder();
-            // Encabezados como en tu exportación legacy
-            sb.append("n,horario,codigo,horas_trabajo,minutos_alimentacion,horario_noturno,documento,")
-              .append("orden,hora,tolerancia,accion,otro_dia,minutos_antes,minutos_despues\n");
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             int n = 1;
             List<HorarioDTO> horarios = request.getHorarios();
-            if (horarios != null) {
+            if (horarios != null && !horarios.isEmpty()) {
                 for (HorarioDTO h : horarios) {
                     List<DetalleHorarioDTO> dets = h.getDetalles();
                     if (dets == null || dets.isEmpty()) continue;
 
                     for (DetalleHorarioDTO d : dets) {
-                        String horario            = nvl(h.getNombre());
-                        String codigo             = nvl(h.getCodigo());
-                        String horasTrabajo       = nvl(h.getHoraTrabajo());
-                        String minutosAliment     = nvl(h.getMinutosComida());
-                        String noturno            = h.isNoturno() ? "Sí" : "No";
-                        String documento          = nvl(h.getDocumento());
-                        String orden              = nvl(d.getOrden());
-                        String hora               = nvl(d.getHora());
-                        String tolerancia         = nvl(d.getTolerancia());
-                        String accion             = nvl(d.getTipoAccionShow());
-                        String otroDia            = d.isSegundoDia() ? "Sí" : "No";
-                        String minutosAntes       = nvl(d.getMinutosAntes());
-                        String minutosDespues     = nvl(d.getMinutosDespues());
+                        String horario        = (h.getNombre() == null)            ? "" : h.getNombre();
+                        String codigo         = (h.getCodigo() == null)            ? "" : h.getCodigo();
+                        String horasTrabajo   = (h.getHoraTrabajo() == null)       ? "" : String.valueOf(h.getHoraTrabajo());
+                        String minutosAliment = (h.getMinutosComida() == null)     ? "" : String.valueOf(h.getMinutosComida());
+                        String noturno        = h.isNoturno() ? "Sí" : "No";
+                        String documento      = (h.getDocumento() == null)         ? "" : h.getDocumento();
 
-                        sb.append(n++).append(',')
-                          .append(csv(horario)).append(',')
-                          .append(csv(codigo)).append(',')
-                          .append(csv(horasTrabajo)).append(',')
-                          .append(csv(minutosAliment)).append(',')
-                          .append(csv(noturno)).append(',')
-                          .append(csv(documento)).append(',')
-                          .append(csv(orden)).append(',')
-                          .append(csv(hora)).append(',')
-                          .append(csv(tolerancia)).append(',')
-                          .append(csv(accion)).append(',')
-                          .append(csv(otroDia)).append(',')
-                          .append(csv(minutosAntes)).append(',')
-                          .append(csv(minutosDespues)).append('\n');
+                        String orden          = (d.getOrden() == null)             ? "" : String.valueOf(d.getOrden());
+                        String hora           = (d.getHora() == null)              ? "" : String.valueOf(d.getHora());
+                        String tolerancia     = (d.getTolerancia() == null)        ? "" : String.valueOf(d.getTolerancia());
+                        String accion         = (d.getTipoAccionShow() == null)    ? "" : d.getTipoAccionShow();
+                        String otroDia        = d.isSegundoDia() ? "Sí" : "No";
+                        String minutosAntes   = (d.getMinutosAntes() == null)      ? "" : String.valueOf(d.getMinutosAntes());
+                        String minutosDespues = (d.getMinutosDespues() == null)    ? "" : String.valueOf(d.getMinutosDespues());
+
+                        sb.append(UtilCsv.csvEscape(String.valueOf(n++))).append(DELIM)
+                        .append(UtilCsv.csvEscape(horario)).append(DELIM)
+                        .append(UtilCsv.csvEscape(codigo)).append(DELIM)
+                        .append(UtilCsv.csvEscape(horasTrabajo)).append(DELIM)
+                        .append(UtilCsv.csvEscape(minutosAliment)).append(DELIM)
+                        .append(UtilCsv.csvEscape(noturno)).append(DELIM)
+                        .append(UtilCsv.csvEscape(documento)).append(DELIM)
+                        .append(UtilCsv.csvEscape(orden)).append(DELIM)
+                        .append(UtilCsv.csvEscape(hora)).append(DELIM)
+                        .append(UtilCsv.csvEscape(tolerancia)).append(DELIM)
+                        .append(UtilCsv.csvEscape(accion)).append(DELIM)
+                        .append(UtilCsv.csvEscape(otroDia)).append(DELIM)
+                        .append(UtilCsv.csvEscape(minutosAntes)).append(DELIM)
+                        .append(UtilCsv.csvEscape(minutosDespues)).append(EOL);
                     }
                 }
             }
 
+            // Retorno (nunca null)
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+    
     // =========================
     //            XML
     // =========================
@@ -421,12 +444,6 @@ public class ReporteHorariosService {
         return v == null ? "" : String.valueOf(v);
     }
 
-    private String csv(String v) {
-        if (v == null) return "";
-        boolean quote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return quote ? "\"" + s + "\"" : s;
-    }
 
     private String xml(Object v) {
         String s = (v == null) ? "" : String.valueOf(v);

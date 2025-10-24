@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.model.Rol.RolDTO;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -20,6 +21,7 @@ import com.lowagie.text.pdf.PdfWriter;
 import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.util.List;
 
 import org.apache.poi.ss.usermodel.Row; // <-- ESTE
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -283,40 +285,70 @@ public class ReporteRolesService {
     
     // ======================= CSV =======================
     public byte[] generarReporteRolesCSV(ReporteRolesRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Roles.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = { "n", "rol", "pagina", "funcion", "modulo", "aplicacion_web", "aplicacion_movil" };
+
         try {
             StringBuilder sb = new StringBuilder();
 
-            // Encabezados EXACTOS como en el front antiguo
-            sb.append("n,rol,pagina,funcion,modulo,aplicacion_web,aplicacion_movil\n");
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
 
+            // Cuerpo
             int n = 1;
-            if (request.getRoles() != null) {
-                for (RolDTO rol : request.getRoles()) {
-                    if (rol.getFunciones() == null)
-                        continue;
+            List<RolDTO> roles = request.getRoles();
+            if (roles != null && !roles.isEmpty()) {
+                for (RolDTO rol : roles) {
+                    List<FuncionDTO> funciones = (rol == null) ? null : rol.getFunciones();
+                    if (funciones == null || funciones.isEmpty()) continue;
 
-                    for (FuncionDTO f : rol.getFunciones()) {
-                        String modulo = transformarModulo(f.getNombre_modulo());
-                        String appWeb = f.getMovil() ? "" : "Sí";
-                        String appMovil = f.getMovil() ? "Sí" : "";
+                    for (FuncionDTO f : funciones) {
+                        String nombreRol = (rol == null || rol.getNombre() == null) ? "" : rol.getNombre();
 
-                        sb.append(n++).append(',')
-                                .append(csvEsc(rol.getNombre())).append(',')
-                                .append(csvEsc(f.getPagina())).append(',')
-                                .append(csvEsc(f.getAccion())).append(',')
-                                .append(csvEsc(modulo)).append(',')
-                                .append(csvEsc(appWeb)).append(',')
-                                .append(csvEsc(appMovil)).append('\n');
+                        String pagina = (f == null || f.getPagina() == null) ? "" : f.getPagina();
+                        String accion = (f == null || f.getAccion() == null) ? "" : f.getAccion();
+
+                        String modulo = "";
+                        if (f != null) {
+                            String nomModulo = f.getNombre_modulo();
+                            modulo = (nomModulo == null) ? "" : transformarModulo(nomModulo);
+                        }
+
+                        boolean esMovil = (f != null && ((f.getMovil() instanceof Boolean) ? Boolean.TRUE.equals(f.getMovil()) : false));
+                        String appWeb   = esMovil ? ""  : "Sí";
+                        String appMovil = esMovil ? "Sí" : "";
+
+                        sb.append(n++).append(DELIM)
+                        .append(UtilCsv.csvEscape(nombreRol)).append(DELIM)
+                        .append(UtilCsv.csvEscape(pagina)).append(DELIM)
+                        .append(UtilCsv.csvEscape(accion)).append(DELIM)
+                        .append(UtilCsv.csvEscape(modulo)).append(DELIM)
+                        .append(UtilCsv.csvEscape(appWeb)).append(DELIM)
+                        .append(UtilCsv.csvEscape(appMovil)).append(EOL);
                     }
                 }
             }
+
+            // Retorno (nunca null)
             return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+        
     // ======================= XML =======================
     public byte[] generarReporteRolesXML(ReporteRolesRequest request) {
         try {
@@ -373,13 +405,6 @@ public class ReporteRolesService {
                 .replace("'", "&apos;");
     }
 
-    private String csvEsc(String v) {
-        if (v == null)
-            return "";
-        boolean mustQuote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return mustQuote ? "\"" + s + "\"" : s;
-    }
 
     // METODO AUXILIAR PARA CONVERTIR EL DATO A UN TEXTO MAS AMIGABLE
     private String transformarModulo(String nombreModulo) {

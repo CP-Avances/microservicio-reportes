@@ -5,6 +5,7 @@ import com.casapazmino.microservicio_reportes.model.Dispositivo.ReporteRelojesRe
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -300,65 +301,92 @@ public class ReporteRelojesService {
     // CSV (orden estable, similar a Excel)
     // =========================
     public byte[] generarReporteCSV(ReporteRelojesRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "Relojes.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = {
+            "id", "codigo", "nombre", "ip", "puerto", "contrasenia", "marca", "modelo", "serie",
+            "id_fabricacion", "fabricante", "mac", "tipo_conexion", "id_sucursal", "id_departamento",
+            "nomdepar", "nomciudad", "temperatura", "zona_horaria_dispositivo", "formato_gmt_dispositivo",
+            "nomempresa", "nomsucursal"
+        };
+
         try {
-            String[] headers = {
-                    "id", "codigo", "nombre", "ip", "puerto", "contrasenia", "marca", "modelo", "serie",
-                    "id_fabricacion", "fabricante", "mac", "tipo_conexion", "id_sucursal", "id_departamento",
-                    "nomdepar", "nomciudad", "temperatura", "zona_horaria_dispositivo", "formato_gmt_dispositivo",
-                    "nomempresa", "nomsucursal"
-            };
-
             StringBuilder sb = new StringBuilder();
-            // encabezados
-            for (int i = 0; i < headers.length; i++) {
-                sb.append(headers[i]);
-                if (i < headers.length - 1)
-                    sb.append(',');
-            }
-            sb.append('\n');
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             List<RelojDTO> items = request.getRelojes();
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 for (RelojDTO r : items) {
-                    String[] vals = {
-                            sv(r.getId()),
-                            nv(r.getCodigo()),
-                            nv(r.getNombre()),
-                            nv(r.getIp()),
-                            sv(r.getPuerto()),
-                            nv(r.getContrasenia()),
-                            nv(r.getMarca()),
-                            nv(r.getModelo()),
-                            nv(r.getSerie()),
-                            nv(r.getIdFabricacion()),
-                            nv(r.getFabricante()),
-                            nv(r.getMac()),
-                            nv(r.getTipoConexion()),
-                            sv(r.getIdSucursal()),
-                            sv(r.getIdDepartamento()),
-                            nv(r.getNomdepar()),
-                            nv(r.getNomciudad()),
-                            nv(r.getTemperatura()),
-                            nv(r.getZonaHorariaDispositivo()),
-                            nv(r.getFormatoGmtDispositivo()),
-                            nv(r.getNomempresa()),
-                            nv(r.getNomsucursal())
-                    };
-                    for (int i = 0; i < vals.length; i++) {
-                        sb.append(csv(vals[i]));
-                        if (i < vals.length - 1)
-                            sb.append(',');
-                    }
-                    sb.append('\n');
+                    String id                 = (r == null || r.getId() == null) ? "" : String.valueOf(r.getId());
+                    String codigo             = (r == null || r.getCodigo() == null) ? "" : r.getCodigo();
+                    String nombre             = (r == null || r.getNombre() == null) ? "" : r.getNombre();
+                    String ip                 = (r == null || r.getIp() == null) ? "" : r.getIp();
+                    String puerto             = (r == null || r.getPuerto() == null) ? "" : String.valueOf(r.getPuerto());
+                    String contrasenia        = (r == null || r.getContrasenia() == null) ? "" : r.getContrasenia();
+                    String marca              = (r == null || r.getMarca() == null) ? "" : r.getMarca();
+                    String modelo             = (r == null || r.getModelo() == null) ? "" : r.getModelo();
+                    String serie              = (r == null || r.getSerie() == null) ? "" : r.getSerie();
+                    String idFabricacion      = (r == null || r.getIdFabricacion() == null) ? "" : r.getIdFabricacion();
+                    String fabricante         = (r == null || r.getFabricante() == null) ? "" : r.getFabricante();
+                    String mac                = (r == null || r.getMac() == null) ? "" : r.getMac();
+                    String tipoConexion       = (r == null || r.getTipoConexion() == null) ? "" : r.getTipoConexion();
+                    String idSucursal         = (r == null || r.getIdSucursal() == null) ? "" : String.valueOf(r.getIdSucursal());
+                    String idDepartamento     = (r == null || r.getIdDepartamento() == null) ? "" : String.valueOf(r.getIdDepartamento());
+                    String nomdepar           = (r == null || r.getNomdepar() == null) ? "" : r.getNomdepar();
+                    String nomciudad          = (r == null || r.getNomciudad() == null) ? "" : r.getNomciudad();
+                    String temperatura        = (r == null || r.getTemperatura() == null) ? "" : r.getTemperatura();
+                    String zonaHorariaDisp    = (r == null || r.getZonaHorariaDispositivo() == null) ? "" : r.getZonaHorariaDispositivo();
+                    String formatoGmtDisp     = (r == null || r.getFormatoGmtDispositivo() == null) ? "" : r.getFormatoGmtDispositivo();
+                    String nomempresa         = (r == null || r.getNomempresa() == null) ? "" : r.getNomempresa();
+                    String nomsucursal        = (r == null || r.getNomsucursal() == null) ? "" : r.getNomsucursal();
+
+                    sb.append(UtilCsv.csvEscape(id)).append(DELIM)
+                    .append(UtilCsv.csvEscape(codigo)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nombre)).append(DELIM)
+                    .append(UtilCsv.csvEscape(ip)).append(DELIM)
+                    .append(UtilCsv.csvEscape(puerto)).append(DELIM)
+                    .append(UtilCsv.csvEscape(contrasenia)).append(DELIM)
+                    .append(UtilCsv.csvEscape(marca)).append(DELIM)
+                    .append(UtilCsv.csvEscape(modelo)).append(DELIM)
+                    .append(UtilCsv.csvEscape(serie)).append(DELIM)
+                    .append(UtilCsv.csvEscape(idFabricacion)).append(DELIM)
+                    .append(UtilCsv.csvEscape(fabricante)).append(DELIM)
+                    .append(UtilCsv.csvEscape(mac)).append(DELIM)
+                    .append(UtilCsv.csvEscape(tipoConexion)).append(DELIM)
+                    .append(UtilCsv.csvEscape(idSucursal)).append(DELIM)
+                    .append(UtilCsv.csvEscape(idDepartamento)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nomdepar)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nomciudad)).append(DELIM)
+                    .append(UtilCsv.csvEscape(temperatura)).append(DELIM)
+                    .append(UtilCsv.csvEscape(zonaHorariaDisp)).append(DELIM)
+                    .append(UtilCsv.csvEscape(formatoGmtDisp)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nomempresa)).append(DELIM)
+                    .append(UtilCsv.csvEscape(nomsucursal)).append(EOL);
                 }
             }
+
+            // Retorno (nunca null)
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+        
     // =========================
     // XML (igual a tu legacy front)
     // =========================
@@ -406,17 +434,6 @@ public class ReporteRelojesService {
     }
 
     // ===== Helpers CSV / XML =====
-    private String sv(Number n) {
-        return n == null ? "" : String.valueOf(n);
-    }
-
-    private String csv(String v) {
-        if (v == null)
-            return "";
-        boolean quote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return quote ? "\"" + s + "\"" : s;
-    }
 
     private String xml(Object v) {
         String s = (v == null) ? "" : String.valueOf(v);

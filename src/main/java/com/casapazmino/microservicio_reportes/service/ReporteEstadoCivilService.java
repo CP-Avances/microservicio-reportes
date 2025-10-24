@@ -4,6 +4,7 @@ import com.casapazmino.microservicio_reportes.model.EstadoCivil.EstadoCivilDTO;
 import com.casapazmino.microservicio_reportes.model.EstadoCivil.ReporteEstadosCivilRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
+import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Service
@@ -221,25 +223,47 @@ public class ReporteEstadoCivilService {
     // CSV
     // =========================
     public byte[] generarReporteCSV(ReporteEstadosCivilRequest request) {
+        // === Contrato del CSV ===
+        final String NOMBRE_REPORTE = "EstadosCivil.csv";
+        final String DELIM = ",";
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String[] HEADERS = { "id", "estado_civil" };
+
         try {
             StringBuilder sb = new StringBuilder();
-            sb.append("id,estado_civil\n"); // <- igual al front viejo
 
+            // Encabezados (orden exacto)
+            for (int i = 0; i < HEADERS.length; i++) {
+                if (i > 0) sb.append(DELIM);
+                sb.append(HEADERS[i]);
+            }
+            sb.append(EOL);
+
+            // Cuerpo
             List<EstadoCivilDTO> items = request.getEstadosCivil();
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 for (EstadoCivilDTO e : items) {
-                    String id = e.getId() == null ? "" : String.valueOf(e.getId());
-                    String desc = e.getEstadoCivil() == null ? "" : e.getEstadoCivil();
-                    sb.append(csv(id)).append(',').append(csv(desc)).append('\n');
+                    String id   = (e.getId() == null)           ? "" : String.valueOf(e.getId());
+                    String desc = (e.getEstadoCivil() == null)  ? "" : e.getEstadoCivil();
+
+                    sb.append(UtilCsv.csvEscape(id)).append(DELIM)
+                    .append(UtilCsv.csvEscape(desc)).append(EOL);
                 }
             }
-            return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
+
+            // Retorno (nunca null)
+            return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            // Validación → 400
+            throw e;
+        } catch (Exception e) {
+            // Interno → 500
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
+    
     // =========================
     // XML
     // =========================
@@ -271,13 +295,6 @@ public class ReporteEstadoCivilService {
     // =========================
     // Helpers CSV/XML
     // =========================
-    private String csv(String v) {
-        if (v == null)
-            return "";
-        boolean quote = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
-        String s = v.replace("\"", "\"\"");
-        return quote ? "\"" + s + "\"" : s;
-    }
 
     private String xml(Object v) {
         String s = (v == null) ? "" : String.valueOf(v);
