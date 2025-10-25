@@ -22,10 +22,8 @@ public class ReporteTimbresUsuariosController {
         try {
             StreamingResponseBody stream = outputStream -> {
                 try {
-                    // El service escribe directo al OutputStream (sin cerrar)
                     reporteService.escribirReportePDF(request, outputStream);
                 } catch (IllegalArgumentException iae) {
-                    // Propagamos para que Spring responda 400 si aplica
                     throw iae;
                 } catch (Exception e) {
                     throw new RuntimeException(e);
@@ -41,9 +39,9 @@ public class ReporteTimbresUsuariosController {
                     .body(stream);
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build(); // 400
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            return ResponseEntity.status(500).build(); // 500
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -53,7 +51,6 @@ public class ReporteTimbresUsuariosController {
         try {
             StreamingResponseBody stream = outputStream -> {
                 try {
-                    // El service escribe directo al OutputStream (sin cerrar)
                     reporteService.escribirReporteTimbresUsuariosExcel(request, outputStream);
                 } catch (IllegalArgumentException iae) {
                     throw iae;
@@ -72,9 +69,9 @@ public class ReporteTimbresUsuariosController {
                     .body(stream);
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build(); // 400
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            return ResponseEntity.status(500).build(); // 500
+            return ResponseEntity.status(500).build();
         }
     }
 }

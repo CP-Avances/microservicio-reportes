@@ -15,6 +15,7 @@ public class ReporteAuditoriaController {
     @Autowired
     private ReporteAuditoriaService reporteService;
 
+    // ===================== PDF =====================
     @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarPDF(@RequestBody ReporteAuditoriaRequest request) {
         try {
@@ -30,9 +31,9 @@ public class ReporteAuditoriaController {
                     .header(HttpHeaders.EXPIRES, "0")
                     .body(bin);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build(); // 400 → entrada inválida
+            return ResponseEntity.badRequest().build(); // 400
         } catch (Exception e) {
-            return ResponseEntity.status(500).build(); // 500 → fallo interno
+            return ResponseEntity.status(500).build(); // 500
         }
     }
 }

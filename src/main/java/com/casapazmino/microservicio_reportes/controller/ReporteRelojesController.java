@@ -32,9 +32,9 @@ public class ReporteRelojesController {
                     .body(bin);
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build(); // 400 - entrada inválida
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            return ResponseEntity.status(500).build(); // 500 - error interno
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -56,9 +56,9 @@ public class ReporteRelojesController {
                     .body(bin);
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build(); // 400
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            return ResponseEntity.status(500).build(); // 500
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -79,9 +79,9 @@ public class ReporteRelojesController {
                     .body(bin);
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build(); // 400
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            return ResponseEntity.status(500).build(); // 500
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -102,9 +102,9 @@ public class ReporteRelojesController {
                     .body(bin);
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build(); // 400
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            return ResponseEntity.status(500).build(); // 500
+            return ResponseEntity.status(500).build();
         }
     }
 }

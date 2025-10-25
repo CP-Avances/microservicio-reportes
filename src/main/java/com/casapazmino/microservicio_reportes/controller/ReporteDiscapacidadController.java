@@ -32,9 +32,9 @@ public class ReporteDiscapacidadController {
                     .header(HttpHeaders.EXPIRES, "0")
                     .body(bin);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build(); // 400
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            return ResponseEntity.status(500).build(); // 500
+            return ResponseEntity.status(500).build();
         }
     }
 
