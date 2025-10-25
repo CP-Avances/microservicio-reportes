@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -569,94 +570,189 @@ public class ReporteRegimenesService {
 
         // ======================= XML =======================
         public byte[] generarReporteRegimenesXML(ReporteRegimenesRequest request) {
+                final String NOMBRE_REPORTE = "Regimen_laboral_listado.xml";
+                final String ROOT_TAG = "Regimen_laboral_listado";
+                final String REGIMEN_WRAP = "regimen";
+                final String REGIMEN_TAG  = "regimen_laboral";
+                final String EOL = "\n";
+                final String IND = "  ";
+
                 try {
-                        StringBuilder sb = new StringBuilder();
-                        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-                        sb.append("<Regimen_laboral_listado>\n");
+                        StringBuilder sb = new StringBuilder(12_288);
 
-                        if (request.getRegimenes() != null) {
-                                for (RegimenDTO r : request.getRegimenes()) {
-                                        sb.append("  <regimen>\n");
-                                        sb.append("    <regimen_laboral id=\"").append(x(r.getId())).append("\">\n");
+                        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+                        sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
-                                        tag(sb, "descripcion", r.getDescripcion());
-                                        tag(sb, "pais", r.getPais());
-                                        tag(sb, "continuidad_laboral", siNo(bool(r.getContinuidad_laboral())));
-                                        tag(sb, "antiguedad_laboral", siNo(bool(r.getAntiguedad())));
-                                        tag(sb, "meses_periodo", r.getMes_periodo()); // ← nombre de nodo como en front
-                                        tag(sb, "dias_mes", r.getDias_mes());
-                                        tag(sb, "trabajo_minimo_mes", r.getTrabajo_minimo_mes());
-                                        tag(sb, "trabajo_minimo_hora", r.getTrabajo_minimo_horas()); // ← nombre de nodo
-                                                                                                     // como en front
-                                        tag(sb, "dias_habiles", r.getVacacion_dias_laboral());
-                                        tag(sb, "dias_libres", r.getVacacion_dias_libre());
-                                        tag(sb, "dias_calendario", r.getVacacion_dias_calendario());
-                                        tag(sb, "acumula_vacaciones", siNo(bool(r.getAcumular())));
-                                        tag(sb, "max_dias_acumulables", r.getDias_maximo_acumulacion());
-                                        tag(sb, "vacaciones_por_periodos", siNo(bool(r.getVacacion_divisible())));
-                                        tag(sb, "dias_laborales_ganados_mes", r.getVacacion_dias_laboral_mes());
-                                        tag(sb, "dias_calendario_ganados_mes", r.getVacacion_dias_calendario_mes());
-                                        tag(sb, "dias_laborales_ganados_dia", r.getLaboral_dias());
-                                        tag(sb, "dias_calendario_ganados_dia", r.getCalendario_dias());
+                        List<RegimenDTO> regs = request.getRegimenes();
+                        if (regs == null || regs.isEmpty()) {
+                        sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+                        } else {
+                        for (RegimenDTO r : regs) {
+                                sb.append(IND).append("<").append(REGIMEN_WRAP).append(">").append(EOL);
+                                sb.append(IND).append(IND).append("<").append(REGIMEN_TAG)
+                                .append(" id=\"").append(UtilXml.xmlEsc(r.getId())).append("\">").append(EOL);
 
-                                        String tipoAntig = tipoAntiguedad(r);
-                                        tag(sb, "tipo_antiguedad", tipoAntig);
-                                        tag(sb, "anios_antiguedad", r.getAnio_antiguedad());
-                                        tag(sb, "dias_adicionales", r.getDias_antiguedad());
+                                // Campos simples (se conservan nombres de nodos del front)
+                                sb.append(IND).append(IND).append(IND).append("<descripcion>")
+                                .append(UtilXml.xmlEsc(r.getDescripcion()))
+                                .append("</descripcion>").append(EOL);
 
-                                        // detalle_vacaciones_periodos
-                                        sb.append("      <detalle_vacaciones_periodos>");
-                                        if (!bool(r.getVacacion_divisible())) {
-                                                sb.append(x("NO APLICA"));
-                                        } else if (r.getPeriodos_vacacionales() == null
-                                                        || r.getPeriodos_vacacionales().isEmpty()) {
-                                                sb.append(x("NO DEFINIDO"));
-                                        } else {
-                                                sb.append('\n');
-                                                for (PeriodoVacacionalDTO p : r.getPeriodos_vacacionales()) {
-                                                        sb.append("        <periodo>\n");
-                                                        tag(sb, "descripcion", p.getDescripcion(), 10);
-                                                        tag(sb, "dias", p.getDias_vacacion(), 10);
-                                                        sb.append("        </periodo>\n");
-                                                }
-                                                sb.append("      ");
+                                sb.append(IND).append(IND).append(IND).append("<pais>")
+                                .append(UtilXml.xmlEsc(r.getPais()))
+                                .append("</pais>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<continuidad_laboral>")
+                                .append(Boolean.TRUE.equals(r.getContinuidad_laboral()) ? "Sí" : "No")
+                                .append("</continuidad_laboral>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<antiguedad_laboral>")
+                                .append(Boolean.TRUE.equals(r.getAntiguedad()) ? "Sí" : "No")
+                                .append("</antiguedad_laboral>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<meses_periodo>")
+                                .append(UtilXml.xmlEsc(r.getMes_periodo()))
+                                .append("</meses_periodo>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<dias_mes>")
+                                .append(UtilXml.xmlEsc(r.getDias_mes()))
+                                .append("</dias_mes>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<trabajo_minimo_mes>")
+                                .append(UtilXml.xmlEsc(r.getTrabajo_minimo_mes()))
+                                .append("</trabajo_minimo_mes>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<trabajo_minimo_hora>")
+                                .append(UtilXml.xmlEsc(r.getTrabajo_minimo_horas()))
+                                .append("</trabajo_minimo_hora>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<dias_habiles>")
+                                .append(UtilXml.xmlEsc(r.getVacacion_dias_laboral()))
+                                .append("</dias_habiles>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<dias_libres>")
+                                .append(UtilXml.xmlEsc(r.getVacacion_dias_libre()))
+                                .append("</dias_libres>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<dias_calendario>")
+                                .append(UtilXml.xmlEsc(r.getVacacion_dias_calendario()))
+                                .append("</dias_calendario>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<acumula_vacaciones>")
+                                .append(Boolean.TRUE.equals(r.getAcumular()) ? "Sí" : "No")
+                                .append("</acumula_vacaciones>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<max_dias_acumulables>")
+                                .append(UtilXml.xmlEsc(r.getDias_maximo_acumulacion()))
+                                .append("</max_dias_acumulables>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<vacaciones_por_periodos>")
+                                .append(Boolean.TRUE.equals(r.getVacacion_divisible()) ? "Sí" : "No")
+                                .append("</vacaciones_por_periodos>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<dias_laborales_ganados_mes>")
+                                .append(UtilXml.xmlEsc(r.getVacacion_dias_laboral_mes()))
+                                .append("</dias_laborales_ganados_mes>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<dias_calendario_ganados_mes>")
+                                .append(UtilXml.xmlEsc(r.getVacacion_dias_calendario_mes()))
+                                .append("</dias_calendario_ganados_mes>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<dias_laborales_ganados_dia>")
+                                .append(UtilXml.xmlEsc(r.getLaboral_dias()))
+                                .append("</dias_laborales_ganados_dia>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<dias_calendario_ganados_dia>")
+                                .append(UtilXml.xmlEsc(r.getCalendario_dias()))
+                                .append("</dias_calendario_ganados_dia>").append(EOL);
+
+                                // Tipo de antigüedad (derivado simple si no hay helper)
+                                String tipoAntig = Boolean.TRUE.equals(r.getAntiguedad_variable()) ? "VARIABLE" : "FIJA";
+                                sb.append(IND).append(IND).append(IND).append("<tipo_antiguedad>")
+                                .append(UtilXml.xmlEsc(tipoAntig))
+                                .append("</tipo_antiguedad>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<anios_antiguedad>")
+                                .append(UtilXml.xmlEsc(r.getAnio_antiguedad()))
+                                .append("</anios_antiguedad>").append(EOL);
+
+                                sb.append(IND).append(IND).append(IND).append("<dias_adicionales>")
+                                .append(UtilXml.xmlEsc(r.getDias_antiguedad()))
+                                .append("</dias_adicionales>").append(EOL);
+
+                                // detalle_vacaciones_periodos
+                                sb.append(IND).append(IND).append(IND).append("<detalle_vacaciones_periodos>");
+                                if (!Boolean.TRUE.equals(r.getVacacion_divisible())) {
+                                sb.append("NO APLICA").append("</detalle_vacaciones_periodos>").append(EOL);
+                                } else {
+                                List<PeriodoVacacionalDTO> per = r.getPeriodos_vacacionales();
+                                if (per == null || per.isEmpty()) {
+                                        sb.append("NO DEFINIDO").append("</detalle_vacaciones_periodos>").append(EOL);
+                                } else {
+                                        sb.append(EOL);
+                                        for (PeriodoVacacionalDTO p : per) {
+                                        sb.append(IND).append(IND).append(IND).append(IND).append("<periodo>").append(EOL);
+
+                                        sb.append(IND).append(IND).append(IND).append(IND).append(IND).append("<descripcion>")
+                                        .append(UtilXml.xmlEsc(p.getDescripcion()))
+                                        .append("</descripcion>").append(EOL);
+
+                                        sb.append(IND).append(IND).append(IND).append(IND).append(IND).append("<dias>")
+                                        .append(UtilXml.xmlEsc(p.getDias_vacacion()))
+                                        .append("</dias>").append(EOL);
+
+                                        sb.append(IND).append(IND).append(IND).append(IND).append("</periodo>").append(EOL);
                                         }
-                                        sb.append("</detalle_vacaciones_periodos>\n");
-
-                                        // detalle_rangos_antiguedad_variable
-                                        sb.append("      <detalle_rangos_antiguedad_variable>");
-                                        if (!bool(r.getAntiguedad_variable())) {
-                                                sb.append(x("NO APLICA"));
-                                        } else if (r.getRangos_antiguedad() == null
-                                                        || r.getRangos_antiguedad().isEmpty()) {
-                                                sb.append(x("NO DEFINIDO"));
-                                        } else {
-                                                sb.append('\n');
-                                                for (RangoAntiguedadDTO g : r.getRangos_antiguedad()) {
-                                                        sb.append("        <rango>\n");
-                                                        tag(sb, "desde", g.getAnio_desde(), 10);
-                                                        tag(sb, "hasta", g.getAnio_hasta(), 10);
-                                                        tag(sb, "dias", g.getDias_antiguedad(), 10);
-                                                        sb.append("        </rango>\n");
-                                                }
-                                                sb.append("      ");
-                                        }
-                                        sb.append("</detalle_rangos_antiguedad_variable>\n");
-
-                                        sb.append("    </regimen_laboral>\n");
-                                        sb.append("  </regimen>\n");
+                                        sb.append(IND).append(IND).append(IND).append("</detalle_vacaciones_periodos>").append(EOL);
                                 }
+                                }
+
+                                // detalle_rangos_antiguedad_variable
+                                sb.append(IND).append(IND).append(IND).append("<detalle_rangos_antiguedad_variable>");
+                                if (!Boolean.TRUE.equals(r.getAntiguedad_variable())) {
+                                sb.append("NO APLICA").append("</detalle_rangos_antiguedad_variable>").append(EOL);
+                                } else {
+                                List<RangoAntiguedadDTO> rang = r.getRangos_antiguedad();
+                                if (rang == null || rang.isEmpty()) {
+                                        sb.append("NO DEFINIDO").append("</detalle_rangos_antiguedad_variable>").append(EOL);
+                                } else {
+                                        sb.append(EOL);
+                                        for (RangoAntiguedadDTO g : rang) {
+                                        sb.append(IND).append(IND).append(IND).append(IND).append("<rango>").append(EOL);
+
+                                        sb.append(IND).append(IND).append(IND).append(IND).append(IND).append("<desde>")
+                                        .append(UtilXml.xmlEsc(g.getAnio_desde()))
+                                        .append("</desde>").append(EOL);
+
+                                        sb.append(IND).append(IND).append(IND).append(IND).append(IND).append("<hasta>")
+                                        .append(UtilXml.xmlEsc(g.getAnio_hasta()))
+                                        .append("</hasta>").append(EOL);
+
+                                        sb.append(IND).append(IND).append(IND).append(IND).append(IND).append("<dias>")
+                                        .append(UtilXml.xmlEsc(g.getDias_antiguedad()))
+                                        .append("</dias>").append(EOL);
+
+                                        sb.append(IND).append(IND).append(IND).append(IND).append("</rango>").append(EOL);
+                                        }
+                                        sb.append(IND).append(IND).append(IND).append("</detalle_rangos_antiguedad_variable>").append(EOL);
+                                }
+                                }
+
+                                sb.append(IND).append(IND).append("</").append(REGIMEN_TAG).append(">").append(EOL);
+                                sb.append(IND).append("</").append(REGIMEN_WRAP).append(">").append(EOL);
+                        }
                         }
 
-                        sb.append("</Regimen_laboral_listado>\n");
-                        return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                        sb.append("</").append(ROOT_TAG).append(">").append(EOL);
+                        return sb.toString().getBytes(StandardCharsets.UTF_8);
 
+                } catch (IllegalArgumentException e) {
+                        throw e;
                 } catch (Exception e) {
-                        e.printStackTrace();
-                        return null;
+                        throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
                 }
         }
 
+                
         // ======================= Helpers comunes =======================
         private String nz(String s) {
                 return s == null ? "" : s;
@@ -703,21 +799,5 @@ public class ReporteRegimenesService {
                                 .collect(java.util.stream.Collectors.joining(" | "));
         }
 
-        private void tag(StringBuilder sb, String name, Object val) {
-                tag(sb, name, val, 6);
-        }
-
-        private void tag(StringBuilder sb, String name, Object val, int indent) {
-                String s = str(val);
-                for (int i = 0; i < indent; i++)
-                        sb.append(' ');
-                sb.append('<').append(name).append('>').append(x(s)).append("</").append(name).append(">\n");
-        }
-
-        private String x(Object v) {
-                String s = str(v);
-                return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                                .replace("\"", "&quot;").replace("'", "&apos;");
-        }
 
 }

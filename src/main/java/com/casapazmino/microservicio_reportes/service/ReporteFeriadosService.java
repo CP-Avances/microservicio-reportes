@@ -7,6 +7,7 @@ import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -286,45 +288,56 @@ public class ReporteFeriadosService {
     // XML
     // =========================
     public byte[] generarReporteFeriadosXML(ReporteFeriadosRequest request) {
+        final String NOMBRE_REPORTE = "Feriados.xml";
+        final String ROOT_TAG = "Feriados";
+        final String ITEM_TAG = "feriados";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Feriados>\n");
+            StringBuilder sb = new StringBuilder(4_096);
+
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
             List<FeriadoDTO> items = request.getFeriados();
-            if (items != null)
-                items.sort(Comparator.comparing(FeriadoDTO::getId));
+            if (items == null || items.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
+                List<FeriadoDTO> ordenados = new ArrayList<>(items);
+                ordenados.sort(Comparator.comparingLong(f ->
+                    f.getId() == null ? Long.MAX_VALUE : f.getId()
+                ));
 
-            if (items != null) {
-                for (FeriadoDTO f : items) {
-                    sb.append("  <feriados id=\"").append(xml(f.getId())).append("\">\n");
-                    sb.append("    <descripcion>").append(xml(f.getDescripcion())).append("</descripcion>\n");
-                    sb.append("    <fecha>").append(xml(f.getFecha())).append("</fecha>\n");
-                    sb.append("    <fec_recuperacion>").append(xml(f.getFechaRecuperacion()))
-                            .append("</fec_recuperacion>\n");
-                    sb.append("  </feriados>\n");
+                for (FeriadoDTO f : ordenados) {
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(f.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<descripcion>")
+                    .append(UtilXml.xmlEsc(f.getDescripcion()))
+                    .append("</descripcion>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<fecha>")
+                    .append(UtilXml.xmlEsc(f.getFecha()))
+                    .append("</fecha>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<fec_recuperacion>")
+                    .append(UtilXml.xmlEsc(f.getFechaRecuperacion()))
+                    .append("</fec_recuperacion>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</Feriados>\n");
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    // Helpers locales
-    // =========================
-
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
-    }
 
 }

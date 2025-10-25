@@ -7,6 +7,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.Document;
@@ -391,57 +392,109 @@ public class ReporteRelojesService {
     // XML (igual a tu legacy front)
     // =========================
     public byte[] generarReporteXML(ReporteRelojesRequest request) {
+        final String NOMBRE_REPORTE = "Relojes.xml";
+        final String ROOT_TAG = "Relojes";
+        final String ITEM_TAG = "reloj";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
             StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Relojes>\n");
 
-            List<RelojDTO> items = request.getRelojes();
-            if (items != null) {
+            // 1) Encabezado
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
+
+            // 2) Cuerpo
+            List<RelojDTO> items = (request == null) ? null : request.getRelojes();
+            if (items == null || items.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
                 for (RelojDTO r : items) {
-                    sb.append("  <reloj id=\"").append(xml(r.getId())).append("\">\n");
-                    sb.append("    <codigo>").append(xml(r.getCodigo())).append("</codigo>\n");
-                    sb.append("    <nombre_empresa>").append(xml(r.getNomempresa())).append("</nombre_empresa>\n");
-                    sb.append("    <nombre_ciudad>").append(xml(r.getNomciudad())).append("</nombre_ciudad>\n");
-                    sb.append("    <nombre_sucursal>").append(xml(r.getNomsucursal())).append("</nombre_sucursal>\n");
-                    sb.append("    <nombre_departamento>").append(xml(r.getNomdepar()))
-                            .append("</nombre_departamento>\n");
-                    sb.append("    <nombre>").append(xml(r.getNombre())).append("</nombre>\n");
-                    sb.append("    <ip>").append(xml(r.getIp())).append("</ip>\n");
-                    sb.append("    <puerto>").append(xml(r.getPuerto())).append("</puerto>\n");
-                    sb.append("    <marca>").append(xml(r.getMarca())).append("</marca>\n");
-                    sb.append("    <modelo>").append(xml(r.getModelo())).append("</modelo>\n");
-                    sb.append("    <serie>").append(xml(r.getSerie())).append("</serie>\n");
-                    sb.append("    <mac>").append(xml(r.getMac())).append("</mac>\n");
-                    sb.append("    <id_fabricacion>").append(xml(r.getIdFabricacion())).append("</id_fabricacion>\n");
-                    sb.append("    <fabricante>").append(xml(r.getFabricante())).append("</fabricante>\n");
-                    sb.append("    <zona_horaria>")
-                            .append(xml(
-                                    (nv(r.getZonaHorariaDispositivo()) + " (" + nv(r.getFormatoGmtDispositivo()) + ")")
-                                            .trim()))
-                            .append("</zona_horaria>\n");
-                    sb.append("  </reloj>\n");
+                    String zona = (
+                            ((r.getZonaHorariaDispositivo() == null) ? "" : r.getZonaHorariaDispositivo())
+                            + " ("
+                            + ((r.getFormatoGmtDispositivo() == null) ? "" : r.getFormatoGmtDispositivo())
+                            + ")"
+                    ).trim();
+
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(r == null ? null : r.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<codigo>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getCodigo()))
+                    .append("</codigo>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre_empresa>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getNomempresa()))
+                    .append("</nombre_empresa>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre_ciudad>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getNomciudad()))
+                    .append("</nombre_ciudad>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre_sucursal>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getNomsucursal()))
+                    .append("</nombre_sucursal>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre_departamento>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getNomdepar()))
+                    .append("</nombre_departamento>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getNombre()))
+                    .append("</nombre>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<ip>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getIp()))
+                    .append("</ip>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<puerto>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getPuerto()))
+                    .append("</puerto>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<marca>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getMarca()))
+                    .append("</marca>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<modelo>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getModelo()))
+                    .append("</modelo>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<serie>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getSerie()))
+                    .append("</serie>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<mac>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getMac()))
+                    .append("</mac>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<id_fabricacion>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getIdFabricacion()))
+                    .append("</id_fabricacion>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<fabricante>")
+                    .append(UtilXml.xmlEsc(r == null ? null : r.getFabricante()))
+                    .append("</fabricante>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<zona_horaria>")
+                    .append(UtilXml.xmlEsc(zona))
+                    .append("</zona_horaria>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</Relojes>\n");
+            // 3) Cierre
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
 
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // ===== Helpers CSV / XML =====
-
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
-    }
 
 }

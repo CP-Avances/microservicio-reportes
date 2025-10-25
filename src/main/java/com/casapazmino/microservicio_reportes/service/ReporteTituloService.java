@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -276,39 +277,50 @@ public class ReporteTituloService {
     // XML (igual a xml2js del front)
     // =========================
     public byte[] generarReporteTitulosXML(ReporteTitulosRequest request) {
+        final String NOMBRE_REPORTE = "Titulos.xml";
+        final String ROOT_TAG = "Titulos";
+        final String ITEM_TAG = "titulos"; // mantener plural tal como el diseño original
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
             StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Titulos>\n");
 
-            List<TituloDTO> items = request.getTitulos();
-            if (items != null) {
+            // 1) Encabezado
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
+
+            // 2) Cuerpo
+            List<TituloDTO> items = (request == null) ? null : request.getTitulos();
+            if (items == null || items.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
                 for (TituloDTO t : items) {
-                    sb.append("  <titulos id=\"").append(xml(t.getId())).append("\">\n");
-                    sb.append("    <nivel>").append(xml(t.getNivel())).append("</nivel>\n");
-                    sb.append("    <nombre>").append(xml(t.getNombre())).append("</nombre>\n");
-                    sb.append("  </titulos>\n");
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(t == null ? null : t.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nivel>")
+                    .append(UtilXml.xmlEsc(t == null ? null : t.getNivel()))
+                    .append("</nivel>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre>")
+                    .append(UtilXml.xmlEsc(t == null ? null : t.getNombre()))
+                    .append("</nombre>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</Titulos>\n");
+            // 3) Cierre
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
 
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    // Helpers CSV/XML
-    // =========================
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
-    }
+
 }

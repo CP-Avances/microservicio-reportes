@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -255,37 +256,42 @@ public class ReporteCargosService {
     //            XML (idéntico a xml2js del front)
     // =========================
     public byte[] generarReporteXML(ReporteCargosRequest request) {
+        final String NOMBRE_REPORTE = "Cargos.xml";
+        final String ROOT_TAG = "Cargos";
+        final String ITEM_TAG = "roles";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Cargos>\n");
+            StringBuilder sb = new StringBuilder(4_096);
+
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
             List<CargoDTO> items = request.getCargos();
             if (items == null || items.isEmpty()) {
-                sb.append("  <lista>NO DEFINIDO</lista>\n"); // opcional; lo mantenemos como convención de backend
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
             } else {
                 for (CargoDTO c : items) {
-                    sb.append("  <roles id=\"").append(xmlEsc(c.getId())).append("\">\n");
-                    sb.append("    <descripcion>").append(xmlEsc(c.getCargo())).append("</descripcion>\n");
-                    sb.append("  </roles>\n");
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(c.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<descripcion>")
+                    .append(UtilXml.xmlEsc(c.getCargo()))
+                    .append("</descripcion>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</Cargos>\n");
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-
-    private String xmlEsc(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"","&quot;")
-                .replace("'","&apos;");
-    }
 }

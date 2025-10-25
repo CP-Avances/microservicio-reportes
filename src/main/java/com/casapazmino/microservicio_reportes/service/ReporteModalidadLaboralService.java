@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -267,39 +268,43 @@ public class ReporteModalidadLaboralService {
     //            XML (idéntico a tu xml2js)
     // =========================
     public byte[] generarReporteXML(ReporteModalidadLaboralRequest request) {
+        final String NOMBRE_REPORTE = "Modalidad_laboral.xml";
+        final String ROOT_TAG = "Modalidad_laboral";
+        final String ITEM_TAG = "roles";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Modalidad_laboral>\n");
+            StringBuilder sb = new StringBuilder(4_096);
+
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
             List<ModalidadLaboralDTO> items = request.getModalidades();
             if (items == null || items.isEmpty()) {
-                sb.append("  <lista>NO DEFINIDO</lista>\n");
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
             } else {
                 for (ModalidadLaboralDTO m : items) {
-                    sb.append("  <roles id=\"").append(xmlEsc(m.getId())).append("\">\n");
-                    sb.append("    <modalidad_laboral>").append(xmlEsc(m.getDescripcion())).append("</modalidad_laboral>\n");
-                    sb.append("  </roles>\n");
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(m.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<modalidad_laboral>")
+                    .append(UtilXml.xmlEsc(m.getDescripcion()))
+                    .append("</modalidad_laboral>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
-            sb.append("</Modalidad_laboral>\n");
+
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    //          Helpers locales CSV/XML (moveremos a util luego)
-    // =========================
 
-    private String xmlEsc(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"","&quot;")
-                .replace("'","&apos;");
-    }
 }

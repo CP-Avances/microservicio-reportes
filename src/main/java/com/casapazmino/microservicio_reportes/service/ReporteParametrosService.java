@@ -19,7 +19,10 @@ import com.lowagie.text.pdf.PdfWriter;
 import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -329,49 +332,66 @@ public class ReporteParametrosService {
 
     
     public byte[] generarReporteParametrosXML(ReporteParametrosRequest request) {
+        final String NOMBRE_REPORTE = "ParametrosGenerales.xml";
+        final String ROOT_TAG = "ParametrosGenerales";
+        final String PARAM_TAG = "parametro";
+        final String DETS_TAG = "detalles";
+        final String DET_TAG  = "detalle";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<ParametrosGenerales>\n");
+            StringBuilder sb = new StringBuilder(8_192);
+
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
             List<ParametroDTO> parametros = request.getParametros();
-            if (parametros != null) {
+            if (parametros == null || parametros.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
                 for (ParametroDTO p : parametros) {
-                    sb.append("  <parametro codigo=\"").append(xmlEsc(p.getId())).append("\">\n");
-                    sb.append("    <nombre>").append(xmlEsc(p.getDescripcion())).append("</nombre>\n");
-                    sb.append("    <detalles>\n");
+                    sb.append(IND).append("<").append(PARAM_TAG)
+                    .append(" codigo=\"").append(UtilXml.xmlEsc(p.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre>")
+                    .append(UtilXml.xmlEsc(p.getDescripcion()))
+                    .append("</nombre>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<").append(DETS_TAG).append(">").append(EOL);
 
                     List<DetalleParametroDTO> detalles = p.getDetalles();
-                    if (detalles != null) {
+                    if (detalles != null && !detalles.isEmpty()) {
                         for (DetalleParametroDTO d : detalles) {
-                            sb.append("      <detalle codigo=\"").append(xmlEsc(d.getId())).append("\">\n");
-                            // OJO: En tu XML original el nodo hijo también se llama "detalle"
-                            sb.append("        <detalle>").append(xmlEsc(d.getDescripcion())).append("</detalle>\n");
-                            sb.append("        <descripcion>").append(xmlEsc(d.getObservacion()))
-                                    .append("</descripcion>\n");
-                            sb.append("      </detalle>\n");
+                            sb.append(IND).append(IND).append(IND).append("<").append(DET_TAG)
+                            .append(" codigo=\"").append(UtilXml.xmlEsc(d.getId())).append("\">").append(EOL);
+
+                            // Nota: se mantiene el nombre de nodo "detalle" para la descripción, según diseño existente
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<detalle>")
+                            .append(UtilXml.xmlEsc(d.getDescripcion()))
+                            .append("</detalle>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<descripcion>")
+                            .append(UtilXml.xmlEsc(d.getObservacion()))
+                            .append("</descripcion>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append("</").append(DET_TAG).append(">").append(EOL);
                         }
                     }
-                    sb.append("    </detalles>\n");
-                    sb.append("  </parametro>\n");
+
+                    sb.append(IND).append(IND).append("</").append(DETS_TAG).append(">").append(EOL);
+                    sb.append(IND).append("</").append(PARAM_TAG).append(">").append(EOL);
                 }
             }
-            sb.append("</ParametrosGenerales>\n");
 
-            return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
+            return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
-    }
-
-    private String xmlEsc(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
     }
 
 

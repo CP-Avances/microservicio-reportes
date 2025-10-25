@@ -8,6 +8,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.Document;
@@ -21,6 +22,7 @@ import com.lowagie.text.pdf.PdfWriter;
 import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.apache.poi.ss.usermodel.Row; // <-- ESTE
@@ -351,58 +353,82 @@ public class ReporteRolesService {
         
     // ======================= XML =======================
     public byte[] generarReporteRolesXML(ReporteRolesRequest request) {
+        final String NOMBRE_REPORTE = "Roles.xml";
+        final String ROOT_TAG = "Roles";
+        final String ITEM_TAG = "rol";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
             StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Roles>\n");
 
-            if (request.getRoles() != null) {
-                for (RolDTO rol : request.getRoles()) {
-                    sb.append("  <rol");
-                    // Si tu RolDTO tiene getId(), descomenta la siguiente línea:
-                    // sb.append(" id=\"").append(xmlEsc(String.valueOf(rol.getId()))).append("\"");
-                    sb.append(">\n");
+            // 1) Encabezado
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
-                    sb.append("    <nombre>").append(xmlEsc(rol.getNombre())).append("</nombre>\n");
-                    sb.append("    <funciones>\n");
+            // 2) Cuerpo
+            List<RolDTO> roles = (request == null) ? null : request.getRoles();
+            if (roles == null || roles.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
+                for (RolDTO rol : roles) {
+                    sb.append(IND).append("<").append(ITEM_TAG).append(">").append(EOL);
 
-                    if (rol.getFunciones() != null) {
-                        for (FuncionDTO f : rol.getFunciones()) {
-                            String modulo = transformarModulo(f.getNombre_modulo());
-                            String appWeb = f.getMovil() ? "" : "Sí";
-                            String appMovil = f.getMovil() ? "Sí" : "";
+                    sb.append(IND).append(IND).append("<nombre>")
+                    .append(UtilXml.xmlEsc(rol == null ? null : rol.getNombre()))
+                    .append("</nombre>").append(EOL);
 
-                            sb.append("      <detalle>\n");
-                            sb.append("        <pagina>").append(xmlEsc(f.getPagina())).append("</pagina>\n");
-                            sb.append("        <funcion>").append(xmlEsc(f.getAccion())).append("</funcion>\n");
-                            sb.append("        <modulo>").append(xmlEsc(modulo)).append("</modulo>\n");
-                            sb.append("        <aplicacion_web>").append(xmlEsc(appWeb)).append("</aplicacion_web>\n");
-                            sb.append("        <aplicacion_movil>").append(xmlEsc(appMovil))
-                                    .append("</aplicacion_movil>\n");
-                            sb.append("      </detalle>\n");
+                    sb.append(IND).append(IND).append("<funciones>").append(EOL);
+
+                    List<FuncionDTO> funcs = (rol == null) ? null : rol.getFunciones();
+                    if (funcs != null && !funcs.isEmpty()) {
+                        for (FuncionDTO f : funcs) {
+                            // modulo según helper existente (mantener diseño)
+                            String modulo = transformarModulo(f == null ? null : f.getNombre_modulo());
+                            boolean esMovil = (f != null) && Boolean.TRUE.equals(f.getMovil());
+                            String appWeb = esMovil ? "" : "Sí";
+                            String appMovil = esMovil ? "Sí" : "";
+
+                            sb.append(IND).append(IND).append(IND).append("<detalle>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<pagina>")
+                            .append(UtilXml.xmlEsc(f == null ? null : f.getPagina()))
+                            .append("</pagina>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<funcion>")
+                            .append(UtilXml.xmlEsc(f == null ? null : f.getAccion()))
+                            .append("</funcion>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<modulo>")
+                            .append(UtilXml.xmlEsc(modulo))
+                            .append("</modulo>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<aplicacion_web>")
+                            .append(UtilXml.xmlEsc(appWeb))
+                            .append("</aplicacion_web>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<aplicacion_movil>")
+                            .append(UtilXml.xmlEsc(appMovil))
+                            .append("</aplicacion_movil>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append("</detalle>").append(EOL);
                         }
                     }
 
-                    sb.append("    </funciones>\n");
-                    sb.append("  </rol>\n");
+                    sb.append(IND).append(IND).append("</funciones>").append(EOL);
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</Roles>\n");
-            return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
+            // 3) Cierre
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
+            return sb.toString().getBytes(StandardCharsets.UTF_8);
 
-    private String xmlEsc(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
+        }
     }
 
 

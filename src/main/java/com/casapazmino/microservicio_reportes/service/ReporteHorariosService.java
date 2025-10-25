@@ -7,6 +7,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -394,64 +395,101 @@ public class ReporteHorariosService {
     //            XML
     // =========================
     public byte[] generarReporteXML(ReporteHorariosRequest request) {
+        final String NOMBRE_REPORTE = "Horarios.xml";
+        final String ROOT_TAG = "Horarios";
+        final String ITEM_TAG = "horario";
+        final String DETS_TAG = "detalles";
+        final String DET_TAG  = "detalle";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Horarios>\n");
+            StringBuilder sb = new StringBuilder(8_192);
+
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
             List<HorarioDTO> horarios = request.getHorarios();
-            if (horarios != null) {
+            if (horarios == null || horarios.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
                 for (HorarioDTO h : horarios) {
-                    sb.append("  <horario codigo=\"").append(xml(h.getCodigo())).append("\">\n");
-                    sb.append("    <nombre>").append(xml(h.getNombre())).append("</nombre>\n");
-                    sb.append("    <horas_trabajo>").append(xml(h.getHoraTrabajo())).append("</horas_trabajo>\n");
-                    sb.append("    <minutos_alimentación>").append(xml(h.getMinutosComida())).append("</minutos_alimentación>\n");
-                    sb.append("    <horario_noturno>").append(h.isNoturno() ? "Sí" : "No").append("</horario_noturno>\n");
-                    sb.append("    <documento>").append(xml(h.getDocumento())).append("</documento>\n");
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" codigo=\"").append(UtilXml.xmlEsc(h.getCodigo())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre>")
+                    .append(UtilXml.xmlEsc(h.getNombre()))
+                    .append("</nombre>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<horas_trabajo>")
+                    .append(UtilXml.xmlEsc(h.getHoraTrabajo()))
+                    .append("</horas_trabajo>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<minutos_alimentación>")
+                    .append(UtilXml.xmlEsc(h.getMinutosComida()))
+                    .append("</minutos_alimentación>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<horario_noturno>")
+                    .append(h.isNoturno() ? "Sí" : "No")
+                    .append("</horario_noturno>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<documento>")
+                    .append(UtilXml.xmlEsc(h.getDocumento()))
+                    .append("</documento>").append(EOL);
 
                     List<DetalleHorarioDTO> dets = h.getDetalles();
                     if (dets != null && !dets.isEmpty()) {
-                        sb.append("    <detalles>\n");
+                        sb.append(IND).append(IND).append("<").append(DETS_TAG).append(">").append(EOL);
                         for (DetalleHorarioDTO d : dets) {
-                            sb.append("      <detalle orden=\"").append(xml(d.getOrden())).append("\">\n");
-                            sb.append("        <hora>").append(xml(d.getHora())).append("</hora>\n");
-                            sb.append("        <tolerancia>").append(xml(d.getTolerancia())).append("</tolerancia>\n");
-                            sb.append("        <accion>").append(xml(d.getTipoAccionShow())).append("</accion>\n");
-                            sb.append("        <otro_dia>").append(d.isSegundoDia() ? "Sí" : "No").append("</otro_dia>\n");
-                            sb.append("        <minutos_antes>").append(xml(d.getMinutosAntes())).append("</minutos_antes>\n");
-                            sb.append("        <minutos_despues>").append(xml(d.getMinutosDespues())).append("</minutos_despues>\n");
-                            sb.append("      </detalle>\n");
+                            sb.append(IND).append(IND).append(IND).append("<").append(DET_TAG)
+                            .append(" orden=\"").append(UtilXml.xmlEsc(d.getOrden())).append("\">").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<hora>")
+                            .append(UtilXml.xmlEsc(d.getHora()))
+                            .append("</hora>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<tolerancia>")
+                            .append(UtilXml.xmlEsc(d.getTolerancia()))
+                            .append("</tolerancia>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<accion>")
+                            .append(UtilXml.xmlEsc(d.getTipoAccionShow()))
+                            .append("</accion>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<otro_dia>")
+                            .append(d.isSegundoDia() ? "Sí" : "No")
+                            .append("</otro_dia>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<minutos_antes>")
+                            .append(UtilXml.xmlEsc(d.getMinutosAntes()))
+                            .append("</minutos_antes>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append(IND).append("<minutos_despues>")
+                            .append(UtilXml.xmlEsc(d.getMinutosDespues()))
+                            .append("</minutos_despues>").append(EOL);
+
+                            sb.append(IND).append(IND).append(IND).append("</").append(DET_TAG).append(">").append(EOL);
                         }
-                        sb.append("    </detalles>\n");
+                        sb.append(IND).append(IND).append("</").append(DETS_TAG).append(">").append(EOL);
                     }
 
-                    sb.append("  </horario>\n");
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</Horarios>\n");
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    //        Helpers locales
-    // =========================
     private String nvl(Object v) {
         return v == null ? "" : String.valueOf(v);
     }
 
-
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"","&quot;")
-                .replace("'","&apos;");
-    }
 }
 

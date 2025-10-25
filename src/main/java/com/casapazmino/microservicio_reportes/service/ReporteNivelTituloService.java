@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -270,40 +271,48 @@ public class ReporteNivelTituloService {
     // XML (igual al front: raíz y nodos)
     // =========================
     public byte[] generarReporteNivelTituloXML(ReporteNivelesTitulosRequest request) {
+        final String NOMBRE_REPORTE = "Niveles_titulos.xml";
+        final String ROOT_TAG = "Niveles_titulos";
+        final String ITEM_TAG = "titulos";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Niveles_titulos>\n");
+            StringBuilder sb = new StringBuilder(4_096);
 
-            // El front ordenaba antes de exportar XML
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
+
             List<NivelTituloDTO> datos = request.getNivelesTitulos();
-            List<NivelTituloDTO> ordenados = new ArrayList<>(datos == null ? List.of() : datos);
-            ordenados.sort(Comparator.comparingLong(n -> n.getId() == null ? Long.MAX_VALUE : n.getId()));
+            if (datos == null || datos.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
+                List<NivelTituloDTO> ordenados = new ArrayList<>(datos);
+                ordenados.sort(Comparator.comparingLong(n ->
+                    n.getId() == null ? Long.MAX_VALUE : n.getId()
+                ));
 
-            for (NivelTituloDTO n : ordenados) {
-                sb.append("  <titulos id=\"").append(xml(n.getId())).append("\">\n");
-                sb.append("    <nivel>").append(xml(n.getNombre())).append("</nivel>\n");
-                sb.append("  </titulos>\n");
+                for (NivelTituloDTO n : ordenados) {
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(n.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nivel>")
+                    .append(UtilXml.xmlEsc(n.getNombre()))
+                    .append("</nivel>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
+                }
             }
 
-            sb.append("</Niveles_titulos>\n");
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    // Helpers CSV/XML
-    // =========================
 
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
-    }
 }

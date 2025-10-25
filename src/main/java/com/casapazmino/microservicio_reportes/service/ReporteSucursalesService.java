@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -281,39 +282,51 @@ public class ReporteSucursalesService {
     //            XML (igual a xml2js del front)
     // =========================
     public byte[] generarReporteXML(ReporteSucursalesRequest request) {
+        final String NOMBRE_REPORTE = "Sucursales.xml";
+        final String ROOT_TAG = "Establecimientos";
+        final String ITEM_TAG = "establecimiento";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
             StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Establecimientos>\n");
 
-            List<SucursalDTO> items = request.getSucursales();
-            if (items != null) {
+            // 1) Encabezado
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
+
+            // 2) Cuerpo
+            List<SucursalDTO> items = (request == null) ? null : request.getSucursales();
+            if (items == null || items.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
                 for (SucursalDTO s : items) {
-                    sb.append("  <establecimiento id=\"").append(xml(s.getId())).append("\">\n");
-                    sb.append("    <ciudad>").append(xml(s.getDescripcion())).append("</ciudad>\n");
-                    // OJO: el front ponía una etiqueta hija llamada también "establecimiento" con el nombre
-                    sb.append("    <establecimiento>").append(xml(s.getNombre())).append("</establecimiento>\n");
-                    sb.append("  </establecimiento>\n");
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(s == null ? null : s.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<ciudad>")
+                    .append(UtilXml.xmlEsc(s == null ? null : s.getDescripcion()))
+                    .append("</ciudad>").append(EOL);
+
+                    // Importante: mantener etiqueta hija llamada también "establecimiento" (diseño original del front)
+                    sb.append(IND).append(IND).append("<establecimiento>")
+                    .append(UtilXml.xmlEsc(s == null ? null : s.getNombre()))
+                    .append("</establecimiento>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</Establecimientos>\n");
+            // 3) Cierre
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    //       Helpers CSV/XML (locales por ahora)
-    // =========================
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"","&quot;")
-                .replace("'","&apos;");
-    }
+
 }

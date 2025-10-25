@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -283,41 +284,54 @@ public class ReporteDepartamentosService {
     //            XML (igual al xml2js del front)
     // =========================
     public byte[] generarReporteXML(ReporteDepartamentosRequest request) {
+        final String NOMBRE_REPORTE = "Departamentos.xml";
+        final String ROOT_TAG = "Departamentos";
+        final String ITEM_TAG = "departamento";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Departamentos>\n");
+            StringBuilder sb = new StringBuilder(4_096);
+
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
             List<DepartamentoDTO> items = request.getDepartamentos();
-            if (items != null) {
+            if (items == null || items.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
                 for (DepartamentoDTO d : items) {
-                    sb.append("  <departamento id=\"").append(xml(d.getId())).append("\">\n");
-                    sb.append("    <establecimiento>").append(xml(d.getNomsucursal())).append("</establecimiento>\n");
-                    sb.append("    <departamento>").append(xml(d.getNombre())).append("</departamento>\n");
-                    sb.append("    <nivel>").append(xml(d.getNivel())).append("</nivel>\n");
-                    sb.append("    <departamento_superior>").append(xml(d.getDepartamento_padre())).append("</departamento_superior>\n");
-                    sb.append("  </departamento>\n");
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(d.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<establecimiento>")
+                    .append(UtilXml.xmlEsc(d.getNomsucursal()))
+                    .append("</establecimiento>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<departamento>")
+                    .append(UtilXml.xmlEsc(d.getNombre()))
+                    .append("</departamento>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nivel>")
+                    .append(UtilXml.xmlEsc(d.getNivel()))
+                    .append("</nivel>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<departamento_superior>")
+                    .append(UtilXml.xmlEsc(d.getDepartamento_padre()))
+                    .append("</departamento_superior>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</Departamentos>\n");
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    //       Helpers CSV/XML (locales por ahora)
-    // =========================
-
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"","&quot;")
-                .replace("'","&apos;");
-    }
 }

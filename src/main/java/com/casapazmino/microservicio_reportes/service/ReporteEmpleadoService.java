@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -314,54 +315,91 @@ public class ReporteEmpleadoService {
     //           XML (LEGACY)
     // =========================
     public byte[] generarReporteEmpleadosXML(ReporteEmpleadosRequest request) {
+        final String NOMBRE_REPORTE = "Empleados.xml";
+        final String ROOT_TAG = "Empleados";
+        final String ITEM_TAG = "empleado";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Empleados>\n");
+            StringBuilder sb = new StringBuilder(8_192);
+
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
             List<EmpleadoDTO> items = request.getEmpleados();
-            if (items != null) {
+            if (items == null || items.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
                 for (EmpleadoDTO e : items) {
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" codigo=\"").append(UtilXml.xmlEsc(e.getCodigo())).append("\">").append(EOL);
 
-                    sb.append("  <empleado codigo=\"").append(xml(nvl(e.getCodigo()))).append("\">\n");
-                    sb.append("    <identificacion>").append(xml(nvl(e.getIdentificacion()))).append("</identificacion>\n");
-                    sb.append("    <apellido>").append(xml(nvl(e.getApellido()))).append("</apellido>\n");
-                    sb.append("    <nombre>").append(xml(nvl(e.getNombre()))).append("</nombre>\n");
-                    sb.append("    <estadoCivil>").append(xml(nvl(e.getEstadoCivil()))).append("</estadoCivil>\n");
-                    sb.append("    <genero>").append(xml(nvl(e.getGenero()))).append("</genero>\n");
-                    sb.append("    <correo>").append(xml(nvl(e.getCorreo()))).append("</correo>\n");
-                    sb.append("    <fechaNacimiento>").append(xml(nvl(e.getFechaNacimiento()))).append("</fechaNacimiento>\n");
-                    sb.append("    <estado>").append(xml(nvl(e.getEstadoTexto()))).append("</estado>\n");
-                    sb.append("    <domicilio>").append(xml(nvl(e.getDomicilio()))).append("</domicilio>\n");
-                    sb.append("    <telefono>").append(xml(nvl(e.getTelefono()))).append("</telefono>\n");
-                    sb.append("    <nacionalidad>").append(xml(nvl(e.getNacionalidad()))).append("</nacionalidad>\n");
-                    sb.append("    <imagen>").append("") /* sin imagen en payload */ .append("</imagen>\n");
-                    sb.append("  </empleado>\n");
+                    sb.append(IND).append(IND).append("<identificacion>")
+                    .append(UtilXml.xmlEsc(e.getIdentificacion()))
+                    .append("</identificacion>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<apellido>")
+                    .append(UtilXml.xmlEsc(e.getApellido()))
+                    .append("</apellido>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre>")
+                    .append(UtilXml.xmlEsc(e.getNombre()))
+                    .append("</nombre>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<estadoCivil>")
+                    .append(UtilXml.xmlEsc(e.getEstadoCivil()))
+                    .append("</estadoCivil>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<genero>")
+                    .append(UtilXml.xmlEsc(e.getGenero()))
+                    .append("</genero>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<correo>")
+                    .append(UtilXml.xmlEsc(e.getCorreo()))
+                    .append("</correo>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<fechaNacimiento>")
+                    .append(UtilXml.xmlEsc(e.getFechaNacimiento()))
+                    .append("</fechaNacimiento>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<estado>")
+                    .append(UtilXml.xmlEsc(e.getEstadoTexto()))
+                    .append("</estado>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<domicilio>")
+                    .append(UtilXml.xmlEsc(e.getDomicilio()))
+                    .append("</domicilio>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<telefono>")
+                    .append(UtilXml.xmlEsc(e.getTelefono()))
+                    .append("</telefono>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nacionalidad>")
+                    .append(UtilXml.xmlEsc(e.getNacionalidad()))
+                    .append("</nacionalidad>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<imagen>")
+                    .append("") // sin imagen en payload (se deja vacío)
+                    .append("</imagen>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</Empleados>\n");
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
+
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    //              Helpers
-    // =========================
+    
     private static String nvl(String s) {
         return (s == null) ? "" : s;
     }
 
-
-    private String xml(String v) {
-        String s = (v == null) ? "" : v;
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"","&quot;")
-                .replace("'","&apos;");
-    }
 }

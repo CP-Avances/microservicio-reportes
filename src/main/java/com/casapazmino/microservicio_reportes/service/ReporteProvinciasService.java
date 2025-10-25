@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -280,38 +281,47 @@ public class ReporteProvinciasService {
     //            XML (igual a xml2js del front)
     // =========================
     public byte[] generarReporteXML(ReporteProvinciasRequest request) {
+        final String NOMBRE_REPORTE = "Provincias.xml";
+        final String ROOT_TAG = "Provincias";
+        final String ITEM_TAG = "provincia";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Provincias>\n");
+            StringBuilder sb = new StringBuilder(4_096);
+
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
             List<ProvinciaDTO> items = request.getProvincias();
-            if (items != null) {
+            if (items == null || items.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
                 for (ProvinciaDTO p : items) {
-                    sb.append("  <provincia id=\"").append(xml(p.getId())).append("\">\n");
-                    sb.append("    <nombre>").append(xml(p.getNombre())).append("</nombre>\n");
-                    sb.append("    <pais>").append(xml(p.getPais())).append("</pais>\n");
-                    sb.append("  </provincia>\n");
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(p.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre>")
+                    .append(UtilXml.xmlEsc(p.getNombre()))
+                    .append("</nombre>").append(EOL);
+
+                    sb.append(IND).append(IND).append("<pais>")
+                    .append(UtilXml.xmlEsc(p.getPais()))
+                    .append("</pais>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
-            sb.append("</Provincias>\n");
+
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    //       Helpers CSV/XML (locales por ahora)
-    // =========================
 
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"","&quot;")
-                .replace("'","&apos;");
-    }
 }

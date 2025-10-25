@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -264,42 +265,48 @@ public class ReporteDiscapacidadService {
     // XML (igual a xml2js: raíz y nodos)
     // =========================
     public byte[] generarReporteDiscapacidadesXML(ReporteDiscapacidadesRequest request) {
+        final String NOMBRE_REPORTE = "Discapacidades.xml";
+        final String ROOT_TAG = "Discapacidades";
+        final String ITEM_TAG = "discapacidad";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Discapacidades>\n");
+            StringBuilder sb = new StringBuilder(4_096);
 
-            // Ordenar por id antes de exportar
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
+
             List<DiscapacidadDTO> datos = request.getDiscapacidades();
-            List<DiscapacidadDTO> ordenados = new ArrayList<>(datos == null ? List.of() : datos);
-            ordenados.sort(Comparator.comparingLong(d -> d.getId() == null ? Long.MAX_VALUE : d.getId()));
+            if (datos == null || datos.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
+                List<DiscapacidadDTO> ordenados = new ArrayList<>(datos);
+                ordenados.sort(Comparator.comparingLong(d ->
+                    d.getId() == null ? Long.MAX_VALUE : d.getId()
+                ));
 
-            for (DiscapacidadDTO d : ordenados) {
-                sb.append("  <discapacidad id=\"").append(xml(d.getId())).append("\">\n");
-                sb.append("    <nombre>").append(xml(d.getNombre())).append("</nombre>\n");
-                sb.append("  </discapacidad>\n");
+                for (DiscapacidadDTO d : ordenados) {
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(d.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<nombre>")
+                    .append(UtilXml.xmlEsc(d.getNombre()))
+                    .append("</nombre>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
+                }
             }
 
-            sb.append("</Discapacidades>\n");
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
 
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    // Helpers CSV/XML
-    // =========================
-
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
-    }
 
 }

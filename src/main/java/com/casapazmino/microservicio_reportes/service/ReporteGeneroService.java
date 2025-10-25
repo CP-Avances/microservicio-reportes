@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -267,39 +268,43 @@ public class ReporteGeneroService {
     //            XML (estructura simple y legible)
     // =========================
     public byte[] generarReporteGenerosXML(ReporteGenerosRequest request) {
+        final String NOMBRE_REPORTE = "G\u00E9neros.xml";
+        final String ROOT_TAG = "G\u00E9neros";
+        final String ITEM_TAG = "genero";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<G\u00E9neros>\n"); // "Géneros" con tilde
+            StringBuilder sb = new StringBuilder(4_096);
+
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
             List<GeneroDTO> items = request.getGeneros();
-            if (items != null) {
+            if (items == null || items.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
                 for (GeneroDTO g : items) {
-                    sb.append("  <genero id=\"").append(xml(g.getId())).append("\">\n");
-                    sb.append("    <genero>").append(xml(g.getGenero())).append("</genero>\n"); // mismo nombre de nodo
-                    sb.append("  </genero>\n");
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(g.getId())).append("\">").append(EOL);
+
+                    sb.append(IND).append(IND).append("<genero>")
+                    .append(UtilXml.xmlEsc(g.getGenero()))
+                    .append("</genero>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</G\u00E9neros>\n");
-            return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
+            return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
 
-    // =========================
-    //       Helpers CSV/XML (locales por ahora)
-    // =========================
-
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"","&quot;")
-                .replace("'","&apos;");
-    }
 }

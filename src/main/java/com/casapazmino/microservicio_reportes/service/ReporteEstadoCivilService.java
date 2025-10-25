@@ -6,6 +6,7 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilCsv;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
+import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
@@ -268,40 +269,43 @@ public class ReporteEstadoCivilService {
     // XML
     // =========================
     public byte[] generarReporteXML(ReporteEstadosCivilRequest request) {
+        final String NOMBRE_REPORTE = "Estados_Civil.xml";
+        final String ROOT_TAG = "Estados_Civil";
+        final String ITEM_TAG = "estado_civil";
+        final String EOL = "\n";
+        final String IND = "  ";
+
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            sb.append("<Estados_Civil>\n"); // <- raíz con guion bajo
+            StringBuilder sb = new StringBuilder(4_096);
+
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
+            sb.append("<").append(ROOT_TAG).append(">").append(EOL);
 
             List<EstadoCivilDTO> items = request.getEstadosCivil();
-            if (items != null) {
+            if (items == null || items.isEmpty()) {
+                sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
+            } else {
                 for (EstadoCivilDTO e : items) {
-                    sb.append("  <estado_civil id=\"").append(xml(e.getId())).append("\">\n");
-                    sb.append("    <estado_civil>").append(xml(e.getEstadoCivil())).append("</estado_civil>\n"); // <-
-                                                                                                                 // etiqueta
-                                                                                                                 // repetida
-                    sb.append("  </estado_civil>\n");
+                    sb.append(IND).append("<").append(ITEM_TAG)
+                    .append(" id=\"").append(UtilXml.xmlEsc(e.getId())).append("\">").append(EOL);
+
+                    // Mantener etiqueta interna igual al diseño existente
+                    sb.append(IND).append(IND).append("<estado_civil>")
+                    .append(UtilXml.xmlEsc(e.getEstadoCivil()))
+                    .append("</estado_civil>").append(EOL);
+
+                    sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
 
-            sb.append("</Estados_Civil>\n");
-            return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
+            sb.append("</").append(ROOT_TAG).append(">").append(EOL);
+            return sb.toString().getBytes(StandardCharsets.UTF_8);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
-    // =========================
-    // Helpers CSV/XML
-    // =========================
-
-    private String xml(Object v) {
-        String s = (v == null) ? "" : String.valueOf(v);
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
-    }
 }
