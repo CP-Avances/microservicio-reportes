@@ -46,9 +46,9 @@ public class ReporteAuditoriaService {
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
             document.add(ReporteUtil.crearTituloReporte("AUDITORÍA"));
 
-            Color colorPrincipal  = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Color zebra           = ReporteUtil.colorZebraClaro();
+            Color zebra = ReporteUtil.colorZebraClaro();
 
             List<AuditoriaDTO> lista = request.getAuditorias();
 
@@ -66,16 +66,14 @@ public class ReporteAuditoriaService {
             cabecera.setSpacingBefore(10f);
 
             PdfPCell celdaPlataforma = new PdfPCell(
-                new Phrase("PLATAFORMA: " + lista.get(0).getPlataforma(), ReporteUtil.fuenteTexto())
-            );
+                    new Phrase("PLATAFORMA: " + lista.get(0).getPlataforma(), ReporteUtil.fuenteTexto()));
             celdaPlataforma.setBackgroundColor(colorSecundario);
             celdaPlataforma.setBorder(Rectangle.TOP | Rectangle.LEFT | Rectangle.BOTTOM);
             celdaPlataforma.setPadding(5f);
             cabecera.addCell(celdaPlataforma);
 
             PdfPCell celdaCantidad = new PdfPCell(
-                new Phrase("N° Registros: " + lista.size(), ReporteUtil.fuenteTexto())
-            );
+                    new Phrase("N° Registros: " + lista.size(), ReporteUtil.fuenteTexto()));
             celdaCantidad.setBackgroundColor(colorSecundario);
             celdaCantidad.setBorder(Rectangle.TOP | Rectangle.RIGHT | Rectangle.BOTTOM);
             celdaCantidad.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -93,8 +91,8 @@ public class ReporteAuditoriaService {
 
             // Encabezados
             String[] encabezados = {
-                "ITEM", "PLATAFORMA", "USUARIO", "IP", "NOMBRE TABLA",
-                "ACCIÓN", "FECHA", "HORA", "DATOS ORIGINALES", "DATOS NUEVOS"
+                    "ITEM", "PLATAFORMA", "USUARIO", "IP", "NOMBRE TABLA",
+                    "ACCIÓN", "FECHA", "HORA", "DATOS ORIGINALES", "DATOS NUEVOS"
             };
             for (String enc : encabezados) {
                 tabla.addCell(ReporteUtil.crearCelda(enc, ReporteUtil.fuenteEncabezado(), colorPrincipal));
@@ -105,14 +103,15 @@ public class ReporteAuditoriaService {
             for (AuditoriaDTO a : lista) {
                 Color fondo = (index.get() % 2 == 0) ? zebra : Color.WHITE;
 
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(index.getAndIncrement()), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getPlataforma(),    ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getUser_name(),     ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getIp_address(),    ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getTable_name(),    ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getAction(),        ReporteUtil.fuenteTexto(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(index.getAndIncrement()), ReporteUtil.fuenteTexto(),
+                        fondo));
+                tabla.addCell(ReporteUtil.crearCelda(a.getPlataforma(), ReporteUtil.fuenteTexto(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(a.getUser_name(), ReporteUtil.fuenteTexto(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(a.getIp_address(), ReporteUtil.fuenteTexto(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(a.getTable_name(), ReporteUtil.fuenteTexto(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(a.getAction(), ReporteUtil.fuenteTexto(), fondo));
                 tabla.addCell(ReporteUtil.crearCelda(a.getFecha_hora_format(), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getSolo_hora(),     ReporteUtil.fuenteTexto(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(a.getSolo_hora(), ReporteUtil.fuenteTexto(), fondo));
 
                 PdfPCell celdaOriginal = ReporteUtil.crearCelda(a.getOriginal_data(), ReporteUtil.fuenteTexto(), fondo);
                 celdaOriginal.setNoWrap(false);
@@ -140,13 +139,22 @@ public class ReporteAuditoriaService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }

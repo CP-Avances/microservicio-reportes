@@ -11,17 +11,16 @@ import java.util.List;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RegimenDTO {
-    private String id; // llega como número pero debe tratarse como String
+    private String id; 
     private String descripcion;
     private String pais;
-    private Boolean continuidad_laboral; // es boolean, no String
+    private Boolean continuidad_laboral;
     private Integer mes_periodo;
     private Integer dias_mes;
     private Integer trabajo_minimo_mes;
     private Integer trabajo_minimo_horas;
     private Boolean antiguedad;
 
-    // Configuración de vacaciones
     private Integer vacacion_dias_laboral;
     private Integer vacacion_dias_libre;
     private Integer vacacion_dias_calendario;
@@ -30,13 +29,11 @@ public class RegimenDTO {
     private Boolean vacacion_divisible;
     private List<PeriodoVacacionalDTO> periodos_vacacionales;
 
-    // Vacaciones ganadas
     private Double vacacion_dias_laboral_mes;
     private Double vacacion_dias_calendario_mes;
     private Double laboral_dias;
     private Double calendario_dias;
 
-    // Antigüedad
     private Boolean antiguedad_fija;
     private Integer anio_antiguedad;
     private Integer dias_antiguedad;

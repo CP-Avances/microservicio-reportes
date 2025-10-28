@@ -45,10 +45,9 @@ public class ReporteDiscapacidadService {
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -64,7 +63,7 @@ public class ReporteDiscapacidadService {
 
             // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra     = ReporteUtil.colorZebraClaro();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(2);
@@ -82,7 +81,8 @@ public class ReporteDiscapacidadService {
             if (lista != null) {
                 for (DiscapacidadDTO d : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(String.valueOf(d.getId()), ReporteUtil.fuenteTablaData(), fondo));
                     tabla.addCell(ReporteUtil.crearCelda(d.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
@@ -103,20 +103,28 @@ public class ReporteDiscapacidadService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-    
-    
+
     // =========================
-    // XLSX 
+    // XLSX
     // =========================
     public byte[] generarReporteDiscapacidadesXLSX(ReporteDiscapacidadesRequest request) {
         // =========================
@@ -130,10 +138,10 @@ public class ReporteDiscapacidadService {
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 2;
 
         final String[] HEADERS = { "ITEM", "CODIGO", "NOMBRE" };
-        final int[] ANCHOS      = {   20,     30,      40   };
+        final int[] ANCHOS = { 20, 30, 40 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
@@ -175,18 +183,20 @@ public class ReporteDiscapacidadService {
             for (int i = 0; i < ordenados.size(); i++) {
                 DiscapacidadDTO d = ordenados.get(i);
                 Row r = UtilExcel.asegurarFila(hoja, filaAct++);
-                UtilExcel.establecerValor(r, 0, i + 1, null);                                // ITEM
-                UtilExcel.establecerValor(r, 1, d.getId(), null);                            // CODIGO
+                UtilExcel.establecerValor(r, 0, i + 1, null); // ITEM
+                UtilExcel.establecerValor(r, 1, d.getId(), null); // CODIGO
                 UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(d.getNombre()), null); // NOMBRE
             }
 
             int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
-            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto izquierda)
+            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto
+            // izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             if (ultimaFila >= filaDatosIni) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
@@ -195,13 +205,12 @@ public class ReporteDiscapacidadService {
                 // 7) Tabla estilizada (A6:Cn), zebra y AutoFilter (ITEM sin filtro)
                 boolean[] filtros = new boolean[] { false, true, true };
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "DiscapacidadesTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "DiscapacidadesTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -215,7 +224,6 @@ public class ReporteDiscapacidadService {
         }
     }
 
-    
     // =========================
     // CSV (keys simples)
     // =========================
@@ -231,7 +239,8 @@ public class ReporteDiscapacidadService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -240,11 +249,11 @@ public class ReporteDiscapacidadService {
             List<DiscapacidadDTO> items = request.getDiscapacidades();
             if (items != null && !items.isEmpty()) {
                 for (DiscapacidadDTO d : items) {
-                    String id     = (d.getId() == null)     ? "" : String.valueOf(d.getId());
+                    String id = (d.getId() == null) ? "" : String.valueOf(d.getId());
                     String nombre = (d.getNombre() == null) ? "" : d.getNombre();
 
                     sb.append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nombre)).append(EOL);
+                            .append(UtilCsv.csvEscape(nombre)).append(EOL);
                 }
             }
 
@@ -260,7 +269,6 @@ public class ReporteDiscapacidadService {
         }
     }
 
-    
     // =========================
     // XML (igual a xml2js: raíz y nodos)
     // =========================
@@ -282,17 +290,15 @@ public class ReporteDiscapacidadService {
                 sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
             } else {
                 List<DiscapacidadDTO> ordenados = new ArrayList<>(datos);
-                ordenados.sort(Comparator.comparingLong(d ->
-                    d.getId() == null ? Long.MAX_VALUE : d.getId()
-                ));
+                ordenados.sort(Comparator.comparingLong(d -> d.getId() == null ? Long.MAX_VALUE : d.getId()));
 
                 for (DiscapacidadDTO d : ordenados) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(d.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(d.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<nombre>")
-                    .append(UtilXml.xmlEsc(d.getNombre()))
-                    .append("</nombre>").append(EOL);
+                            .append(UtilXml.xmlEsc(d.getNombre()))
+                            .append("</nombre>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -307,6 +313,5 @@ public class ReporteDiscapacidadService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
 }

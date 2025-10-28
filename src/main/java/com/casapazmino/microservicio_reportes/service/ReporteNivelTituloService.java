@@ -45,10 +45,9 @@ public class ReporteNivelTituloService {
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -64,7 +63,7 @@ public class ReporteNivelTituloService {
 
             // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra     = ReporteUtil.colorZebraClaro();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(2);
@@ -74,7 +73,7 @@ public class ReporteNivelTituloService {
 
             // Encabezados
             tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NIVEL",  ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("NIVEL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
             // Cuerpo (zebra)
             List<NivelTituloDTO> lista = request.getNivelesTitulos();
@@ -82,8 +81,9 @@ public class ReporteNivelTituloService {
             if (lista != null) {
                 for (NivelTituloDTO n : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(n.getNombre(),             ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(n.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
             }
@@ -103,13 +103,22 @@ public class ReporteNivelTituloService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
@@ -121,8 +130,8 @@ public class ReporteNivelTituloService {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA     = "Niveles Títulos"; // nombre exacto (≤31)
-        final int    FILA_ENCABEZADO = 5;
+        final String NOMBRE_HOJA = "Niveles Títulos"; // nombre exacto (≤31)
+        final int FILA_ENCABEZADO = 5;
 
         // Merges B1:C1 ... B5:C5 => (row 0..4, col 1..2)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
@@ -130,10 +139,10 @@ public class ReporteNivelTituloService {
 
         final String TITULO_REPORTE = "LISTA DE NIVELES DE TÍTULOS PROFESIONALES";
         final String[] HEADERS = { "ITEM", "CODIGO", "NOMBRE" };
-        final int[]    ANCHOS  = {   20,      30,       40    };
+        final int[] ANCHOS = { 20, 30, 40 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener encabezado visible
@@ -169,18 +178,18 @@ public class ReporteNivelTituloService {
             List<NivelTituloDTO> ordenados = new java.util.ArrayList<>(datos == null ? java.util.List.of() : datos);
             ordenados.sort(java.util.Comparator.comparing(
                     NivelTituloDTO::getId,
-                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())
-            ));
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
 
             int filaDatosInicio = FILA_ENCABEZADO + 1;
             int filaActual = filaDatosInicio;
             int item = 1;
 
             for (NivelTituloDTO n : ordenados) {
-                if (n == null) continue;
+                if (n == null)
+                    continue;
                 Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                UtilExcel.establecerValor(r, 0, item++, null);                              // ITEM
-                UtilExcel.establecerValor(r, 1, n.getId(), null);                           // CODIGO
+                UtilExcel.establecerValor(r, 0, item++, null); // ITEM
+                UtilExcel.establecerValor(r, 1, n.getId(), null); // CODIGO
                 UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(n.getNombre()), null); // NOMBRE
             }
 
@@ -188,10 +197,11 @@ public class ReporteNivelTituloService {
 
             // 6) Alineaciones + bordes
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             // Cuerpo: col 0 centrado; col 1..2 izquierda
             if (ultimaFila >= filaDatosInicio) {
@@ -201,13 +211,12 @@ public class ReporteNivelTituloService {
                 // 7) Tabla estilizada + filtros (ITEM sin filtro)
                 boolean[] filtros = new boolean[] { false, true, true };
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "NivelesTitulosTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "NivelesTitulosTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -221,7 +230,6 @@ public class ReporteNivelTituloService {
         }
     }
 
-    
     // =========================
     // CSV (orden simple de keys como en front dinámico)
     // =========================
@@ -237,7 +245,8 @@ public class ReporteNivelTituloService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -246,11 +255,11 @@ public class ReporteNivelTituloService {
             List<NivelTituloDTO> items = request.getNivelesTitulos();
             if (items != null && !items.isEmpty()) {
                 for (NivelTituloDTO n : items) {
-                    String id  = (n == null || n.getId() == null)     ? "" : String.valueOf(n.getId());
+                    String id = (n == null || n.getId() == null) ? "" : String.valueOf(n.getId());
                     String nom = (n == null || n.getNombre() == null) ? "" : n.getNombre();
 
                     sb.append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nom)).append(EOL);
+                            .append(UtilCsv.csvEscape(nom)).append(EOL);
                 }
             }
 
@@ -266,7 +275,6 @@ public class ReporteNivelTituloService {
         }
     }
 
-    
     // =========================
     // XML (igual al front: raíz y nodos)
     // =========================
@@ -288,17 +296,15 @@ public class ReporteNivelTituloService {
                 sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
             } else {
                 List<NivelTituloDTO> ordenados = new ArrayList<>(datos);
-                ordenados.sort(Comparator.comparingLong(n ->
-                    n.getId() == null ? Long.MAX_VALUE : n.getId()
-                ));
+                ordenados.sort(Comparator.comparingLong(n -> n.getId() == null ? Long.MAX_VALUE : n.getId()));
 
                 for (NivelTituloDTO n : ordenados) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(n.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(n.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<nivel>")
-                    .append(UtilXml.xmlEsc(n.getNombre()))
-                    .append("</nivel>").append(EOL);
+                            .append(UtilXml.xmlEsc(n.getNombre()))
+                            .append("</nivel>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -313,6 +319,5 @@ public class ReporteNivelTituloService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
 }

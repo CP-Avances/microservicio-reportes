@@ -9,7 +9,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor  // Genera un constructor sin argumentos, sin necesidad de escribirlo manualmente
-@JsonIgnoreProperties(ignoreUnknown = true) // Ignorar propiedades desconocidas durante la deserialización
+@JsonIgnoreProperties(ignoreUnknown = true) // Ignorar propiedades desconocidas. De momento se puede enviar campos extras y no generara error
 public class CargoDTO {
     private Long id;
     private String cargo;

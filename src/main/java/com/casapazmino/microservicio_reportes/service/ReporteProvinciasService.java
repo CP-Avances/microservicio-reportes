@@ -28,18 +28,18 @@ import java.util.List;
 public class ReporteProvinciasService {
 
     // =========================
-    //          PDF 
+    // PDF
     // =========================
     public byte[] generarReportePDF(ReporteProvinciasRequest request) {
 
         // ➊ DRY: constantes locales (look & feel NO cambia)
         final String TITULO = "LISTA DE PROVINCIAS";
-        final float[] WIDTHS = { 2f, 4f };     // mismas proporciones
-        final int WIDTH_PERCENT = 50;          // mismo 50%
+        final float[] WIDTHS = { 2f, 4f }; // mismas proporciones
+        final int WIDTH_PERCENT = 50; // mismo 50%
         final float SPACING_BEFORE = 10f;
 
         final Color COLOR_PRIMARIO = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-        final Color COLOR_ZEBRA    = ReporteUtil.colorZebraClaro();
+        final Color COLOR_ZEBRA = ReporteUtil.colorZebraClaro();
 
         Document document = null;
         PdfWriter writer = null;
@@ -53,8 +53,7 @@ public class ReporteProvinciasService {
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
-            ));
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (usando helpers existentes)
@@ -75,8 +74,9 @@ public class ReporteProvinciasService {
             tabla.setSpacingBefore(SPACING_BEFORE);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("PAÍS",       ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
-            tabla.addCell(ReporteUtil.crearCelda("PROVINCIAS", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.crearCelda("PAÍS", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+            tabla.addCell(
+                    ReporteUtil.crearCelda("PROVINCIAS", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
 
             // Cuerpo con zebra
             boolean zebra = false;
@@ -84,7 +84,7 @@ public class ReporteProvinciasService {
             if (lista != null) {
                 for (ProvinciaDTO provincia : lista) {
                     Color fondo = zebra ? COLOR_ZEBRA : null; // null conserva blanco
-                    tabla.addCell(ReporteUtil.crearCelda(provincia.getPais(),   ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(provincia.getPais(), ReporteUtil.fuenteTablaData(), fondo));
                     tabla.addCell(ReporteUtil.crearCelda(provincia.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
@@ -105,39 +105,48 @@ public class ReporteProvinciasService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-    
+
     // =========================
-    //          XLSX (igual al ExcelJS del front)
+    // XLSX (igual al ExcelJS del front)
     // =========================
     public byte[] generarReporteXLSX(ReporteProvinciasRequest request) {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA = "Provincias";       // ≤ 31 chars
-        final int FILA_ENCABEZADO = 5;                  // fila 6 (idx 5)
+        final String NOMBRE_HOJA = "Provincias"; // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5; // fila 6 (idx 5)
 
         // MERGES exactos (B1:E1 ... B5:E5) => (row 0..4, col 1..4)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 4;
 
         final String[] HEADERS = { "ITEM", "ID", "NOMBRE", "ID_PAIS", "PAIS" };
-        final int[]    ANCHOS  = {     10,   20,      20,        20,      20 };
+        final int[] ANCHOS = { 10, 20, 20, 20, 20 };
 
         // Filtros: ITEM sin filtro; resto con filtro
         final boolean[] FILTROS = new boolean[] { false, true, true, true, true };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
@@ -178,19 +187,20 @@ public class ReporteProvinciasService {
             if (provincias != null) {
                 for (ProvinciaDTO p : provincias) {
                     Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                    UtilExcel.establecerValor(r, 0, item++, null);                                 // ITEM (secuencial)
-                    UtilExcel.establecerValor(r, 1, p.getId(), null);                              // ID
+                    UtilExcel.establecerValor(r, 0, item++, null); // ITEM (secuencial)
+                    UtilExcel.establecerValor(r, 1, p.getId(), null); // ID
                     UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(p.getNombre()), null); // NOMBRE
-                    UtilExcel.establecerValor(r, 3, p.getId_pais(), null);                         // ID_PAIS
-                    UtilExcel.establecerValor(r, 4, UtilExcel.nuloComoVacio(p.getPais()), null);   // PAIS
+                    UtilExcel.establecerValor(r, 3, p.getId_pais(), null); // ID_PAIS
+                    UtilExcel.establecerValor(r, 4, UtilExcel.nuloComoVacio(p.getPais()), null); // PAIS
                 }
             }
 
             int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
-            // 6) ALINEACIONES + BORDES (header centrado; cuerpo col 0 centrado, resto izquierda)
+            // 6) ALINEACIONES + BORDES (header centrado; cuerpo col 0 centrado, resto
+            // izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con borde
             UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
@@ -210,8 +220,7 @@ public class ReporteProvinciasService {
                         FILA_ENCABEZADO, 0,
                         ultimaFila, HEADERS.length - 1,
                         true,
-                        FILTROS
-                );
+                        FILTROS);
             }
 
             // 8) Cierre + retorno
@@ -227,9 +236,8 @@ public class ReporteProvinciasService {
         }
     }
 
-    
     // =========================
-    //           CSV (como tu ExportToCSV dinámico)
+    // CSV (como tu ExportToCSV dinámico)
     // =========================
     public byte[] generarReporteCSV(ReporteProvinciasRequest request) {
         // === Contrato del CSV ===
@@ -243,7 +251,8 @@ public class ReporteProvinciasService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -252,15 +261,15 @@ public class ReporteProvinciasService {
             List<ProvinciaDTO> items = request.getProvincias();
             if (items != null && !items.isEmpty()) {
                 for (ProvinciaDTO p : items) {
-                    String id     = (p == null || p.getId() == null)        ? "" : String.valueOf(p.getId());
-                    String nombre = (p == null || p.getNombre() == null)    ? "" : p.getNombre();
-                    String idPais = (p == null || p.getId_pais() == null)   ? "" : String.valueOf(p.getId_pais());
-                    String pais   = (p == null || p.getPais() == null)      ? "" : p.getPais();
+                    String id = (p == null || p.getId() == null) ? "" : String.valueOf(p.getId());
+                    String nombre = (p == null || p.getNombre() == null) ? "" : p.getNombre();
+                    String idPais = (p == null || p.getId_pais() == null) ? "" : String.valueOf(p.getId_pais());
+                    String pais = (p == null || p.getPais() == null) ? "" : p.getPais();
 
                     sb.append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nombre)).append(DELIM)
-                    .append(UtilCsv.csvEscape(idPais)).append(DELIM)
-                    .append(UtilCsv.csvEscape(pais)).append(EOL);
+                            .append(UtilCsv.csvEscape(nombre)).append(DELIM)
+                            .append(UtilCsv.csvEscape(idPais)).append(DELIM)
+                            .append(UtilCsv.csvEscape(pais)).append(EOL);
                 }
             }
 
@@ -276,9 +285,8 @@ public class ReporteProvinciasService {
         }
     }
 
-    
     // =========================
-    //            XML (igual a xml2js del front)
+    // XML (igual a xml2js del front)
     // =========================
     public byte[] generarReporteXML(ReporteProvinciasRequest request) {
         final String NOMBRE_REPORTE = "Provincias.xml";
@@ -299,15 +307,15 @@ public class ReporteProvinciasService {
             } else {
                 for (ProvinciaDTO p : items) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(p.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(p.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<nombre>")
-                    .append(UtilXml.xmlEsc(p.getNombre()))
-                    .append("</nombre>").append(EOL);
+                            .append(UtilXml.xmlEsc(p.getNombre()))
+                            .append("</nombre>").append(EOL);
 
                     sb.append(IND).append(IND).append("<pais>")
-                    .append(UtilXml.xmlEsc(p.getPais()))
-                    .append("</pais>").append(EOL);
+                            .append(UtilXml.xmlEsc(p.getPais()))
+                            .append("</pais>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -322,6 +330,5 @@ public class ReporteProvinciasService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
 }

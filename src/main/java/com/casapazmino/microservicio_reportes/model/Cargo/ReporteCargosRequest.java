@@ -8,12 +8,11 @@ import lombok.Setter;
 
 /**
  * Modela el JSON que llega del frontend para generar el reporte de Cargos.
- * Simple, funcional y tolerante a campos extra.
  */
 @Getter
 @Setter
 @NoArgsConstructor  // Genera un constructor sin argumentos, sin necesidad de escribirlo manualmente
-@JsonIgnoreProperties(ignoreUnknown = true) // Ignorar propiedades desconocidas durante la deserialización
+@JsonIgnoreProperties(ignoreUnknown = true) // Ignorar propiedades desconocidas durante la deserialización. De momento se puede enviar campos extras y no generara error
 public class ReporteCargosRequest {
     private String usuario;
     private String empresa;

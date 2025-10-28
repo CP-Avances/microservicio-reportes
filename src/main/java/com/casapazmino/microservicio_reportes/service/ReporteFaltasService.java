@@ -15,7 +15,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.apache.poi.ss.usermodel.Row;
 
-
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,7 +26,7 @@ public class ReporteFaltasService {
 
         // DRY: constantes locales
         final float[] WIDTHS_TITULO = { 8f, 2f };
-        final float[] WIDTHS_INFO   = { 4f, 4f, 4f };
+        final float[] WIDTHS_INFO = { 4f, 4f, 4f };
         final float[] WIDTHS_FALTAS = { 3f, 3f };
         final float[] WIDTHS_RESUMEN = { 4f, 4f, 2f };
 
@@ -41,36 +40,33 @@ public class ReporteFaltasService {
             document = new Document(PageSize.A4, 40, 40, 30, 50);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
             // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-            if (logo != null) document.add(logo);
+            if (logo != null)
+                document.add(logo);
 
             // Títulos
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
             document.add(ReporteUtil.crearTituloReporte(
-                "FALTAS - USUARIOS " + (request.getOpcionBusqueda() == 1 ? "ACTIVOS" : "INACTIVOS")
-            ));
+                    "FALTAS - USUARIOS " + (request.getOpcionBusqueda() == 1 ? "ACTIVOS" : "INACTIVOS")));
             document.add(ReporteUtil.crearTituloPeriodo(
-                "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin()
-            ));
+                    "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin()));
 
             // Colores
-            Color colorPrincipal  = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Color zebraColor      = ReporteUtil.colorZebraClaro();
+            Color zebraColor = ReporteUtil.colorZebraClaro();
 
             // Contador global
             AtomicInteger totalFaltasGeneral = new AtomicInteger();
             request.getGrupos().forEach(
-                grupo -> grupo.getEmpleados().forEach(emp -> totalFaltasGeneral.addAndGet(emp.getFaltas().size()))
-            );
+                    grupo -> grupo.getEmpleados().forEach(emp -> totalFaltasGeneral.addAndGet(emp.getFaltas().size())));
 
             // Título global
             PdfPTable tablaTitulo = new PdfPTable(2);
@@ -84,8 +80,7 @@ public class ReporteFaltasService {
             tablaTitulo.addCell(celda1);
 
             PdfPCell celda2 = new PdfPCell(
-                new Phrase("Nº Registros: " + totalFaltasGeneral.get(), ReporteUtil.fuenteEncabezado())
-            );
+                    new Phrase("Nº Registros: " + totalFaltasGeneral.get(), ReporteUtil.fuenteEncabezado()));
             celda2.setBackgroundColor(colorSecundario);
             celda2.setHorizontalAlignment(Element.ALIGN_RIGHT);
             celda2.setVerticalAlignment(Element.ALIGN_MIDDLE);
@@ -106,12 +101,14 @@ public class ReporteFaltasService {
                     infoEmpleado.setWidthPercentage(100);
                     infoEmpleado.setWidths(WIDTHS_INFO);
 
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:",   emp.getApellido() + " " + emp.getNombre(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:",       emp.getIdentificacion(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:",        emp.getCodigo(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:",
+                            emp.getApellido() + " " + emp.getNombre(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:", emp.getIdentificacion(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:", emp.getCodigo(), zebraColor));
                     infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", emp.getRegimen(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:",    emp.getDepartamento(), zebraColor));
-                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:",           emp.getCargo(), zebraColor));
+                    infoEmpleado
+                            .addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:", emp.getDepartamento(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:", emp.getCargo(), zebraColor));
 
                     PdfPTable tablaContenedora = new PdfPTable(1);
                     tablaContenedora.setWidthPercentage(100);
@@ -127,23 +124,22 @@ public class ReporteFaltasService {
                     tablaFaltas.setWidthPercentage(100);
                     tablaFaltas.setWidths(WIDTHS_FALTAS);
 
-                    tablaFaltas.addCell(ReporteUtil.crearCelda("N°",    ReporteUtil.fuenteEncabezado(), colorPrincipal));
-                    tablaFaltas.addCell(ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                    tablaFaltas.addCell(ReporteUtil.crearCelda("N°", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                    tablaFaltas
+                            .addCell(ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(), colorPrincipal));
 
                     for (FaltaDTO falta : emp.getFaltas()) {
                         Color fondo = (contador % 2 == 0) ? zebraColor : Color.WHITE;
                         tablaFaltas.addCell(ReporteUtil.celdaCentro(String.valueOf(contador), fondo));
                         tablaFaltas.addCell(ReporteUtil.celdaCentro(
-                            ReporteUtil.formatearFechaConDia(falta.getFecha()), fondo
-                        ));
+                                ReporteUtil.formatearFechaConDia(falta.getFecha()), fondo));
                         contador++;
                     }
 
                     // Fila total por empleado
                     tablaFaltas.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), colorSecundario));
                     tablaFaltas.addCell(ReporteUtil.crearCelda(
-                        String.valueOf(emp.getFaltas().size()), ReporteUtil.fuenteTexto(), colorSecundario
-                    ));
+                            String.valueOf(emp.getFaltas().size()), ReporteUtil.fuenteTexto(), colorSecundario));
 
                     tablaFaltas.setSpacingAfter(10f);
                     document.add(tablaFaltas);
@@ -159,11 +155,11 @@ public class ReporteFaltasService {
                 resumen.setWidths(WIDTHS_RESUMEN);
                 resumen.setSpacingBefore(10f);
 
-                resumen.addCell(ReporteUtil.crearCelda("TOTAL GENERAL", ReporteUtil.fuenteEncabezado(), colorSecundario));
-                resumen.addCell(ReporteUtil.crearCelda("",              ReporteUtil.fuenteEncabezado(), colorSecundario));
+                resumen.addCell(
+                        ReporteUtil.crearCelda("TOTAL GENERAL", ReporteUtil.fuenteEncabezado(), colorSecundario));
+                resumen.addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteEncabezado(), colorSecundario));
                 resumen.addCell(ReporteUtil.crearCelda(
-                    String.valueOf(totalFaltasGeneral.get()), ReporteUtil.fuenteEncabezado(), colorSecundario
-                ));
+                        String.valueOf(totalFaltasGeneral.get()), ReporteUtil.fuenteEncabezado(), colorSecundario));
 
                 document.add(resumen);
             }
@@ -180,24 +176,32 @@ public class ReporteFaltasService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-
 
     public byte[] generarReporteFaltasExcel(ReporteFaltasRequest request) {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA   = "Faltas"; // ≤ 31 chars
-        final int    FILA_ENC      = 5;
+        final String NOMBRE_HOJA = "Faltas"; // ≤ 31 chars
+        final int FILA_ENC = 5;
 
         // Merges B1:J5 (row 0..4, col 1..9)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
@@ -206,14 +210,14 @@ public class ReporteFaltasService {
         final String TITULO_REPORTE = "LISTA DE FALTAS";
 
         final String[] HEADERS = {
-            "ITEM","IDENTIFICACIÓN","CÓDIGO","APELLIDO NOMBRE",
-            "GÉNERO","CIUDAD","NACIONALIDAD","SUCURSAL",
-            "RÉGIMEN","DEPARTAMENTO","CARGO","FECHA"
+                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
+                "GÉNERO", "CIUDAD", "NACIONALIDAD", "SUCURSAL",
+                "RÉGIMEN", "DEPARTAMENTO", "CARGO", "FECHA"
         };
-        final int[] ANCHOS = { 10,20,20,28, 18,18,20,18, 18,20,20,18 };
+        final int[] ANCHOS = { 10, 20, 20, 28, 18, 18, 20, 18, 18, 20, 20, 18 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             // =========================
             // 1) Inicialización de hoja
@@ -234,9 +238,11 @@ public class ReporteFaltasService {
 
             // 4) Títulos
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())), estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())),
+                    estiloTitulo);
             UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo);
-            String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL " + safe(request.getFechaFin());
+            String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL "
+                    + safe(request.getFechaFin());
             UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
 
             // 5) Encabezados + anchos
@@ -258,19 +264,22 @@ public class ReporteFaltasService {
 
             if (request.getGrupos() != null) {
                 for (GrupoFaltasDTO grupo : request.getGrupos()) {
-                    if (grupo == null || grupo.getEmpleados() == null) continue;
+                    if (grupo == null || grupo.getEmpleados() == null)
+                        continue;
 
                     for (EmpleadoFaltasDTO emp : grupo.getEmpleados()) {
-                        if (emp == null || emp.getFaltas() == null) continue;
+                        if (emp == null || emp.getFaltas() == null)
+                            continue;
 
-                        String apenom    = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
-                        String ciudad    = firstNonEmpty(safe(emp.getCiudad()),   safe(grupo.getCiudad()));
-                        String sucursal  = firstNonEmpty(safe(emp.getSucursal()), safe(grupo.getSucursal()));
+                        String apenom = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
+                        String ciudad = firstNonEmpty(safe(emp.getCiudad()), safe(grupo.getCiudad()));
+                        String sucursal = firstNonEmpty(safe(emp.getSucursal()), safe(grupo.getSucursal()));
                         String generoNom = safe(emp.getGeneroNombre());
-                        String nacNom    = safe(emp.getNacionalidadNombre());
+                        String nacNom = safe(emp.getNacionalidadNombre());
 
                         for (FaltaDTO falta : emp.getFaltas()) {
-                            if (falta == null) continue;
+                            if (falta == null)
+                                continue;
 
                             String fechaFmt = ReporteUtil.formatearFechaConDia(safe(falta.getFecha()));
 
@@ -300,7 +309,7 @@ public class ReporteFaltasService {
             // 7) Estilos reutilizables
             // =========================
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con borde
             UtilExcel.aplicarEstiloARegion(hoja, FILA_ENC, FILA_ENC, 0, HEADERS.length - 1, estiloCentroBorde, true);
@@ -309,26 +318,26 @@ public class ReporteFaltasService {
                 // ITEM centrado
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
                 // APELLIDO NOMBRE / DEPARTAMENTO / CARGO a la izquierda
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 3, 3,  estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 3, 3, estiloIzqBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 9, 10, estiloIzqBorde, true);
                 // Resto centrado
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 2,  estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 4, 8,  estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 2, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 4, 8, estiloCentroBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 11, 11, estiloCentroBorde, true);
 
                 // 8) Tabla estilizada + filtros (ITEM sin filtro)
                 boolean[] filtros = new boolean[HEADERS.length];
-                for (int i = 0; i < filtros.length; i++) filtros[i] = true;
+                for (int i = 0; i < filtros.length; i++)
+                    filtros[i] = true;
                 filtros[0] = false;
 
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "FaltasReporteTabla",
-                    FILA_ENC, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "FaltasReporteTabla",
+                        FILA_ENC, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // =========================
@@ -346,16 +355,16 @@ public class ReporteFaltasService {
         }
     }
 
-    
     /* ===== Helpers locales ===== */
     private String safe(Object v) {
-        if (v == null) return "";
+        if (v == null)
+            return "";
         String s = String.valueOf(v).trim();
         return "null".equalsIgnoreCase(s) ? "" : s;
     }
+
     private String firstNonEmpty(String a, String b) {
         return (a == null || a.isBlank()) ? (b == null ? "" : b) : a;
     }
-
 
 }

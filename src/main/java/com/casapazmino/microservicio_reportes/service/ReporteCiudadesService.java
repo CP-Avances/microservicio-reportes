@@ -27,7 +27,7 @@ import java.util.List;
 @Service
 public class ReporteCiudadesService {
     // =========================
-    //          PDF 
+    // PDF
     // =========================
     public byte[] generarReportePDF(ReporteCiudadesRequest request) {
 
@@ -44,10 +44,9 @@ public class ReporteCiudadesService {
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -60,7 +59,7 @@ public class ReporteCiudadesService {
             document.add(ReporteUtil.crearTituloReporte("LISTA DE CIUDADES"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra     = ReporteUtil.colorZebraClaro();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(50);
@@ -69,14 +68,14 @@ public class ReporteCiudadesService {
 
             // Encabezados
             tabla.addCell(ReporteUtil.crearCelda("Provincia", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("Ciudad",    ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("Ciudad", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
             // Cuerpo (zebra)
             boolean zebra = false;
             for (CiudadDTO ciudad : request.getCiudades()) {
                 Color fondo = zebra ? colorZebra : Color.WHITE;
                 tabla.addCell(ReporteUtil.crearCelda(ciudad.getProvincia(), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(ciudad.getNombre(),    ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(ciudad.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
                 zebra = !zebra;
             }
 
@@ -95,19 +94,28 @@ public class ReporteCiudadesService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-    
+
     // =========================
-    //          XLSX (idéntico al front)
+    // XLSX (idéntico al front)
     // =========================
     public byte[] generarReporteXLSX(ReporteCiudadesRequest request) {
         // =========================
@@ -116,15 +124,15 @@ public class ReporteCiudadesService {
         final String NOMBRE_HOJA = "Ciudades";
         final int FILA_ENCABEZADO = 5;
 
-        // Merges B1:E1 ... B5:E5  => (row 0..4, col 1..4)
+        // Merges B1:E1 ... B5:E5 => (row 0..4, col 1..4)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 4;
 
         final String[] HEADERS = { "ITEM", "ID", "NOMBRE", "PROVINCIA", "ID_PROVINCIA" };
-        final int[] ANCHOS      = {   10,   20,      20,        20,            20     };
+        final int[] ANCHOS = { 10, 20, 20, 20, 20 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
@@ -176,10 +184,11 @@ public class ReporteCiudadesService {
 
             // 6) Alineaciones + bordes
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Header centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             // Cuerpo: col 0 centrado; col 1..4 izquierda
             if (ultimaFila >= filaDatosIni) {
@@ -191,13 +200,12 @@ public class ReporteCiudadesService {
             if (ultimaFila >= filaDatosIni) {
                 boolean[] filtros = new boolean[] { false, true, true, true, true };
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "CiudadesTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "CiudadesTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -211,9 +219,8 @@ public class ReporteCiudadesService {
         }
     }
 
-
     // =========================
-    //           CSV (dinámico del front → orden fijo aquí)
+    // CSV (dinámico del front → orden fijo aquí)
     // =========================
     public byte[] generarReporteCSV(ReporteCiudadesRequest request) {
         // === Contrato del CSV ===
@@ -227,7 +234,8 @@ public class ReporteCiudadesService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -236,15 +244,15 @@ public class ReporteCiudadesService {
             List<CiudadDTO> items = request.getCiudades();
             if (items != null && !items.isEmpty()) {
                 for (CiudadDTO c : items) {
-                    String id     = (c.getId() == null)       ? "" : String.valueOf(c.getId());
-                    String nombre = (c.getNombre() == null)   ? "" : c.getNombre();
-                    String prov   = (c.getProvincia() == null)? "" : c.getProvincia();
-                    String idProv = (c.getId_prov() == null)  ? "" : String.valueOf(c.getId_prov());
+                    String id = (c.getId() == null) ? "" : String.valueOf(c.getId());
+                    String nombre = (c.getNombre() == null) ? "" : c.getNombre();
+                    String prov = (c.getProvincia() == null) ? "" : c.getProvincia();
+                    String idProv = (c.getId_prov() == null) ? "" : String.valueOf(c.getId_prov());
 
                     sb.append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nombre)).append(DELIM)
-                    .append(UtilCsv.csvEscape(prov)).append(DELIM)
-                    .append(UtilCsv.csvEscape(idProv)).append(EOL);
+                            .append(UtilCsv.csvEscape(nombre)).append(DELIM)
+                            .append(UtilCsv.csvEscape(prov)).append(DELIM)
+                            .append(UtilCsv.csvEscape(idProv)).append(EOL);
                 }
             }
 
@@ -260,9 +268,8 @@ public class ReporteCiudadesService {
         }
     }
 
-    
     // =========================
-    //            XML (igual a tu xml2js)
+    // XML (igual a tu xml2js)
     // =========================
     public byte[] generarReporteXML(ReporteCiudadesRequest request) {
         final String NOMBRE_REPORTE = "Ciudades.xml";
@@ -283,15 +290,15 @@ public class ReporteCiudadesService {
             } else {
                 for (CiudadDTO c : items) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(c.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(c.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<nombre>")
-                    .append(UtilXml.xmlEsc(c.getNombre()))
-                    .append("</nombre>").append(EOL);
+                            .append(UtilXml.xmlEsc(c.getNombre()))
+                            .append("</nombre>").append(EOL);
 
                     sb.append(IND).append(IND).append("<provincia>")
-                    .append(UtilXml.xmlEsc(c.getProvincia()))
-                    .append("</provincia>").append(EOL);
+                            .append(UtilXml.xmlEsc(c.getProvincia()))
+                            .append("</provincia>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -306,6 +313,5 @@ public class ReporteCiudadesService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
 }

@@ -32,28 +32,27 @@ public class ReporteVacunaService {
     // METODO QUE GENERA EL PDF
     public byte[] generarReporteVacunasPDF(ReporteVacunasRequest request) {
         // DRY: constantes locales
-        final float[] WIDTHS_TABLA     = { 2f, 6f };
-        final float   PORC_ANCHO_TABLA = 45f;
-        final String  TITULO_REPORTE   = "LISTA TIPOS DE VACUNAS";
+        final float[] WIDTHS_TABLA = { 2f, 6f };
+        final float PORC_ANCHO_TABLA = 45f;
+        final String TITULO_REPORTE = "LISTA TIPOS DE VACUNAS";
 
         // Colores calculados una sola vez
         final Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-        final Color colorZebra     = ReporteUtil.colorZebraClaro();
+        final Color colorZebra = ReporteUtil.colorZebraClaro();
 
         Document document = null;
-        PdfWriter writer  = null;
+        PdfWriter writer = null;
         ByteArrayOutputStream baos = null;
 
         try {
             // 1) Inicialización de recursos PDF
-            baos     = new ByteArrayOutputStream();
+            baos = new ByteArrayOutputStream();
             document = new Document(PageSize.A4, 40, 40, 30, 50);
-            writer   = PdfWriter.getInstance(document, baos);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
-            ));
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes; no cambiamos diseño)
@@ -84,7 +83,7 @@ public class ReporteVacunaService {
             for (VacunaDTO v : lista) {
                 Color bg = zebra ? colorZebra : Color.WHITE;
                 tabla.addCell(ReporteUtil.crearCelda(String.valueOf(v.getId()), ReporteUtil.fuenteTablaData(), bg));
-                tabla.addCell(ReporteUtil.crearCelda(v.getNombre(),               ReporteUtil.fuenteTablaData(), bg));
+                tabla.addCell(ReporteUtil.crearCelda(v.getNombre(), ReporteUtil.fuenteTablaData(), bg));
                 zebra = !zebra;
             }
 
@@ -103,13 +102,22 @@ public class ReporteVacunaService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
@@ -121,21 +129,21 @@ public class ReporteVacunaService {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA     = "Vacunas"; // ≤ 31 chars
-        final int    FILA_ENCABEZADO = 5;        // fila 6 (idx 5)
+        final String NOMBRE_HOJA = "Vacunas"; // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5; // fila 6 (idx 5)
 
         // MERGES exactos (B1:C1 ... B5:C5) => (row 0..4, col 1..2)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 2;
 
         final String[] HEADERS = { "ITEM", "CODIGO", "NOMBRE" };
-        final int[]    ANCHOS  = {    20,      30,      40   };
+        final int[] ANCHOS = { 20, 30, 40 };
 
         // Filtros: ITEM sin filtro; resto con filtro
         final boolean[] FILTROS = new boolean[] { false, true, true };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
@@ -154,10 +162,9 @@ public class ReporteVacunaService {
             // 3) TÍTULOS
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(
-                hoja, 0, 1,
-                UtilExcel.aMayusculasSeguras(request.getEmpresa()),
-                estiloTitulo
-            ); // B1
+                    hoja, 0, 1,
+                    UtilExcel.aMayusculasSeguras(request.getEmpresa()),
+                    estiloTitulo); // B1
             UtilExcel.establecerTexto(hoja, 1, 1, "LISTA TIPOS DE VACUNAS", estiloTitulo); // B2
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
@@ -184,37 +191,36 @@ public class ReporteVacunaService {
 
             for (VacunaDTO v : ordenados) {
                 Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                UtilExcel.establecerValor(r, 0, item++, null);                               // ITEM
-                UtilExcel.establecerValor(r, 1, v.getId(), null);                            // CODIGO
+                UtilExcel.establecerValor(r, 0, item++, null); // ITEM
+                UtilExcel.establecerValor(r, 1, v.getId(), null); // CODIGO
                 UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(v.getNombre()), null); // NOMBRE
             }
 
             int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
-            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto izquierda)
+            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto
+            // izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado
             UtilExcel.aplicarEstiloARegion(
-                hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
-                0, HEADERS.length - 1, estiloCentroBorde, true
-            );
+                    hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
+                    0, HEADERS.length - 1, estiloCentroBorde, true);
 
             // Cuerpo
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true); // ITEM
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 2, estiloIzqBorde, true);    // CODIGO..NOMBRE
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 2, estiloIzqBorde, true); // CODIGO..NOMBRE
 
                 // 7) Tabla estilizada (A6:Cn), zebra y AutoFilter (ITEM sin filtro)
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "VacunasTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    FILTROS
-                );
+                        hoja,
+                        "VacunasTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        FILTROS);
             }
 
             // 8) Cierre + retorno
@@ -230,7 +236,6 @@ public class ReporteVacunaService {
         }
     }
 
-    
     // =========================
     // CSV
     // =========================
@@ -246,7 +251,8 @@ public class ReporteVacunaService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -255,11 +261,11 @@ public class ReporteVacunaService {
             List<VacunaDTO> items = request.getVacunas();
             if (items != null && !items.isEmpty()) {
                 for (VacunaDTO v : items) {
-                    String id     = (v == null || v.getId() == null)     ? "" : String.valueOf(v.getId());
+                    String id = (v == null || v.getId() == null) ? "" : String.valueOf(v.getId());
                     String nombre = (v == null || v.getNombre() == null) ? "" : v.getNombre();
 
                     sb.append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nombre)).append(EOL);
+                            .append(UtilCsv.csvEscape(nombre)).append(EOL);
                 }
             }
 
@@ -275,7 +281,6 @@ public class ReporteVacunaService {
         }
     }
 
-        
     // =========================
     // XML
     // =========================
@@ -303,11 +308,12 @@ public class ReporteVacunaService {
             } else {
                 for (VacunaDTO v : ordenados) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(v == null ? null : v.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(v == null ? null : v.getId())).append("\">")
+                            .append(EOL);
 
                     sb.append(IND).append(IND).append("<nombre>")
-                    .append(UtilXml.xmlEsc(v == null ? null : v.getNombre()))
-                    .append("</nombre>").append(EOL);
+                            .append(UtilXml.xmlEsc(v == null ? null : v.getNombre()))
+                            .append("</nombre>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -324,7 +330,6 @@ public class ReporteVacunaService {
         }
     }
 
-        
     // =========================
     // Helpers
     // =========================

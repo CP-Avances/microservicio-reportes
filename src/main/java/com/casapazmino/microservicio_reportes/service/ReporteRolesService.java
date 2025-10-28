@@ -45,9 +45,9 @@ public class ReporteRolesService {
         final float SPACING_BEFORE_TABLA = 5f;
         final float PADDING_TITULOS = 3f;
 
-        final Color COLOR_PRIMARIO   = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+        final Color COLOR_PRIMARIO = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
         final Color COLOR_SECUNDARIO = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-        final Color COLOR_ZEBRA      = ReporteUtil.colorZebraClaro();
+        final Color COLOR_ZEBRA = ReporteUtil.colorZebraClaro();
 
         final String[] HEADERS = { "PÁGINA", "FUNCIÓN", "MÓDULO", "APLICACIÓN WEB", "APLICACIÓN MÓVIL" };
 
@@ -63,8 +63,7 @@ public class ReporteRolesService {
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
-            ));
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -87,7 +86,8 @@ public class ReporteRolesService {
                     encabezado.setWidthPercentage(WIDTH_PERCENT_100);
                     encabezado.setSpacingBefore(SPACING_BEFORE_ENCABEZADO);
 
-                    PdfPCell celdaRol = new PdfPCell(new Phrase("ROL: " + rol.getNombre(), ReporteUtil.fuenteEncabezado()));
+                    PdfPCell celdaRol = new PdfPCell(
+                            new Phrase("ROL: " + rol.getNombre(), ReporteUtil.fuenteEncabezado()));
                     celdaRol.setBackgroundColor(COLOR_PRIMARIO);
                     celdaRol.setPadding(PADDING_TITULOS);
                     encabezado.addCell(celdaRol);
@@ -115,7 +115,8 @@ public class ReporteRolesService {
 
                     // Encabezados
                     for (String h : HEADERS) {
-                        tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), COLOR_SECUNDARIO));
+                        tabla.addCell(
+                                ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), COLOR_SECUNDARIO));
                     }
 
                     // Cuerpo con zebra
@@ -130,9 +131,12 @@ public class ReporteRolesService {
                             tabla.addCell(ReporteUtil.crearCelda(
                                     transformarModulo(f.getNombre_modulo()), ReporteUtil.fuenteTablaData(), fondo));
 
-                            // Mantener la lógica original: WEB = "Sí" cuando !movil; MÓVIL = "Sí" cuando movil
-                            tabla.addCell(ReporteUtil.crearCelda(f.getMovil() ? "" : "Sí", ReporteUtil.fuenteTablaData(), fondo));
-                            tabla.addCell(ReporteUtil.crearCelda(f.getMovil() ? "Sí" : "", ReporteUtil.fuenteTablaData(), fondo));
+                            // Mantener la lógica original: WEB = "Sí" cuando !movil; MÓVIL = "Sí" cuando
+                            // movil
+                            tabla.addCell(ReporteUtil.crearCelda(f.getMovil() ? "" : "Sí",
+                                    ReporteUtil.fuenteTablaData(), fondo));
+                            tabla.addCell(ReporteUtil.crearCelda(f.getMovil() ? "Sí" : "",
+                                    ReporteUtil.fuenteTablaData(), fondo));
                         }
                     }
 
@@ -153,31 +157,39 @@ public class ReporteRolesService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-
 
     public byte[] generarReporteRolesXLSX(ReporteRolesRequest request) {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA    = "Funcionalidades de Rol"; // ≤ 31 chars
-        final int    FILA_ENCABEZADO = 5;                       // fila 6 (idx 5)
+        final String NOMBRE_HOJA = "Funcionalidades de Rol"; // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5; // fila 6 (idx 5)
 
         // Merges para cabecera (B1:G1 ... B5:G5) → col 1..6 (B..G)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 6;
 
         final String[] HEADERS = {
-            "ITEM", "ROL", "PÁGINA", "FUNCIÓN", "MÓDULO", "APLICACIÓN WEB", "APLICACIÓN MÓVIL"
+                "ITEM", "ROL", "PÁGINA", "FUNCIÓN", "MÓDULO", "APLICACIÓN WEB", "APLICACIÓN MÓVIL"
         };
 
         final int[] ANCHOS = { 10, 30, 40, 60, 30, 20, 20 };
@@ -186,7 +198,7 @@ public class ReporteRolesService {
         final boolean[] FILTROS = new boolean[] { false, true, true, true, true, true, true };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
@@ -205,10 +217,9 @@ public class ReporteRolesService {
             // 3) TÍTULOS (mismo estilo que el resto)
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(
-                hoja, 0, 1,
-                UtilExcel.aMayusculasSeguras(request.getEmpresa()),
-                estiloTitulo
-            ); // B1
+                    hoja, 0, 1,
+                    UtilExcel.aMayusculasSeguras(request.getEmpresa()),
+                    estiloTitulo); // B1
             UtilExcel.establecerTexto(hoja, 1, 1, "PERMISOS O FUNCIONALIDADES DEL ROL", estiloTitulo); // B2
 
             // 4) ENCABEZADOS + ANCHOS (fila 6 → idx 5)
@@ -227,19 +238,20 @@ public class ReporteRolesService {
             int item = 1;
 
             CellStyle estCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             if (request.getRoles() != null) {
                 for (RolDTO rol : request.getRoles()) {
-                    if (rol.getFunciones() == null) continue;
+                    if (rol.getFunciones() == null)
+                        continue;
 
                     for (FuncionDTO f : rol.getFunciones()) {
                         Row r = UtilExcel.asegurarFila(hoja, filaActual++);
 
-                        UtilExcel.establecerValor(r, 0, item++,            estCentroBorde); // ITEM
-                        UtilExcel.establecerValor(r, 1, rol.getNombre(),   estIzqBorde);    // ROL
-                        UtilExcel.establecerValor(r, 2, f.getPagina(),     estIzqBorde);    // PÁGINA
-                        UtilExcel.establecerValor(r, 3, f.getAccion(),     estIzqBorde);    // FUNCIÓN
+                        UtilExcel.establecerValor(r, 0, item++, estCentroBorde); // ITEM
+                        UtilExcel.establecerValor(r, 1, rol.getNombre(), estIzqBorde); // ROL
+                        UtilExcel.establecerValor(r, 2, f.getPagina(), estIzqBorde); // PÁGINA
+                        UtilExcel.establecerValor(r, 3, f.getAccion(), estIzqBorde); // FUNCIÓN
                         UtilExcel.establecerValor(r, 4, transformarModulo(f.getNombre_modulo()), estIzqBorde); // MÓDULO
                         UtilExcel.establecerValor(r, 5, f.getMovil() ? "" : "Sí", estCentroBorde); // APP WEB
                         UtilExcel.establecerValor(r, 6, f.getMovil() ? "Sí" : "", estCentroBorde); // APP MÓVIL
@@ -251,24 +263,25 @@ public class ReporteRolesService {
 
             // 6) ALINEACIONES + BORDES por regiones (como en Provincias)
             // Encabezado centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estCentroBorde, true);
 
             // Cuerpo: col 0 centrada; resto izquierda
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, HEADERS.length - 1, estIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, HEADERS.length - 1, estIzqBorde,
+                        true);
             }
 
             // 7) TABLA estilizada + AutoFilter (ITEM sin filtro)
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "RolesTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    FILTROS
-                );
+                        hoja,
+                        "RolesTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        FILTROS);
             }
 
             // 8) Cierre + retorno
@@ -284,7 +297,6 @@ public class ReporteRolesService {
         }
     }
 
-    
     // ======================= CSV =======================
     public byte[] generarReporteRolesCSV(ReporteRolesRequest request) {
         // === Contrato del CSV ===
@@ -298,7 +310,8 @@ public class ReporteRolesService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -309,7 +322,8 @@ public class ReporteRolesService {
             if (roles != null && !roles.isEmpty()) {
                 for (RolDTO rol : roles) {
                     List<FuncionDTO> funciones = (rol == null) ? null : rol.getFunciones();
-                    if (funciones == null || funciones.isEmpty()) continue;
+                    if (funciones == null || funciones.isEmpty())
+                        continue;
 
                     for (FuncionDTO f : funciones) {
                         String nombreRol = (rol == null || rol.getNombre() == null) ? "" : rol.getNombre();
@@ -323,17 +337,18 @@ public class ReporteRolesService {
                             modulo = (nomModulo == null) ? "" : transformarModulo(nomModulo);
                         }
 
-                        boolean esMovil = (f != null && ((f.getMovil() instanceof Boolean) ? Boolean.TRUE.equals(f.getMovil()) : false));
-                        String appWeb   = esMovil ? ""  : "Sí";
+                        boolean esMovil = (f != null
+                                && ((f.getMovil() instanceof Boolean) ? Boolean.TRUE.equals(f.getMovil()) : false));
+                        String appWeb = esMovil ? "" : "Sí";
                         String appMovil = esMovil ? "Sí" : "";
 
                         sb.append(n++).append(DELIM)
-                        .append(UtilCsv.csvEscape(nombreRol)).append(DELIM)
-                        .append(UtilCsv.csvEscape(pagina)).append(DELIM)
-                        .append(UtilCsv.csvEscape(accion)).append(DELIM)
-                        .append(UtilCsv.csvEscape(modulo)).append(DELIM)
-                        .append(UtilCsv.csvEscape(appWeb)).append(DELIM)
-                        .append(UtilCsv.csvEscape(appMovil)).append(EOL);
+                                .append(UtilCsv.csvEscape(nombreRol)).append(DELIM)
+                                .append(UtilCsv.csvEscape(pagina)).append(DELIM)
+                                .append(UtilCsv.csvEscape(accion)).append(DELIM)
+                                .append(UtilCsv.csvEscape(modulo)).append(DELIM)
+                                .append(UtilCsv.csvEscape(appWeb)).append(DELIM)
+                                .append(UtilCsv.csvEscape(appMovil)).append(EOL);
                     }
                 }
             }
@@ -350,7 +365,6 @@ public class ReporteRolesService {
         }
     }
 
-        
     // ======================= XML =======================
     public byte[] generarReporteRolesXML(ReporteRolesRequest request) {
         final String NOMBRE_REPORTE = "Roles.xml";
@@ -375,8 +389,8 @@ public class ReporteRolesService {
                     sb.append(IND).append("<").append(ITEM_TAG).append(">").append(EOL);
 
                     sb.append(IND).append(IND).append("<nombre>")
-                    .append(UtilXml.xmlEsc(rol == null ? null : rol.getNombre()))
-                    .append("</nombre>").append(EOL);
+                            .append(UtilXml.xmlEsc(rol == null ? null : rol.getNombre()))
+                            .append("</nombre>").append(EOL);
 
                     sb.append(IND).append(IND).append("<funciones>").append(EOL);
 
@@ -392,24 +406,24 @@ public class ReporteRolesService {
                             sb.append(IND).append(IND).append(IND).append("<detalle>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<pagina>")
-                            .append(UtilXml.xmlEsc(f == null ? null : f.getPagina()))
-                            .append("</pagina>").append(EOL);
+                                    .append(UtilXml.xmlEsc(f == null ? null : f.getPagina()))
+                                    .append("</pagina>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<funcion>")
-                            .append(UtilXml.xmlEsc(f == null ? null : f.getAccion()))
-                            .append("</funcion>").append(EOL);
+                                    .append(UtilXml.xmlEsc(f == null ? null : f.getAccion()))
+                                    .append("</funcion>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<modulo>")
-                            .append(UtilXml.xmlEsc(modulo))
-                            .append("</modulo>").append(EOL);
+                                    .append(UtilXml.xmlEsc(modulo))
+                                    .append("</modulo>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<aplicacion_web>")
-                            .append(UtilXml.xmlEsc(appWeb))
-                            .append("</aplicacion_web>").append(EOL);
+                                    .append(UtilXml.xmlEsc(appWeb))
+                                    .append("</aplicacion_web>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<aplicacion_movil>")
-                            .append(UtilXml.xmlEsc(appMovil))
-                            .append("</aplicacion_movil>").append(EOL);
+                                    .append(UtilXml.xmlEsc(appMovil))
+                                    .append("</aplicacion_movil>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append("</detalle>").append(EOL);
                         }
@@ -430,7 +444,6 @@ public class ReporteRolesService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
     // METODO AUXILIAR PARA CONVERTIR EL DATO A UN TEXTO MAS AMIGABLE
     private String transformarModulo(String nombreModulo) {

@@ -32,16 +32,17 @@ public class ReporteTimbresLibresService {
     public byte[] generarReportePDF(ReporteTimbresLibresRequest request) {
 
         // ➊ DRY: constantes locales (manteniendo el look & feel)
-        final String TITULO_DEF = "TIMBRES LIBRES - " + ((request.getOpcionBusqueda() != null && request.getOpcionBusqueda() == 1) ? "ACTIVOS" : "INACTIVOS");
+        final String TITULO_DEF = "TIMBRES LIBRES - "
+                + ((request.getOpcionBusqueda() != null && request.getOpcionBusqueda() == 1) ? "ACTIVOS" : "INACTIVOS");
         final float[] WIDTHS_CABECERA = { 3f, 3f, 2f };
         final float[] WIDTHS_EMPLEADO = { 3f, 4f, 3f };
         final float[] WIDTHS_TABLA_CON_DISP = { 0.8f, 1.2f, 1.0f, 1.2f, 1.0f, 1.0f, 1.2f, 3.0f, 1.2f, 1.2f };
         final float[] WIDTHS_TABLA_SIN_DISP = { 0.8f, 1.2f, 1.0f, 1.0f, 1.2f, 3.0f, 1.2f, 1.2f };
         final int WIDTH_PERCENT_100 = 100;
 
-        final Color COLOR_PRIMARIO   = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+        final Color COLOR_PRIMARIO = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
         final Color COLOR_SECUNDARIO = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-        final Font  FUENTE_TEXTO     = ReporteUtil.fuenteTexto();
+        final Font FUENTE_TEXTO = ReporteUtil.fuenteTexto();
 
         Document document = null;
         PdfWriter writer = null;
@@ -58,13 +59,13 @@ public class ReporteTimbresLibresService {
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
-            ));
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-            if (logo != null) document.add(logo);
+            if (logo != null)
+                document.add(logo);
 
             // Empresa
             Paragraph empresa = new Paragraph(safe(request.getEmpresa()), ReporteUtil.fuenteEncabezado());
@@ -73,7 +74,8 @@ public class ReporteTimbresLibresService {
             document.add(empresa);
 
             // Título
-            String tituloStr = (request.getTitulo() == null || request.getTitulo().isEmpty()) ? TITULO_DEF : request.getTitulo();
+            String tituloStr = (request.getTitulo() == null || request.getTitulo().isEmpty()) ? TITULO_DEF
+                    : request.getTitulo();
             Paragraph titulo = new Paragraph(tituloStr, ReporteUtil.fuenteEncabezado());
             titulo.setAlignment(Element.ALIGN_CENTER);
             titulo.setSpacingAfter(0f);
@@ -82,9 +84,9 @@ public class ReporteTimbresLibresService {
             // Periodo (si aplica)
             if (request.getPeriodo() != null) {
                 Paragraph periodo = new Paragraph(
-                        "PERIODO DEL: " + safe(request.getPeriodo().getInicio()) + " AL " + safe(request.getPeriodo().getFin()),
-                        ReporteUtil.fuenteTexto()
-                );
+                        "PERIODO DEL: " + safe(request.getPeriodo().getInicio()) + " AL "
+                                + safe(request.getPeriodo().getFin()),
+                        ReporteUtil.fuenteTexto());
                 periodo.setAlignment(Element.ALIGN_CENTER);
                 periodo.setSpacingAfter(0f);
                 document.add(periodo);
@@ -94,9 +96,10 @@ public class ReporteTimbresLibresService {
             if (request.getDatos() != null) {
                 for (DatoGrupoDTO grupo : request.getDatos()) {
                     // 2.1 Cabecera principal (3 celdas, borde externo)
-                    String descripcion   = resolverDescripcionCabecera(request.getTipoFiltro(), grupo);
-                    String establecimiento = esEmpleadoFiltro(request.getTipoFiltro()) ? "" : "SUCURSAL: " + safe(grupo.getSucursal());
-                    int totalRegistros   = contarRegistrosTimbres(grupo);
+                    String descripcion = resolverDescripcionCabecera(request.getTipoFiltro(), grupo);
+                    String establecimiento = esEmpleadoFiltro(request.getTipoFiltro()) ? ""
+                            : "SUCURSAL: " + safe(grupo.getSucursal());
+                    int totalRegistros = contarRegistrosTimbres(grupo);
 
                     PdfPTable tablaCabecera = new PdfPTable(3);
                     tablaCabecera.setWidthPercentage(WIDTH_PERCENT_100);
@@ -104,9 +107,10 @@ public class ReporteTimbresLibresService {
                     tablaCabecera.setSpacingBefore(10f);
                     tablaCabecera.getDefaultCell().setBorder(Rectangle.NO_BORDER);
 
-                    tablaCabecera.addCell(celdaSinBordeIzquierda(descripcion,       FUENTE_TEXTO, COLOR_SECUNDARIO));
-                    tablaCabecera.addCell(celdaSinBordeIzquierda(establecimiento,   FUENTE_TEXTO, COLOR_SECUNDARIO));
-                    tablaCabecera.addCell(celdaSinBordeIzquierda("N° Registros: " + totalRegistros, FUENTE_TEXTO, COLOR_SECUNDARIO));
+                    tablaCabecera.addCell(celdaSinBordeIzquierda(descripcion, FUENTE_TEXTO, COLOR_SECUNDARIO));
+                    tablaCabecera.addCell(celdaSinBordeIzquierda(establecimiento, FUENTE_TEXTO, COLOR_SECUNDARIO));
+                    tablaCabecera.addCell(
+                            celdaSinBordeIzquierda("N° Registros: " + totalRegistros, FUENTE_TEXTO, COLOR_SECUNDARIO));
 
                     // Borde alrededor de toda la cabecera (sin tocar helpers)
                     tablaCabecera.setTableEvent((table, widths, heights, headerRows, rowStart, canvas) -> {
@@ -115,14 +119,14 @@ public class ReporteTimbresLibresService {
                                 widths[0][0],
                                 heights[heights.length - 1],
                                 widths[0][widths[0].length - 1] - widths[0][0],
-                                heights[0] - heights[heights.length - 1]
-                        );
+                                heights[0] - heights[heights.length - 1]);
                         cb.stroke();
                     });
                     document.add(tablaCabecera);
 
                     // 2.2 Ficha del empleado (3x3, fondo gris claro, borde externo)
-                    if (grupo.getEmpleados() == null) continue;
+                    if (grupo.getEmpleados() == null)
+                        continue;
 
                     for (EmpleadoDTO empl : grupo.getEmpleados()) {
                         PdfPTable tablaEmpleado = new PdfPTable(3);
@@ -131,15 +135,15 @@ public class ReporteTimbresLibresService {
                         tablaEmpleado.setWidths(WIDTHS_EMPLEADO);
 
                         String[][] filas = new String[][] {
-                            { "C.C.: " + safe(empl.getIdentificacion()),
-                            "EMPLEADO: " + (safe(empl.getApellido()) + " " + safe(empl.getNombre())).trim(),
-                            "COD: " + safe(empl.getCodigo()) },
-                            { "RÉGIMEN LABORAL: " + safe(empl.getRegimen()),
-                            "DEPARTAMENTO: " + safe(empl.getDepartamento()),
-                            "CARGO: " + safe(empl.getCargo()) },
-                            { "CIUDAD: " + safe(empl.getCiudad()),
-                            "SUCURSAL: " + safe(empl.getSucursal()),
-                            "ROL: " + safe(empl.getRol()) }
+                                { "C.C.: " + safe(empl.getIdentificacion()),
+                                        "EMPLEADO: " + (safe(empl.getApellido()) + " " + safe(empl.getNombre())).trim(),
+                                        "COD: " + safe(empl.getCodigo()) },
+                                { "RÉGIMEN LABORAL: " + safe(empl.getRegimen()),
+                                        "DEPARTAMENTO: " + safe(empl.getDepartamento()),
+                                        "CARGO: " + safe(empl.getCargo()) },
+                                { "CIUDAD: " + safe(empl.getCiudad()),
+                                        "SUCURSAL: " + safe(empl.getSucursal()),
+                                        "ROL: " + safe(empl.getRol()) }
                         };
 
                         for (String[] fila : filas) {
@@ -158,8 +162,7 @@ public class ReporteTimbresLibresService {
                                     widths[0][0],
                                     heights[heights.length - 1],
                                     widths[0][widths[0].length - 1] - widths[0][0],
-                                    heights[0] - heights[heights.length - 1]
-                            );
+                                    heights[0] - heights[heights.length - 1]);
                             cb.stroke();
                         });
                         document.add(tablaEmpleado);
@@ -173,7 +176,8 @@ public class ReporteTimbresLibresService {
                         // Encabezado fila 1
                         addHeaderCellRowSpan(tabla, "N°", COLOR_PRIMARIO, 2);
                         addHeaderCellColSpan(tabla, "TIMBRE", COLOR_PRIMARIO, 2);
-                        if (conDispositivo) addHeaderCellColSpan(tabla, "DISPOSITIVO", COLOR_PRIMARIO, 2);
+                        if (conDispositivo)
+                            addHeaderCellColSpan(tabla, "DISPOSITIVO", COLOR_PRIMARIO, 2);
                         addHeaderCellRowSpan(tabla, "RELOJ", COLOR_PRIMARIO, 2);
                         addHeaderCellRowSpan(tabla, "ACCIÓN", COLOR_PRIMARIO, 2);
                         addHeaderCellRowSpan(tabla, "OBSERVACIÓN", COLOR_PRIMARIO, 2);
@@ -182,15 +186,16 @@ public class ReporteTimbresLibresService {
 
                         // Encabezado fila 2 (subtítulos)
                         addHeaderCell(tabla, "FECHA", COLOR_PRIMARIO);
-                        addHeaderCell(tabla, "HORA",  COLOR_PRIMARIO);
+                        addHeaderCell(tabla, "HORA", COLOR_PRIMARIO);
                         if (conDispositivo) {
                             addHeaderCell(tabla, "FECHA", COLOR_PRIMARIO);
-                            addHeaderCell(tabla, "HORA",  COLOR_PRIMARIO);
+                            addHeaderCell(tabla, "HORA", COLOR_PRIMARIO);
                         }
 
                         // Cuerpo con zebra
                         int c = 0;
-                        List<TimbreDTO> timbres = (empl.getTimbres() != null) ? empl.getTimbres() : Collections.emptyList();
+                        List<TimbreDTO> timbres = (empl.getTimbres() != null) ? empl.getTimbres()
+                                : Collections.emptyList();
                         if (!timbres.isEmpty()) {
                             for (TimbreDTO t : timbres) {
                                 c++;
@@ -198,16 +203,16 @@ public class ReporteTimbresLibresService {
 
                                 addBodyCell(tabla, String.valueOf(c), bg, true);
                                 addBodyCell(tabla, safe(t.getFechaServidor()), bg, false);
-                                addBodyCell(tabla, safe(t.getHoraServidor()),  bg, false);
+                                addBodyCell(tabla, safe(t.getHoraServidor()), bg, false);
                                 if (conDispositivo) {
                                     addBodyCell(tabla, safe(t.getFechaDispositivo()), bg, false);
-                                    addBodyCell(tabla, safe(t.getHoraDispositivo()),  bg, false);
+                                    addBodyCell(tabla, safe(t.getHoraDispositivo()), bg, false);
                                 }
-                                addBodyCell(tabla, safe(t.getId_reloj()),      bg, true);
+                                addBodyCell(tabla, safe(t.getId_reloj()), bg, true);
                                 addBodyCell(tabla, mapAccion(safe(t.getAccion())), bg, true);
-                                addBodyCell(tabla, safe(t.getObservacion()),   bg, false);
-                                addBodyCell(tabla, safe(t.getLongitud()),      bg, false);
-                                addBodyCell(tabla, safe(t.getLatitud()),       bg, false);
+                                addBodyCell(tabla, safe(t.getObservacion()), bg, false);
+                                addBodyCell(tabla, safe(t.getLongitud()), bg, false);
+                                addBodyCell(tabla, safe(t.getLatitud()), bg, false);
                             }
                         } else {
                             PdfPCell vacio = new PdfPCell(new Phrase("SIN REGISTROS", ReporteUtil.fuenteTexto()));
@@ -234,18 +239,26 @@ public class ReporteTimbresLibresService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
 
-    
     // =========================
     // XLSX (misma estructura ExcelJS)
     // =========================
@@ -253,11 +266,11 @@ public class ReporteTimbresLibresService {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA     = "Timbres";  // ≤ 31 chars
-        final int    FILA_ENCABEZADO = 5;          // fila 6 (idx 5)
+        final String NOMBRE_HOJA = "Timbres"; // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5; // fila 6 (idx 5)
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
@@ -272,7 +285,7 @@ public class ReporteTimbresLibresService {
             }
 
             // 2) Merges de cabecera
-            //    Si hay dispositivo → B..R (col 1..17); si no → B..P (col 1..15)
+            // Si hay dispositivo → B..R (col 1..17); si no → B..P (col 1..15)
             final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
             final int MERGE_COL_INI = 1;
             final int MERGE_COL_FIN = conDispositivo ? 17 : 15;
@@ -301,35 +314,35 @@ public class ReporteTimbresLibresService {
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
             final String[] HEADERS_SIN_DISP = {
-                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
-                "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
-                "FECHA TIMBRE", "HORA TIMBRE", "RELOJ", "ACCIÓN",
-                "OBSERVACIÓN", "LATITUD", "LONGITUD"
+                    "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
+                    "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
+                    "FECHA TIMBRE", "HORA TIMBRE", "RELOJ", "ACCIÓN",
+                    "OBSERVACIÓN", "LATITUD", "LONGITUD"
             };
             final int[] ANCHOS_SIN_DISP = {
-                10, 20, 20, 28, 18, 18, 18, 20, 18, 20, 16, 16, 20, 24, 18, 18
+                    10, 20, 20, 28, 18, 18, 18, 20, 18, 20, 16, 16, 20, 24, 18, 18
             };
             final boolean[] FILTROS_SIN_DISP = {
-                false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true
+                    false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true
             };
 
             final String[] HEADERS_CON_DISP = {
-                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
-                "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
-                "FECHA TIMBRE", "HORA TIMBRE", "RELOJ", "ACCIÓN",
-                "OBSERVACIÓN", "LATITUD", "LONGITUD",
-                "FECHA TIMBRE DISPOSITIVO", "HORA TIMBRE DISPOSITIVO"
+                    "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
+                    "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
+                    "FECHA TIMBRE", "HORA TIMBRE", "RELOJ", "ACCIÓN",
+                    "OBSERVACIÓN", "LATITUD", "LONGITUD",
+                    "FECHA TIMBRE DISPOSITIVO", "HORA TIMBRE DISPOSITIVO"
             };
             final int[] ANCHOS_CON_DISP = {
-                10, 20, 20, 28, 18, 18, 18, 20, 18, 20, 16, 16, 20, 24, 18, 18, 22, 20
+                    10, 20, 20, 28, 18, 18, 18, 20, 18, 20, 16, 16, 20, 24, 18, 18, 22, 20
             };
             final boolean[] FILTROS_CON_DISP = {
-                false, true, true, true, true, true, true, true, true,
-                true, true, true, true, true, true, true, true, true
+                    false, true, true, true, true, true, true, true, true,
+                    true, true, true, true, true, true, true, true, true
             };
 
             final String[] HEADERS = conDispositivo ? HEADERS_CON_DISP : HEADERS_SIN_DISP;
-            final int[]    ANCHOS  = conDispositivo ? ANCHOS_CON_DISP  : ANCHOS_SIN_DISP;
+            final int[] ANCHOS = conDispositivo ? ANCHOS_CON_DISP : ANCHOS_SIN_DISP;
             final boolean[] FILTROS = conDispositivo ? FILTROS_CON_DISP : FILTROS_SIN_DISP;
 
             Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
@@ -348,7 +361,8 @@ public class ReporteTimbresLibresService {
 
             if (request.getDatos() != null) {
                 for (DatoGrupoDTO grupo : request.getDatos()) {
-                    if (grupo == null || grupo.getEmpleados() == null) continue;
+                    if (grupo == null || grupo.getEmpleados() == null)
+                        continue;
 
                     for (EmpleadoDTO e : grupo.getEmpleados()) {
                         String apenom = (safe(e.getApellido()) + " " + safe(e.getNombre())).trim();
@@ -414,7 +428,7 @@ public class ReporteTimbresLibresService {
 
             // 6) Alineaciones + bordes (por región)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Header centrado con borde
             UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
@@ -424,20 +438,20 @@ public class ReporteTimbresLibresService {
                 // ITEM centrado
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
                 // resto izquierda
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde,
+                        true);
             }
 
             // 7) Tabla estilizada + AutoFilter (ITEM sin filtro)
             if (ultimaFila >= filaDatosIni) {
                 String tableName = conDispositivo ? "TimbresReporteTabla" : "TimbresAbiertoReporteTabla";
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    tableName,
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    FILTROS
-                );
+                        hoja,
+                        tableName,
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        FILTROS);
             }
 
             // 8) Cierre + retorno
@@ -453,7 +467,6 @@ public class ReporteTimbresLibresService {
         }
     }
 
-    
     // =========================
     // Helpers (idénticos al otro módulo)
     // =========================
@@ -497,16 +510,18 @@ public class ReporteTimbresLibresService {
         t.addCell(c);
     }
 
-
     private boolean hayColumnaDispositivo(ReporteTimbresLibresRequest req) {
-        if (req == null || req.getDatos() == null) return false;
+        if (req == null || req.getDatos() == null)
+            return false;
         for (DatoGrupoDTO g : req.getDatos()) {
-            if (g.getEmpleados() == null) continue;
+            if (g.getEmpleados() == null)
+                continue;
             for (EmpleadoDTO e : g.getEmpleados()) {
-                if (e.getTimbres() == null) continue;
+                if (e.getTimbres() == null)
+                    continue;
                 for (TimbreDTO t : e.getTimbres()) {
                     if ((t.getFechaDispositivo() != null && !t.getFechaDispositivo().trim().isEmpty()) ||
-                        (t.getHoraDispositivo()  != null && !t.getHoraDispositivo().trim().isEmpty())) {
+                            (t.getHoraDispositivo() != null && !t.getHoraDispositivo().trim().isEmpty())) {
                         return true;
                     }
                 }
@@ -518,12 +533,19 @@ public class ReporteTimbresLibresService {
     private String resolverDescripcionCabecera(String tipoFiltro, DatoGrupoDTO g) {
         String tf = safe(tipoFiltro).toLowerCase();
         switch (tf) {
-            case "regimen":      return "RÉGIMEN LABORAL: " + safe(g.getDepartamento()); // si tu payload trae 'nombre', cámbialo por g.getNombre()
-            case "departamento": return "DEPARTAMENTO: " + safe(g.getDepartamento());
-            case "cargo":        return "CARGO: " + safe(g.getDepartamento());           // idem comentario
-            case "ciudad":       return "CIUDAD: " + safe(g.getCiudad());
-            case "empleado":     return "LISTA EMPLEADOS";
-            default:             return "LISTA EMPLEADOS";
+            case "regimen":
+                return "RÉGIMEN LABORAL: " + safe(g.getDepartamento()); // si tu payload trae 'nombre', cámbialo por
+                                                                        // g.getNombre()
+            case "departamento":
+                return "DEPARTAMENTO: " + safe(g.getDepartamento());
+            case "cargo":
+                return "CARGO: " + safe(g.getDepartamento()); // idem comentario
+            case "ciudad":
+                return "CIUDAD: " + safe(g.getCiudad());
+            case "empleado":
+                return "LISTA EMPLEADOS";
+            default:
+                return "LISTA EMPLEADOS";
         }
     }
 
@@ -532,7 +554,8 @@ public class ReporteTimbresLibresService {
     }
 
     private int contarRegistrosTimbres(DatoGrupoDTO grupo) {
-        if (grupo.getEmpleados() == null) return 0;
+        if (grupo.getEmpleados() == null)
+            return 0;
         int total = 0;
         for (EmpleadoDTO e : grupo.getEmpleados()) {
             total += (e.getTimbres() == null) ? 0 : e.getTimbres().size();
@@ -541,20 +564,32 @@ public class ReporteTimbresLibresService {
     }
 
     private String mapAccion(String cod) {
-        if (cod == null) return "";
+        if (cod == null)
+            return "";
         String k = cod.trim().toUpperCase();
         switch (k) {
-            case "EOS": return "Entrada o salida";           // EoS normalizado
-            case "AES": return "Inicio o fin alimentación";
-            case "PES": return "Inicio o fin permiso";
-            case "E":   return "Entrada";
-            case "S":   return "Salida";
-            case "I/A": return "Inicio alimentación";
-            case "F/A": return "Fin alimentación";
-            case "I/P": return "Inicio permiso";
-            case "F/P": return "Fin permiso";
-            case "HA":  return "Timbre libre";
-            default:    return cod; // si ya viene mapeado desde FE, se respeta
+            case "EOS":
+                return "Entrada o salida"; // EoS normalizado
+            case "AES":
+                return "Inicio o fin alimentación";
+            case "PES":
+                return "Inicio o fin permiso";
+            case "E":
+                return "Entrada";
+            case "S":
+                return "Salida";
+            case "I/A":
+                return "Inicio alimentación";
+            case "F/A":
+                return "Fin alimentación";
+            case "I/P":
+                return "Inicio permiso";
+            case "F/P":
+                return "Fin permiso";
+            case "HA":
+                return "Timbre libre";
+            default:
+                return cod; // si ya viene mapeado desde FE, se respeta
         }
     }
 
@@ -562,10 +597,10 @@ public class ReporteTimbresLibresService {
         return (val == null || val.equalsIgnoreCase("null")) ? "" : val;
     }
 
-
     private String fechaCortaExcel(String iso) {
-        if (iso == null) return "";
+        if (iso == null)
+            return "";
         String f = iso.trim();
         return (f.length() >= 10) ? f.substring(0, 10) : f;
-        }
+    }
 }

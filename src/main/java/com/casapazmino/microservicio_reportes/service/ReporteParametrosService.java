@@ -38,7 +38,7 @@ public class ReporteParametrosService {
 
         // DRY: constantes locales
         final float[] WIDTHS_ENCABEZADO = { 6.9f, 2.1f };
-        final float[] WIDTHS_DETALLES   = { 2f, 3f, 6f };
+        final float[] WIDTHS_DETALLES = { 2f, 3f, 6f };
         final String[] HEADERS_DETALLES = { "CÓDIGO DETALLE", "DETALLE", "DESCRIPCIÓN" };
 
         Document document = null;
@@ -51,10 +51,9 @@ public class ReporteParametrosService {
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -69,7 +68,7 @@ public class ReporteParametrosService {
             document.add(ReporteUtil.crearTituloReporte("PARÁMETROS GENERALES"));
 
             // Colores
-            Color colorPrincipal  = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
 
             // Iteración de parámetros
@@ -82,8 +81,7 @@ public class ReporteParametrosService {
                     encabezado.setWidths(WIDTHS_ENCABEZADO);
 
                     PdfPCell celdaParametro = new PdfPCell(
-                        new Phrase("PARÁMETRO: " + parametro.getDescripcion(), ReporteUtil.fuenteEncabezado())
-                    );
+                            new Phrase("PARÁMETRO: " + parametro.getDescripcion(), ReporteUtil.fuenteEncabezado()));
                     celdaParametro.setBackgroundColor(colorPrincipal);
                     celdaParametro.setPaddingTop(2f);
                     celdaParametro.setPaddingBottom(3f);
@@ -92,8 +90,7 @@ public class ReporteParametrosService {
                     encabezado.addCell(celdaParametro);
 
                     PdfPCell celdaCodigo = new PdfPCell(
-                        new Phrase("CÓDIGO PARAMETRO: " + parametro.getId(), ReporteUtil.fuenteEncabezado())
-                    );
+                            new Phrase("CÓDIGO PARAMETRO: " + parametro.getId(), ReporteUtil.fuenteEncabezado()));
                     celdaCodigo.setBackgroundColor(colorPrincipal);
                     celdaCodigo.setPaddingTop(2f);
                     celdaCodigo.setPaddingBottom(3f);
@@ -113,14 +110,18 @@ public class ReporteParametrosService {
 
                         // Encabezados de detalles
                         for (String h : HEADERS_DETALLES) {
-                            tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+                            tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorSecundario));
                         }
 
                         // Cuerpo de detalles (diseño original en blanco)
                         for (DetalleParametroDTO d : parametro.getDetalles()) {
-                            tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getId()),      ReporteUtil.fuenteTablaData(), Color.WHITE));
-                            tabla.addCell(ReporteUtil.crearCelda(d.getDescripcion(),              ReporteUtil.fuenteTablaData(), Color.WHITE));
-                            tabla.addCell(ReporteUtil.crearCelda(d.getObservacion(),              ReporteUtil.fuenteTablaData(), Color.WHITE));
+                            tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getId()),
+                                    ReporteUtil.fuenteTablaData(), Color.WHITE));
+                            tabla.addCell(ReporteUtil.crearCelda(d.getDescripcion(), ReporteUtil.fuenteTablaData(),
+                                    Color.WHITE));
+                            tabla.addCell(ReporteUtil.crearCelda(d.getObservacion(), ReporteUtil.fuenteTablaData(),
+                                    Color.WHITE));
                         }
 
                         document.add(tabla);
@@ -141,13 +142,22 @@ public class ReporteParametrosService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
@@ -157,8 +167,8 @@ public class ReporteParametrosService {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA     = "Parametros"; // ≤ 31 chars
-        final int    FILA_ENCABEZADO = 5;
+        final String NOMBRE_HOJA = "Parametros"; // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5;
 
         // Merges B1:D1 ... B5:D5 => (row 0..4, col 1..3)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
@@ -166,10 +176,10 @@ public class ReporteParametrosService {
 
         final String TITULO_REPORTE = "LISTA DE PARÁMETROS GENERALES";
         final String[] HEADERS = { "ITEM", "CÓDIGO PARAMETRO", "PARÁMETRO", "DETALLE", "DESCRIPCIÓN" };
-        final int[]    ANCHOS  = { 10, 25, 50, 20, 160 };
+        final int[] ANCHOS = { 10, 25, 50, 20, 160 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener encabezado visible
@@ -188,7 +198,7 @@ public class ReporteParametrosService {
             // 3) TÍTULOS (B1 empresa, B2 subtítulo)
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
-            UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo);                                     // B2
+            UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo); // B2
 
             // 4) ENCABEZADOS + ANCHOS
             Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
@@ -208,14 +218,16 @@ public class ReporteParametrosService {
             List<ParametroDTO> parametros = request.getParametros();
             if (parametros != null) {
                 for (ParametroDTO p : parametros) {
-                    if (p == null) continue;
+                    if (p == null)
+                        continue;
                     boolean tieneDetalles = (p.getDetalles() != null && !p.getDetalles().isEmpty());
                     if (tieneDetalles) {
                         for (DetalleParametroDTO d : p.getDetalles()) {
-                            if (d == null) continue;
+                            if (d == null)
+                                continue;
                             Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                            UtilExcel.establecerValor(r, 0, item++, null);                                // ITEM
-                            UtilExcel.establecerValor(r, 1, p.getId(), null);                             // CÓDIGO
+                            UtilExcel.establecerValor(r, 0, item++, null); // ITEM
+                            UtilExcel.establecerValor(r, 1, p.getId(), null); // CÓDIGO
                             UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(p.getDescripcion()), null);
                             UtilExcel.establecerValor(r, 3, UtilExcel.nuloComoVacio(d.getDescripcion()), null);
                             UtilExcel.establecerValor(r, 4, UtilExcel.nuloComoVacio(d.getObservacion()), null);
@@ -235,10 +247,11 @@ public class ReporteParametrosService {
 
             // 6) ALINEACIONES + BORDES
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             // Cuerpo: col 0 y 1 centrado; 2..4 izquierda
             if (ultimaFila >= filaDatosInicio) {
@@ -249,13 +262,12 @@ public class ReporteParametrosService {
                 // 7) TABLA estilizada + filtros (ITEM y CÓDIGO sin filtro)
                 boolean[] filtros = new boolean[] { false, false, true, true, true };
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "ParametrosTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "ParametrosTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -269,7 +281,6 @@ public class ReporteParametrosService {
         }
     }
 
-    
     public byte[] generarReporteParametrosCSV(ReporteParametrosRequest request) {
         // === Contrato del CSV ===
         final String NOMBRE_REPORTE = "Parametros.csv";
@@ -282,7 +293,8 @@ public class ReporteParametrosService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -293,7 +305,7 @@ public class ReporteParametrosService {
             if (parametros != null && !parametros.isEmpty()) {
                 for (ParametroDTO p : parametros) {
                     String codParam = (p == null || p.getId() == null) ? "" : String.valueOf(p.getId());
-                    String param    = (p == null || p.getDescripcion() == null) ? "" : p.getDescripcion();
+                    String param = (p == null || p.getDescripcion() == null) ? "" : p.getDescripcion();
 
                     List<DetalleParametroDTO> detalles = (p == null) ? null : p.getDetalles();
                     if (detalles != null && !detalles.isEmpty()) {
@@ -302,18 +314,18 @@ public class ReporteParametrosService {
                             String obs = (d == null || d.getObservacion() == null) ? "" : d.getObservacion();
 
                             sb.append(n++).append(DELIM)
-                            .append(UtilCsv.csvEscape(codParam)).append(DELIM)
-                            .append(UtilCsv.csvEscape(param)).append(DELIM)
-                            .append(UtilCsv.csvEscape(det)).append(DELIM)
-                            .append(UtilCsv.csvEscape(obs)).append(EOL);
+                                    .append(UtilCsv.csvEscape(codParam)).append(DELIM)
+                                    .append(UtilCsv.csvEscape(param)).append(DELIM)
+                                    .append(UtilCsv.csvEscape(det)).append(DELIM)
+                                    .append(UtilCsv.csvEscape(obs)).append(EOL);
                         }
                     } else {
                         // Fila sin detalle/descripcion
                         sb.append(n++).append(DELIM)
-                        .append(UtilCsv.csvEscape(codParam)).append(DELIM)
-                        .append(UtilCsv.csvEscape(param)).append(DELIM)
-                        .append(UtilCsv.csvEscape("")).append(DELIM)
-                        .append(UtilCsv.csvEscape("")).append(EOL);
+                                .append(UtilCsv.csvEscape(codParam)).append(DELIM)
+                                .append(UtilCsv.csvEscape(param)).append(DELIM)
+                                .append(UtilCsv.csvEscape("")).append(DELIM)
+                                .append(UtilCsv.csvEscape("")).append(EOL);
                     }
                 }
             }
@@ -330,13 +342,12 @@ public class ReporteParametrosService {
         }
     }
 
-    
     public byte[] generarReporteParametrosXML(ReporteParametrosRequest request) {
         final String NOMBRE_REPORTE = "ParametrosGenerales.xml";
         final String ROOT_TAG = "ParametrosGenerales";
         final String PARAM_TAG = "parametro";
         final String DETS_TAG = "detalles";
-        final String DET_TAG  = "detalle";
+        final String DET_TAG = "detalle";
         final String EOL = "\n";
         final String IND = "  ";
 
@@ -352,11 +363,11 @@ public class ReporteParametrosService {
             } else {
                 for (ParametroDTO p : parametros) {
                     sb.append(IND).append("<").append(PARAM_TAG)
-                    .append(" codigo=\"").append(UtilXml.xmlEsc(p.getId())).append("\">").append(EOL);
+                            .append(" codigo=\"").append(UtilXml.xmlEsc(p.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<nombre>")
-                    .append(UtilXml.xmlEsc(p.getDescripcion()))
-                    .append("</nombre>").append(EOL);
+                            .append(UtilXml.xmlEsc(p.getDescripcion()))
+                            .append("</nombre>").append(EOL);
 
                     sb.append(IND).append(IND).append("<").append(DETS_TAG).append(">").append(EOL);
 
@@ -364,16 +375,17 @@ public class ReporteParametrosService {
                     if (detalles != null && !detalles.isEmpty()) {
                         for (DetalleParametroDTO d : detalles) {
                             sb.append(IND).append(IND).append(IND).append("<").append(DET_TAG)
-                            .append(" codigo=\"").append(UtilXml.xmlEsc(d.getId())).append("\">").append(EOL);
+                                    .append(" codigo=\"").append(UtilXml.xmlEsc(d.getId())).append("\">").append(EOL);
 
-                            // Nota: se mantiene el nombre de nodo "detalle" para la descripción, según diseño existente
+                            // Nota: se mantiene el nombre de nodo "detalle" para la descripción, según
+                            // diseño existente
                             sb.append(IND).append(IND).append(IND).append(IND).append("<detalle>")
-                            .append(UtilXml.xmlEsc(d.getDescripcion()))
-                            .append("</detalle>").append(EOL);
+                                    .append(UtilXml.xmlEsc(d.getDescripcion()))
+                                    .append("</detalle>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<descripcion>")
-                            .append(UtilXml.xmlEsc(d.getObservacion()))
-                            .append("</descripcion>").append(EOL);
+                                    .append(UtilXml.xmlEsc(d.getObservacion()))
+                                    .append("</descripcion>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append("</").append(DET_TAG).append(">").append(EOL);
                         }
@@ -393,6 +405,5 @@ public class ReporteParametrosService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
 }

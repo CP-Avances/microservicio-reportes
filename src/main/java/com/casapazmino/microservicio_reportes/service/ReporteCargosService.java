@@ -28,7 +28,7 @@ import java.util.List;
 public class ReporteCargosService {
 
     // =========================
-    //          PDF (SIN CAMBIOS)
+    // PDF
     // =========================
     public byte[] generarReportePDF(ReporteCargosRequest request) {
 
@@ -47,8 +47,7 @@ public class ReporteCargosService {
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
-            ));
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -61,23 +60,24 @@ public class ReporteCargosService {
             document.add(ReporteUtil.crearTituloReporte("LISTA TIPO DE CARGOS"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra     = ReporteUtil.colorZebraClaro();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             PdfPTable tabla = new PdfPTable(2);
-            tabla.setWidthPercentage(50);   // respetamos tu diseño
+            tabla.setWidthPercentage(50); // respetamos tu diseño
             tabla.setWidths(WIDTHS);
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("ITEM",   ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("ITEM", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
             tabla.addCell(ReporteUtil.crearCelda("CARGOS", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
             // Cuerpo (zebra)
             boolean zebra = false;
             for (CargoDTO cargo : request.getCargos()) {
                 Color fondo = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(cargo.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(cargo.getCargo(),               ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(
+                        ReporteUtil.crearCelda(String.valueOf(cargo.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(cargo.getCargo(), ReporteUtil.fuenteTablaData(), fondo));
                 zebra = !zebra;
             }
 
@@ -88,7 +88,8 @@ public class ReporteCargosService {
             return baos.toByteArray();
 
         } catch (IllegalArgumentException e) {
-            // si algún helper valida y falla, dejamos que el controller lo trate (posible 400)
+            // si algún helper valida y falla, dejamos que el controller lo trate (posible
+            // 400)
             throw e;
         } catch (Exception e) {
             // fallo interno → 500 uniforme
@@ -96,19 +97,28 @@ public class ReporteCargosService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
 
     // =========================
-    //          XLSX (Como ExcelJS del front)
+    // XLSX (Como ExcelJS del front)
     // =========================
     public byte[] generarReporteXLSX(ReporteCargosRequest request) {
         // =========================
@@ -125,7 +135,7 @@ public class ReporteCargosService {
         final int[] ANCHOS = { 10, 30, 45 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
@@ -144,7 +154,7 @@ public class ReporteCargosService {
             // 3) Títulos en B1 y B2
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
-            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE TIPOS DE CARGOS", estiloTitulo);                         // B2
+            UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE TIPOS DE CARGOS", estiloTitulo); // B2
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
             Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
@@ -165,9 +175,10 @@ public class ReporteCargosService {
             if (cargos != null) {
                 for (CargoDTO c : cargos) {
                     Row r = UtilExcel.asegurarFila(hoja, filaAct++);
-                    UtilExcel.establecerValor(r, 0, item++, null);                                   // ITEM (secuencial)
-                    UtilExcel.establecerValor(r, 1, c.getId(), null);                                // CÓDIGO (id)
-                    UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(c.getCargo()), null);    // CARGO (se mantiene helper actual)
+                    UtilExcel.establecerValor(r, 0, item++, null); // ITEM (secuencial)
+                    UtilExcel.establecerValor(r, 1, c.getId(), null); // CÓDIGO (id)
+                    UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(c.getCargo()), null); // CARGO (se mantiene
+                                                                                                  // helper actual)
                 }
             }
 
@@ -175,10 +186,11 @@ public class ReporteCargosService {
 
             // 6) Alineaciones + bordes
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             // Cuerpo: col 0 centrado; col 1..2 izquierda
             if (ultimaFila >= filaDatosIni) {
@@ -190,13 +202,12 @@ public class ReporteCargosService {
             if (ultimaFila >= filaDatosIni) {
                 boolean[] filtros = new boolean[] { false, true, true };
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "TipoCargoTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "TipoCargoTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -209,16 +220,15 @@ public class ReporteCargosService {
             throw new ReportBuildException("No se pudo generar TiposDeCargos.xlsx", e); // Interno → 500
         }
     }
-        
 
     // =========================
-    //           CSV (idéntico al front)
+    // CSV (idéntico al front)
     // =========================
     public byte[] generarReporteCSV(ReporteCargosRequest request) {
         // === Contrato del CSV ===
         final String NOMBRE_REPORTE = "Cargos.csv";
         final String DELIM = ",";
-        final String EOL = "\r\n";                 // CRLF para Excel/Windows
+        final String EOL = "\r\n"; // CRLF para Excel/Windows
         final String[] HEADERS = { "ITEM", "CARGOS" };
 
         try {
@@ -226,7 +236,8 @@ public class ReporteCargosService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -235,7 +246,7 @@ public class ReporteCargosService {
             List<CargoDTO> items = request.getCargos();
             if (items != null && !items.isEmpty()) {
                 for (CargoDTO c : items) {
-                    String item  = (c.getId() == null) ? "" : String.valueOf(c.getId()); // contrato histórico: ITEM = id
+                    String item = (c.getId() == null) ? "" : String.valueOf(c.getId()); // contrato histórico: ITEM = id
                     String cargo = (c.getCargo() == null) ? "" : c.getCargo();
 
                     sb.append(UtilCsv.csvEscape(item)).append(DELIM).append(UtilCsv.csvEscape(cargo)).append(EOL);
@@ -251,9 +262,9 @@ public class ReporteCargosService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-    
+
     // =========================
-    //            XML (idéntico a xml2js del front)
+    // XML (idéntico a xml2js del front)
     // =========================
     public byte[] generarReporteXML(ReporteCargosRequest request) {
         final String NOMBRE_REPORTE = "Cargos.xml";
@@ -274,11 +285,11 @@ public class ReporteCargosService {
             } else {
                 for (CargoDTO c : items) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(c.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(c.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<descripcion>")
-                    .append(UtilXml.xmlEsc(c.getCargo()))
-                    .append("</descripcion>").append(EOL);
+                            .append(UtilXml.xmlEsc(c.getCargo()))
+                            .append("</descripcion>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }

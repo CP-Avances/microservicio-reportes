@@ -25,11 +25,10 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-
 @Service
 public class ReporteHorariosService {
 
-    //METODO QUE GENERA EL PDF
+    // METODO QUE GENERA EL PDF
     public byte[] generarReportePDF(ReporteHorariosRequest request) {
 
         // DRY: constantes locales
@@ -46,10 +45,9 @@ public class ReporteHorariosService {
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -64,9 +62,9 @@ public class ReporteHorariosService {
             document.add(ReporteUtil.crearTituloReporte("LISTA DE HORARIOS"));
 
             // Colores
-            Color colorPrincipal  = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            Color zebraColor      = ReporteUtil.colorZebraClaro();
+            Color zebraColor = ReporteUtil.colorZebraClaro();
 
             // Iteración de horarios
             for (HorarioDTO h : request.getHorarios()) {
@@ -81,13 +79,18 @@ public class ReporteHorariosService {
                 cabecera.setWidthPercentage(100);
                 cabecera.setWidths(WIDTHS_CABECERA);
 
-                cabecera.addCell(celdaHorario("HORARIO: " + h.getNombre(), colorPrincipal, Rectangle.TOP | Rectangle.LEFT));
-                cabecera.addCell(celdaHorario("HORAS DE TRABAJO: " + h.getHoraTrabajo(), colorPrincipal, Rectangle.TOP));
-                cabecera.addCell(celdaHorario("MINUTOS DE ALIMENTACIÓN: " + h.getMinutosComida(), colorPrincipal, Rectangle.TOP | Rectangle.RIGHT));
+                cabecera.addCell(
+                        celdaHorario("HORARIO: " + h.getNombre(), colorPrincipal, Rectangle.TOP | Rectangle.LEFT));
+                cabecera.addCell(
+                        celdaHorario("HORAS DE TRABAJO: " + h.getHoraTrabajo(), colorPrincipal, Rectangle.TOP));
+                cabecera.addCell(celdaHorario("MINUTOS DE ALIMENTACIÓN: " + h.getMinutosComida(), colorPrincipal,
+                        Rectangle.TOP | Rectangle.RIGHT));
 
                 cabecera.addCell(celdaHorario("CÓDIGO: " + h.getCodigo(), colorPrincipal, Rectangle.LEFT));
-                cabecera.addCell(celdaHorario("HORARIO NOCTURNO: " + (h.isNoturno() ? "Sí" : "No"), colorPrincipal, Rectangle.NO_BORDER));
-                cabecera.addCell(celdaHorario("DOCUMENTO: " + (h.getDocumento() != null ? h.getDocumento() : ""), colorPrincipal, Rectangle.RIGHT));
+                cabecera.addCell(celdaHorario("HORARIO NOCTURNO: " + (h.isNoturno() ? "Sí" : "No"), colorPrincipal,
+                        Rectangle.NO_BORDER));
+                cabecera.addCell(celdaHorario("DOCUMENTO: " + (h.getDocumento() != null ? h.getDocumento() : ""),
+                        colorPrincipal, Rectangle.RIGHT));
 
                 PdfPCell celdaCabecera = new PdfPCell(cabecera);
                 celdaCabecera.setPadding(0);
@@ -101,7 +104,8 @@ public class ReporteHorariosService {
                     PdfPTable tituloDetalles = new PdfPTable(1);
                     tituloDetalles.setWidthPercentage(100);
 
-                    PdfPCell celdaDetalles = new PdfPCell(new Phrase("DETALLES", ReporteUtil.fuenteEncabezadoTablaData()));
+                    PdfPCell celdaDetalles = new PdfPCell(
+                            new Phrase("DETALLES", ReporteUtil.fuenteEncabezadoTablaData()));
                     celdaDetalles.setBackgroundColor(colorSecundario);
                     celdaDetalles.setHorizontalAlignment(Element.ALIGN_CENTER);
                     celdaDetalles.setPadding(5);
@@ -119,24 +123,31 @@ public class ReporteHorariosService {
                     tabla.setWidths(WIDTHS_DETALLES);
 
                     // Encabezados
-                    String[] headers = {"ORDEN", "HORA", "TOLERANCIA", "ACCIÓN", "OTRO DÍA", "MINUTOS ANTES", "MINUTOS DESPUÉS"};
+                    String[] headers = { "ORDEN", "HORA", "TOLERANCIA", "ACCIÓN", "OTRO DÍA", "MINUTOS ANTES",
+                            "MINUTOS DESPUÉS" };
                     for (String col : headers) {
-                        tabla.addCell(ReporteUtil.crearCelda(col, ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+                        tabla.addCell(
+                                ReporteUtil.crearCelda(col, ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
                     }
 
                     // Cuerpo
                     boolean zebra = false;
                     for (DetalleHorarioDTO d : h.getDetalles()) {
                         Color fondo = zebra ? zebraColor : Color.WHITE;
-                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getOrden()), ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getOrden()),
+                                ReporteUtil.fuenteTablaData(), fondo));
                         tabla.addCell(ReporteUtil.crearCelda(d.getHora(), ReporteUtil.fuenteTablaData(), fondo));
                         tabla.addCell(ReporteUtil.crearCelda(
-                            d.getTolerancia() != null ? d.getTolerancia().toString() : "",
-                            ReporteUtil.fuenteTablaData(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(d.getTipoAccionShow(), ReporteUtil.fuenteTablaData(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(d.isSegundoDia() ? "Sí" : "No", ReporteUtil.fuenteTablaData(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getMinutosAntes()), ReporteUtil.fuenteTablaData(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getMinutosDespues()), ReporteUtil.fuenteTablaData(), fondo));
+                                d.getTolerancia() != null ? d.getTolerancia().toString() : "",
+                                ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(
+                                ReporteUtil.crearCelda(d.getTipoAccionShow(), ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.crearCelda(d.isSegundoDia() ? "Sí" : "No",
+                                ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getMinutosAntes()),
+                                ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getMinutosDespues()),
+                                ReporteUtil.fuenteTablaData(), fondo));
                         zebra = !zebra;
                     }
 
@@ -160,13 +171,22 @@ public class ReporteHorariosService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
@@ -183,14 +203,14 @@ public class ReporteHorariosService {
     }
 
     // =========================
-    //           XLSX
+    // XLSX
     // =========================
     public byte[] generarReporteXLSX(ReporteHorariosRequest request) {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA     = "Horarios"; // ≤ 31 chars
-        final int    FILA_ENCABEZADO = 5;
+        final String NOMBRE_HOJA = "Horarios"; // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5;
 
         // Merges B1:N1 ... B5:N5 => (row 0..4, col 1..13)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
@@ -199,14 +219,14 @@ public class ReporteHorariosService {
         final String TITULO_REPORTE = "LISTA DE HORARIOS";
 
         final String[] HEADERS = {
-            "ITEM","HORARIO","CÓDIGO","HORAS DE TRABAJO","MINUTOS DE ALIMENTACIÓN",
-            "HORARIO NOTURNO","DOCUMENTO","ORDEN","HORA","TOLERANCIA",
-            "ACCIÓN","OTRO DÍA","MINUTOS ANTES","MINUTOS DESPUÉS"
+                "ITEM", "HORARIO", "CÓDIGO", "HORAS DE TRABAJO", "MINUTOS DE ALIMENTACIÓN",
+                "HORARIO NOTURNO", "DOCUMENTO", "ORDEN", "HORA", "TOLERANCIA",
+                "ACCIÓN", "OTRO DÍA", "MINUTOS ANTES", "MINUTOS DESPUÉS"
         };
-        final int[] ANCHOS = { 10,20,20,20,20,20,20,20,20,20,20,20,30,30 };
+        final int[] ANCHOS = { 10, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 30, 30 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener encabezado visible
@@ -245,59 +265,65 @@ public class ReporteHorariosService {
             List<HorarioDTO> horarios = request.getHorarios();
             if (horarios != null) {
                 for (HorarioDTO h : horarios) {
-                    if (h == null) continue;
+                    if (h == null)
+                        continue;
                     List<DetalleHorarioDTO> dets = h.getDetalles();
-                    if (dets == null || dets.isEmpty()) continue;
+                    if (dets == null || dets.isEmpty())
+                        continue;
 
                     for (DetalleHorarioDTO d : dets) {
-                        if (d == null) continue;
+                        if (d == null)
+                            continue;
                         Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                        UtilExcel.establecerValor(r, 0, item++, null);                          // ITEM
-                        UtilExcel.establecerTexto(r, 1, nvl(h.getNombre()), null);              // HORARIO
-                        UtilExcel.establecerTexto(r, 2, nvl(h.getCodigo()), null);              // CÓDIGO
-                        UtilExcel.establecerTexto(r, 3, nvl(h.getHoraTrabajo()), null);         // HORAS DE TRABAJO
-                        UtilExcel.establecerTexto(r, 4, nvl(h.getMinutosComida()), null);       // MINUTOS DE ALIMENTACIÓN
-                        UtilExcel.establecerTexto(r, 5, h.isNoturno() ? "Sí" : "No", null);     // HORARIO NOTURNO
-                        UtilExcel.establecerTexto(r, 6, nvl(h.getDocumento()), null);           // DOCUMENTO
-                        UtilExcel.establecerValor(r, 7, d.getOrden(), null);                    // ORDEN
-                        UtilExcel.establecerTexto(r, 8, nvl(d.getHora()), null);                // HORA
-                        UtilExcel.establecerTexto(r, 9, nvl(d.getTolerancia()), null);          // TOLERANCIA
-                        UtilExcel.establecerTexto(r,10, nvl(d.getTipoAccionShow()), null);      // ACCIÓN
-                        UtilExcel.establecerTexto(r,11, d.isSegundoDia() ? "Sí" : "No", null);  // OTRO DÍA
-                        UtilExcel.establecerValor(r,12, d.getMinutosAntes(), null);             // MINUTOS ANTES
-                        UtilExcel.establecerValor(r,13, d.getMinutosDespues(), null);           // MINUTOS DESPUÉS
+                        UtilExcel.establecerValor(r, 0, item++, null); // ITEM
+                        UtilExcel.establecerTexto(r, 1, nvl(h.getNombre()), null); // HORARIO
+                        UtilExcel.establecerTexto(r, 2, nvl(h.getCodigo()), null); // CÓDIGO
+                        UtilExcel.establecerTexto(r, 3, nvl(h.getHoraTrabajo()), null); // HORAS DE TRABAJO
+                        UtilExcel.establecerTexto(r, 4, nvl(h.getMinutosComida()), null); // MINUTOS DE ALIMENTACIÓN
+                        UtilExcel.establecerTexto(r, 5, h.isNoturno() ? "Sí" : "No", null); // HORARIO NOTURNO
+                        UtilExcel.establecerTexto(r, 6, nvl(h.getDocumento()), null); // DOCUMENTO
+                        UtilExcel.establecerValor(r, 7, d.getOrden(), null); // ORDEN
+                        UtilExcel.establecerTexto(r, 8, nvl(d.getHora()), null); // HORA
+                        UtilExcel.establecerTexto(r, 9, nvl(d.getTolerancia()), null); // TOLERANCIA
+                        UtilExcel.establecerTexto(r, 10, nvl(d.getTipoAccionShow()), null); // ACCIÓN
+                        UtilExcel.establecerTexto(r, 11, d.isSegundoDia() ? "Sí" : "No", null); // OTRO DÍA
+                        UtilExcel.establecerValor(r, 12, d.getMinutosAntes(), null); // MINUTOS ANTES
+                        UtilExcel.establecerValor(r, 13, d.getMinutosDespues(), null); // MINUTOS DESPUÉS
                     }
                 }
             }
 
             int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
-            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto izquierda)
+            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto
+            // izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             if (ultimaFila >= filaDatosInicio) {
                 // ITEM centrado
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
                 // Resto izquierda
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde,
+                        true);
 
                 // 7) Tabla estilizada + filtros (ITEM sin filtro)
                 boolean[] filtros = new boolean[HEADERS.length];
-                for (int i = 0; i < filtros.length; i++) filtros[i] = true;
+                for (int i = 0; i < filtros.length; i++)
+                    filtros[i] = true;
                 filtros[0] = false;
 
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "HorariosTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "HorariosTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -311,9 +337,8 @@ public class ReporteHorariosService {
         }
     }
 
-    
     // =========================
-    //            CSV
+    // CSV
     // =========================
     public byte[] generarReporteCSV(ReporteHorariosRequest request) {
         // === Contrato del CSV ===
@@ -321,9 +346,9 @@ public class ReporteHorariosService {
         final String DELIM = ",";
         final String EOL = "\r\n"; // CRLF para Excel/Windows
         final String[] HEADERS = {
-            "n", "horario", "codigo", "horas_trabajo", "minutos_alimentacion", "horario_noturno",
-            "documento", "orden", "hora", "tolerancia", "accion", "otro_dia",
-            "minutos_antes", "minutos_despues"
+                "n", "horario", "codigo", "horas_trabajo", "minutos_alimentacion", "horario_noturno",
+                "documento", "orden", "hora", "tolerancia", "accion", "otro_dia",
+                "minutos_antes", "minutos_despues"
         };
 
         try {
@@ -331,7 +356,8 @@ public class ReporteHorariosService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -342,38 +368,41 @@ public class ReporteHorariosService {
             if (horarios != null && !horarios.isEmpty()) {
                 for (HorarioDTO h : horarios) {
                     List<DetalleHorarioDTO> dets = h.getDetalles();
-                    if (dets == null || dets.isEmpty()) continue;
+                    if (dets == null || dets.isEmpty())
+                        continue;
 
                     for (DetalleHorarioDTO d : dets) {
-                        String horario        = (h.getNombre() == null)            ? "" : h.getNombre();
-                        String codigo         = (h.getCodigo() == null)            ? "" : h.getCodigo();
-                        String horasTrabajo   = (h.getHoraTrabajo() == null)       ? "" : String.valueOf(h.getHoraTrabajo());
-                        String minutosAliment = (h.getMinutosComida() == null)     ? "" : String.valueOf(h.getMinutosComida());
-                        String noturno        = h.isNoturno() ? "Sí" : "No";
-                        String documento      = (h.getDocumento() == null)         ? "" : h.getDocumento();
+                        String horario = (h.getNombre() == null) ? "" : h.getNombre();
+                        String codigo = (h.getCodigo() == null) ? "" : h.getCodigo();
+                        String horasTrabajo = (h.getHoraTrabajo() == null) ? "" : String.valueOf(h.getHoraTrabajo());
+                        String minutosAliment = (h.getMinutosComida() == null) ? ""
+                                : String.valueOf(h.getMinutosComida());
+                        String noturno = h.isNoturno() ? "Sí" : "No";
+                        String documento = (h.getDocumento() == null) ? "" : h.getDocumento();
 
-                        String orden          = (d.getOrden() == null)             ? "" : String.valueOf(d.getOrden());
-                        String hora           = (d.getHora() == null)              ? "" : String.valueOf(d.getHora());
-                        String tolerancia     = (d.getTolerancia() == null)        ? "" : String.valueOf(d.getTolerancia());
-                        String accion         = (d.getTipoAccionShow() == null)    ? "" : d.getTipoAccionShow();
-                        String otroDia        = d.isSegundoDia() ? "Sí" : "No";
-                        String minutosAntes   = (d.getMinutosAntes() == null)      ? "" : String.valueOf(d.getMinutosAntes());
-                        String minutosDespues = (d.getMinutosDespues() == null)    ? "" : String.valueOf(d.getMinutosDespues());
+                        String orden = (d.getOrden() == null) ? "" : String.valueOf(d.getOrden());
+                        String hora = (d.getHora() == null) ? "" : String.valueOf(d.getHora());
+                        String tolerancia = (d.getTolerancia() == null) ? "" : String.valueOf(d.getTolerancia());
+                        String accion = (d.getTipoAccionShow() == null) ? "" : d.getTipoAccionShow();
+                        String otroDia = d.isSegundoDia() ? "Sí" : "No";
+                        String minutosAntes = (d.getMinutosAntes() == null) ? "" : String.valueOf(d.getMinutosAntes());
+                        String minutosDespues = (d.getMinutosDespues() == null) ? ""
+                                : String.valueOf(d.getMinutosDespues());
 
                         sb.append(UtilCsv.csvEscape(String.valueOf(n++))).append(DELIM)
-                        .append(UtilCsv.csvEscape(horario)).append(DELIM)
-                        .append(UtilCsv.csvEscape(codigo)).append(DELIM)
-                        .append(UtilCsv.csvEscape(horasTrabajo)).append(DELIM)
-                        .append(UtilCsv.csvEscape(minutosAliment)).append(DELIM)
-                        .append(UtilCsv.csvEscape(noturno)).append(DELIM)
-                        .append(UtilCsv.csvEscape(documento)).append(DELIM)
-                        .append(UtilCsv.csvEscape(orden)).append(DELIM)
-                        .append(UtilCsv.csvEscape(hora)).append(DELIM)
-                        .append(UtilCsv.csvEscape(tolerancia)).append(DELIM)
-                        .append(UtilCsv.csvEscape(accion)).append(DELIM)
-                        .append(UtilCsv.csvEscape(otroDia)).append(DELIM)
-                        .append(UtilCsv.csvEscape(minutosAntes)).append(DELIM)
-                        .append(UtilCsv.csvEscape(minutosDespues)).append(EOL);
+                                .append(UtilCsv.csvEscape(horario)).append(DELIM)
+                                .append(UtilCsv.csvEscape(codigo)).append(DELIM)
+                                .append(UtilCsv.csvEscape(horasTrabajo)).append(DELIM)
+                                .append(UtilCsv.csvEscape(minutosAliment)).append(DELIM)
+                                .append(UtilCsv.csvEscape(noturno)).append(DELIM)
+                                .append(UtilCsv.csvEscape(documento)).append(DELIM)
+                                .append(UtilCsv.csvEscape(orden)).append(DELIM)
+                                .append(UtilCsv.csvEscape(hora)).append(DELIM)
+                                .append(UtilCsv.csvEscape(tolerancia)).append(DELIM)
+                                .append(UtilCsv.csvEscape(accion)).append(DELIM)
+                                .append(UtilCsv.csvEscape(otroDia)).append(DELIM)
+                                .append(UtilCsv.csvEscape(minutosAntes)).append(DELIM)
+                                .append(UtilCsv.csvEscape(minutosDespues)).append(EOL);
                     }
                 }
             }
@@ -390,16 +419,15 @@ public class ReporteHorariosService {
         }
     }
 
-    
     // =========================
-    //            XML
+    // XML
     // =========================
     public byte[] generarReporteXML(ReporteHorariosRequest request) {
         final String NOMBRE_REPORTE = "Horarios.xml";
         final String ROOT_TAG = "Horarios";
         final String ITEM_TAG = "horario";
         final String DETS_TAG = "detalles";
-        final String DET_TAG  = "detalle";
+        final String DET_TAG = "detalle";
         final String EOL = "\n";
         final String IND = "  ";
 
@@ -415,58 +443,58 @@ public class ReporteHorariosService {
             } else {
                 for (HorarioDTO h : horarios) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" codigo=\"").append(UtilXml.xmlEsc(h.getCodigo())).append("\">").append(EOL);
+                            .append(" codigo=\"").append(UtilXml.xmlEsc(h.getCodigo())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<nombre>")
-                    .append(UtilXml.xmlEsc(h.getNombre()))
-                    .append("</nombre>").append(EOL);
+                            .append(UtilXml.xmlEsc(h.getNombre()))
+                            .append("</nombre>").append(EOL);
 
                     sb.append(IND).append(IND).append("<horas_trabajo>")
-                    .append(UtilXml.xmlEsc(h.getHoraTrabajo()))
-                    .append("</horas_trabajo>").append(EOL);
+                            .append(UtilXml.xmlEsc(h.getHoraTrabajo()))
+                            .append("</horas_trabajo>").append(EOL);
 
                     sb.append(IND).append(IND).append("<minutos_alimentación>")
-                    .append(UtilXml.xmlEsc(h.getMinutosComida()))
-                    .append("</minutos_alimentación>").append(EOL);
+                            .append(UtilXml.xmlEsc(h.getMinutosComida()))
+                            .append("</minutos_alimentación>").append(EOL);
 
                     sb.append(IND).append(IND).append("<horario_noturno>")
-                    .append(h.isNoturno() ? "Sí" : "No")
-                    .append("</horario_noturno>").append(EOL);
+                            .append(h.isNoturno() ? "Sí" : "No")
+                            .append("</horario_noturno>").append(EOL);
 
                     sb.append(IND).append(IND).append("<documento>")
-                    .append(UtilXml.xmlEsc(h.getDocumento()))
-                    .append("</documento>").append(EOL);
+                            .append(UtilXml.xmlEsc(h.getDocumento()))
+                            .append("</documento>").append(EOL);
 
                     List<DetalleHorarioDTO> dets = h.getDetalles();
                     if (dets != null && !dets.isEmpty()) {
                         sb.append(IND).append(IND).append("<").append(DETS_TAG).append(">").append(EOL);
                         for (DetalleHorarioDTO d : dets) {
                             sb.append(IND).append(IND).append(IND).append("<").append(DET_TAG)
-                            .append(" orden=\"").append(UtilXml.xmlEsc(d.getOrden())).append("\">").append(EOL);
+                                    .append(" orden=\"").append(UtilXml.xmlEsc(d.getOrden())).append("\">").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<hora>")
-                            .append(UtilXml.xmlEsc(d.getHora()))
-                            .append("</hora>").append(EOL);
+                                    .append(UtilXml.xmlEsc(d.getHora()))
+                                    .append("</hora>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<tolerancia>")
-                            .append(UtilXml.xmlEsc(d.getTolerancia()))
-                            .append("</tolerancia>").append(EOL);
+                                    .append(UtilXml.xmlEsc(d.getTolerancia()))
+                                    .append("</tolerancia>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<accion>")
-                            .append(UtilXml.xmlEsc(d.getTipoAccionShow()))
-                            .append("</accion>").append(EOL);
+                                    .append(UtilXml.xmlEsc(d.getTipoAccionShow()))
+                                    .append("</accion>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<otro_dia>")
-                            .append(d.isSegundoDia() ? "Sí" : "No")
-                            .append("</otro_dia>").append(EOL);
+                                    .append(d.isSegundoDia() ? "Sí" : "No")
+                                    .append("</otro_dia>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<minutos_antes>")
-                            .append(UtilXml.xmlEsc(d.getMinutosAntes()))
-                            .append("</minutos_antes>").append(EOL);
+                                    .append(UtilXml.xmlEsc(d.getMinutosAntes()))
+                                    .append("</minutos_antes>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append(IND).append("<minutos_despues>")
-                            .append(UtilXml.xmlEsc(d.getMinutosDespues()))
-                            .append("</minutos_despues>").append(EOL);
+                                    .append(UtilXml.xmlEsc(d.getMinutosDespues()))
+                                    .append("</minutos_despues>").append(EOL);
 
                             sb.append(IND).append(IND).append(IND).append("</").append(DET_TAG).append(">").append(EOL);
                         }
@@ -492,4 +520,3 @@ public class ReporteHorariosService {
     }
 
 }
-

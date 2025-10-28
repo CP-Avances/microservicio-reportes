@@ -46,10 +46,9 @@ public class ReporteFeriadosService {
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -65,7 +64,7 @@ public class ReporteFeriadosService {
 
             // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra     = ReporteUtil.colorZebraClaro();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(4);
@@ -74,10 +73,12 @@ public class ReporteFeriadosService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO",       ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("DESCRIPCIÓN",  ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("FECHA",        ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("RECUPERACIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(
+                    ReporteUtil.crearCelda("DESCRIPCIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(
+                    ReporteUtil.crearCelda("RECUPERACIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
             // Cuerpo (zebra)
             List<FeriadoDTO> lista = request.getFeriados();
@@ -86,10 +87,12 @@ public class ReporteFeriadosService {
                 boolean zebra = false;
                 for (FeriadoDTO f : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(f.getId()),     ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(f.getDescripcion(),            ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(f.getFecha(),                  ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(f.getFechaRecuperacion(),      ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(String.valueOf(f.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(f.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(f.getFecha(), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(f.getFechaRecuperacion(), ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
             }
@@ -109,17 +112,26 @@ public class ReporteFeriadosService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-    
+
     // =========================
     // XLSX (diseño legacy)
     // =========================
@@ -127,7 +139,7 @@ public class ReporteFeriadosService {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA = "Feriados";  // ≤ 31 chars
+        final String NOMBRE_HOJA = "Feriados"; // ≤ 31 chars
         final int FILA_ENCABEZADO = 5;
 
         // Merges exactos (B1:E1 ... B5:E5) => (row 0..4, col 1..4)
@@ -136,10 +148,10 @@ public class ReporteFeriadosService {
 
         final String TITULO_REPORTE = "LISTA DE FERIADOS";
         final String[] HEADERS = { "ITEM", "CÓDIGO", "FERIADO", "FECHA", "FECHA_RECUPERA" };
-        final int[]    ANCHOS  = { 10, 20, 20, 20, 30 };
+        final int[] ANCHOS = { 10, 20, 20, 20, 30 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener encabezado visible
@@ -158,7 +170,7 @@ public class ReporteFeriadosService {
             // 3) Títulos en B1 y B2 (upper)
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
-            UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo);                                     // B2
+            UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo); // B2
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
             Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
@@ -179,15 +191,15 @@ public class ReporteFeriadosService {
             if (items != null) {
                 // Orden estable con nulls al final
                 items.sort(java.util.Comparator.comparing(
-                    FeriadoDTO::getId,
-                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())
-                ));
+                        FeriadoDTO::getId,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
 
                 for (FeriadoDTO f : items) {
-                    if (f == null) continue;
+                    if (f == null)
+                        continue;
                     Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                    UtilExcel.establecerValor(r, 0, item++, null);                                 // ITEM
-                    UtilExcel.establecerValor(r, 1, f.getId(), null);                              // CÓDIGO
+                    UtilExcel.establecerValor(r, 0, item++, null); // ITEM
+                    UtilExcel.establecerValor(r, 1, f.getId(), null); // CÓDIGO
                     UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(f.getDescripcion()), null);
                     UtilExcel.establecerValor(r, 3, UtilExcel.nuloComoVacio(f.getFecha()), null);
                     UtilExcel.establecerValor(r, 4, UtilExcel.nuloComoVacio(f.getFechaRecuperacion()), null);
@@ -198,10 +210,11 @@ public class ReporteFeriadosService {
 
             // 6) Alineaciones + bordes (reutilizar estilos)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             // Cuerpo: col 0 centrado; resto izquierda
             if (ultimaFila >= filaDatosInicio) {
@@ -213,13 +226,12 @@ public class ReporteFeriadosService {
             if (ultimaFila >= filaDatosInicio) {
                 boolean[] filtros = new boolean[] { false, true, true, true, true };
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "FeriadosTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "FeriadosTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -233,7 +245,6 @@ public class ReporteFeriadosService {
         }
     }
 
-    
     // =========================
     // CSV
     // =========================
@@ -249,7 +260,8 @@ public class ReporteFeriadosService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -259,15 +271,15 @@ public class ReporteFeriadosService {
             if (items != null && !items.isEmpty()) {
                 items.sort(Comparator.comparing(FeriadoDTO::getId));
                 for (FeriadoDTO f : items) {
-                    String id     = (f.getId() == null)                ? "" : String.valueOf(f.getId());
-                    String desc   = (f.getDescripcion() == null)       ? "" : f.getDescripcion();
-                    String fecha  = (f.getFecha() == null)             ? "" : f.getFecha();
-                    String recup  = (f.getFechaRecuperacion() == null) ? "" : f.getFechaRecuperacion();
+                    String id = (f.getId() == null) ? "" : String.valueOf(f.getId());
+                    String desc = (f.getDescripcion() == null) ? "" : f.getDescripcion();
+                    String fecha = (f.getFecha() == null) ? "" : f.getFecha();
+                    String recup = (f.getFechaRecuperacion() == null) ? "" : f.getFechaRecuperacion();
 
                     sb.append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(desc)).append(DELIM)
-                    .append(UtilCsv.csvEscape(fecha)).append(DELIM)
-                    .append(UtilCsv.csvEscape(recup)).append(EOL);
+                            .append(UtilCsv.csvEscape(desc)).append(DELIM)
+                            .append(UtilCsv.csvEscape(fecha)).append(DELIM)
+                            .append(UtilCsv.csvEscape(recup)).append(EOL);
                 }
             }
 
@@ -283,7 +295,6 @@ public class ReporteFeriadosService {
         }
     }
 
-    
     // =========================
     // XML
     // =========================
@@ -305,25 +316,23 @@ public class ReporteFeriadosService {
                 sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
             } else {
                 List<FeriadoDTO> ordenados = new ArrayList<>(items);
-                ordenados.sort(Comparator.comparingLong(f ->
-                    f.getId() == null ? Long.MAX_VALUE : f.getId()
-                ));
+                ordenados.sort(Comparator.comparingLong(f -> f.getId() == null ? Long.MAX_VALUE : f.getId()));
 
                 for (FeriadoDTO f : ordenados) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(f.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(f.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<descripcion>")
-                    .append(UtilXml.xmlEsc(f.getDescripcion()))
-                    .append("</descripcion>").append(EOL);
+                            .append(UtilXml.xmlEsc(f.getDescripcion()))
+                            .append("</descripcion>").append(EOL);
 
                     sb.append(IND).append(IND).append("<fecha>")
-                    .append(UtilXml.xmlEsc(f.getFecha()))
-                    .append("</fecha>").append(EOL);
+                            .append(UtilXml.xmlEsc(f.getFecha()))
+                            .append("</fecha>").append(EOL);
 
                     sb.append(IND).append(IND).append("<fec_recuperacion>")
-                    .append(UtilXml.xmlEsc(f.getFechaRecuperacion()))
-                    .append("</fec_recuperacion>").append(EOL);
+                            .append(UtilXml.xmlEsc(f.getFechaRecuperacion()))
+                            .append("</fec_recuperacion>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -338,6 +347,5 @@ public class ReporteFeriadosService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
 }

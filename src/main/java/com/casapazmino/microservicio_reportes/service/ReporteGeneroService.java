@@ -28,7 +28,7 @@ import java.util.List;
 public class ReporteGeneroService {
 
     // =========================
-    //          PDF
+    // PDF
     // =========================
     public byte[] generarReporteGenerosPDF(ReporteGenerosRequest request) {
 
@@ -45,10 +45,9 @@ public class ReporteGeneroService {
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -61,7 +60,7 @@ public class ReporteGeneroService {
             document.add(ReporteUtil.crearTituloReporte("LISTA DE GÉNEROS"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra     = ReporteUtil.colorZebraClaro();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(40);
@@ -79,8 +78,9 @@ public class ReporteGeneroService {
             if (generos != null) {
                 for (GeneroDTO g : generos) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(g.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(g.getGenero(),             ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(String.valueOf(g.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(g.getGenero(), ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
             }
@@ -100,26 +100,35 @@ public class ReporteGeneroService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-    
+
     // =========================
-    //          XLSX (idéntico al estilo del front)
+    // XLSX (idéntico al estilo del front)
     // =========================
     public byte[] generarReporteGenerosXLSX(ReporteGenerosRequest request) {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA    = "Género"; // ≤ 31 chars (nombre exacto)
-        final int    FILA_ENCABEZADO = 5;
+        final String NOMBRE_HOJA = "Género"; // ≤ 31 chars (nombre exacto)
+        final int FILA_ENCABEZADO = 5;
 
         // Merges B1:C1 ... B5:C5 => (row 0..4, col 1..2)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
@@ -127,10 +136,10 @@ public class ReporteGeneroService {
 
         final String TITULO_REPORTE = "LISTA DE GÉNEROS";
         final String[] HEADERS = { "ITEM", "CODIGO", "GENERO" }; // labels exactos (sin tildes)
-        final int[]    ANCHOS  = {    20,       30,       40   }; // anchos exactos
+        final int[] ANCHOS = { 20, 30, 40 }; // anchos exactos
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener encabezado visible
@@ -166,29 +175,30 @@ public class ReporteGeneroService {
             List<GeneroDTO> ordenados = new java.util.ArrayList<>(data == null ? java.util.List.of() : data);
             ordenados.sort(java.util.Comparator.comparing(
                     GeneroDTO::getId,
-                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())
-            ));
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
 
             int filaDatosInicio = FILA_ENCABEZADO + 1;
             int filaActual = filaDatosInicio;
             int item = 1;
 
             for (GeneroDTO g : ordenados) {
-                if (g == null) continue;
+                if (g == null)
+                    continue;
                 Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                UtilExcel.establecerValor(r, 0, item++, null);                                    // ITEM
-                UtilExcel.establecerValor(r, 1, g.getId(), null);                                 // CODIGO
-                UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(g.getGenero()), null);   // GENERO
+                UtilExcel.establecerValor(r, 0, item++, null); // ITEM
+                UtilExcel.establecerValor(r, 1, g.getId(), null); // CODIGO
+                UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(g.getGenero()), null); // GENERO
             }
 
             int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
             // 6) Alineaciones + bordes (reutilizar estilos)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             if (ultimaFila >= filaDatosInicio) {
                 // col 0 centrada; col 1..2 izquierda
@@ -203,8 +213,7 @@ public class ReporteGeneroService {
                         FILA_ENCABEZADO, 0,
                         ultimaFila, HEADERS.length - 1,
                         true,
-                        filtros
-                );
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -218,9 +227,8 @@ public class ReporteGeneroService {
         }
     }
 
-    
     // =========================
-    //           CSV (orden simple de keys)
+    // CSV (orden simple de keys)
     // =========================
     public byte[] generarReporteGenerosCSV(ReporteGenerosRequest request) {
         // === Contrato del CSV ===
@@ -234,7 +242,8 @@ public class ReporteGeneroService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -243,11 +252,11 @@ public class ReporteGeneroService {
             List<GeneroDTO> items = request.getGeneros();
             if (items != null && !items.isEmpty()) {
                 for (GeneroDTO g : items) {
-                    String id     = (g.getId() == null)     ? "" : String.valueOf(g.getId());
+                    String id = (g.getId() == null) ? "" : String.valueOf(g.getId());
                     String genero = (g.getGenero() == null) ? "" : g.getGenero();
 
                     sb.append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(genero)).append(EOL);
+                            .append(UtilCsv.csvEscape(genero)).append(EOL);
                 }
             }
 
@@ -263,9 +272,8 @@ public class ReporteGeneroService {
         }
     }
 
-    
     // =========================
-    //            XML (estructura simple y legible)
+    // XML (estructura simple y legible)
     // =========================
     public byte[] generarReporteGenerosXML(ReporteGenerosRequest request) {
         final String NOMBRE_REPORTE = "G\u00E9neros.xml";
@@ -286,11 +294,11 @@ public class ReporteGeneroService {
             } else {
                 for (GeneroDTO g : items) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(g.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(g.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<genero>")
-                    .append(UtilXml.xmlEsc(g.getGenero()))
-                    .append("</genero>").append(EOL);
+                            .append(UtilXml.xmlEsc(g.getGenero()))
+                            .append("</genero>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -305,6 +313,5 @@ public class ReporteGeneroService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
 }

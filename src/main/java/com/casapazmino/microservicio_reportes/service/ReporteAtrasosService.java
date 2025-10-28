@@ -16,8 +16,6 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.CellStyle;
 import java.io.ByteArrayOutputStream;
 
-
-
 import java.awt.Color;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -46,194 +44,227 @@ public class ReporteAtrasosService {
         ByteArrayOutputStream baos = null;
 
         try {
-                // 1) Inicialización
-                baos = new ByteArrayOutputStream();
-                document = new Document(PageSize.A4, 40, 40, 30, 50);
-                writer = PdfWriter.getInstance(document, baos);
-                writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-                ));
-                document.open();
+            // 1) Inicialización
+            baos = new ByteArrayOutputStream();
+            document = new Document(PageSize.A4, 40, 40, 30, 50);
+            writer = PdfWriter.getInstance(document, baos);
+            writer.setPageEvent(new ConfiguracionPaginaPDF(
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
+            document.open();
 
-                // 2) Construcción (helpers existentes)
-                Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-                if (logo != null) document.add(logo);
+            // 2) Construcción (helpers existentes)
+            Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
+            if (logo != null)
+                document.add(logo);
 
-                document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-                String titulo = "REPORTE DE ATRASOS - " + request.getOpcionBusqueda();
-                document.add(ReporteUtil.crearTituloReporte(titulo));
-                document.add(ReporteUtil.crearTituloPeriodo(
-                "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin()
-                ));
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            String titulo = "REPORTE DE ATRASOS - " + request.getOpcionBusqueda();
+            document.add(ReporteUtil.crearTituloReporte(titulo));
+            document.add(ReporteUtil.crearTituloPeriodo(
+                    "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin()));
 
-                Color colorPrincipal  = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-                Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-                Color zebraColor      = ReporteUtil.colorZebraClaro();
+            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+            Color zebraColor = ReporteUtil.colorZebraClaro();
 
-                // Contador global
-                AtomicInteger contadorGlobal = new AtomicInteger();
-                request.getGrupos().forEach(
-                g -> g.getEmpleados().forEach(e -> contadorGlobal.addAndGet(e.getAtrasos().size()))
-                );
+            // Contador global
+            AtomicInteger contadorGlobal = new AtomicInteger();
+            request.getGrupos().forEach(
+                    g -> g.getEmpleados().forEach(e -> contadorGlobal.addAndGet(e.getAtrasos().size())));
 
-                // Tabla título + N° registros
-                PdfPTable tituloTabla = new PdfPTable(2);
-                tituloTabla.setWidthPercentage(100);
-                tituloTabla.setWidths(WIDTHS_TITULO);
-                tituloTabla.setSpacingAfter(10f);
+            // Tabla título + N° registros
+            PdfPTable tituloTabla = new PdfPTable(2);
+            tituloTabla.setWidthPercentage(100);
+            tituloTabla.setWidths(WIDTHS_TITULO);
+            tituloTabla.setSpacingAfter(10f);
 
-                PdfPCell celdaTitulo = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezado()));
-                celdaTitulo.setBackgroundColor(colorSecundario);
-                celdaTitulo.setPadding(5f);
-                celdaTitulo.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
-                tituloTabla.addCell(celdaTitulo);
+            PdfPCell celdaTitulo = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezado()));
+            celdaTitulo.setBackgroundColor(colorSecundario);
+            celdaTitulo.setPadding(5f);
+            celdaTitulo.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
+            tituloTabla.addCell(celdaTitulo);
 
-                PdfPCell celdaContador = new PdfPCell(
-                new Phrase("N° Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezado())
-                );
-                celdaContador.setBackgroundColor(colorSecundario);
-                celdaContador.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                celdaContador.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                celdaContador.setPadding(5f);
-                celdaContador.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.RIGHT);
-                tituloTabla.addCell(celdaContador);
+            PdfPCell celdaContador = new PdfPCell(
+                    new Phrase("N° Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezado()));
+            celdaContador.setBackgroundColor(colorSecundario);
+            celdaContador.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            celdaContador.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            celdaContador.setPadding(5f);
+            celdaContador.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.RIGHT);
+            tituloTabla.addCell(celdaContador);
 
-                document.add(tituloTabla);
+            document.add(tituloTabla);
 
-                // Iteración por grupos / empleados
-                for (GrupoAtrasoDTO grupo : request.getGrupos()) {
+            // Iteración por grupos / empleados
+            for (GrupoAtrasoDTO grupo : request.getGrupos()) {
                 for (EmpleadoAtrasoDTO emp : grupo.getEmpleados()) {
 
-                        // Info empleado
-                        PdfPTable infoEmpleado = new PdfPTable(3);
-                        infoEmpleado.setWidthPercentage(100);
-                        infoEmpleado.setWidths(new float[]{ 4, 4, 4 });
-                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:", emp.getIdentificacion(), zebraColor));
-                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:", emp.getApellido() + " " + emp.getNombre(), zebraColor));
-                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:", emp.getCodigo(), zebraColor));
-                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", emp.getRegimen(), zebraColor));
-                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:", emp.getDepartamento(), zebraColor));
-                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:", emp.getCargo(), zebraColor));
+                    // Info empleado
+                    PdfPTable infoEmpleado = new PdfPTable(3);
+                    infoEmpleado.setWidthPercentage(100);
+                    infoEmpleado.setWidths(new float[] { 4, 4, 4 });
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:", emp.getIdentificacion(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:",
+                            emp.getApellido() + " " + emp.getNombre(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:", emp.getCodigo(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", emp.getRegimen(), zebraColor));
+                    infoEmpleado
+                            .addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:", emp.getDepartamento(), zebraColor));
+                    infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:", emp.getCargo(), zebraColor));
 
-                        PdfPTable contenedora = new PdfPTable(1);
-                        contenedora.setWidthPercentage(100);
-                        PdfPCell cont = new PdfPCell(infoEmpleado);
-                        cont.setPadding(0);
-                        cont.setBorder(Rectangle.BOX);
-                        contenedora.addCell(cont);
-                        document.add(contenedora);
+                    PdfPTable contenedora = new PdfPTable(1);
+                    contenedora.setWidthPercentage(100);
+                    PdfPCell cont = new PdfPCell(infoEmpleado);
+                    cont.setPadding(0);
+                    cont.setBorder(Rectangle.BOX);
+                    contenedora.addCell(cont);
+                    document.add(contenedora);
 
-                        // Encabezado (11 columnas)
-                        PdfPTable encabezado = new PdfPTable(11);
-                        encabezado.setWidthPercentage(100);
-                        encabezado.setWidths(WIDTHS_ENCAB_11);
+                    // Encabezado (11 columnas)
+                    PdfPTable encabezado = new PdfPTable(11);
+                    encabezado.setWidthPercentage(100);
+                    encabezado.setWidths(WIDTHS_ENCAB_11);
 
-                        encabezado.addCell(ReporteUtil.crearCelda("N°",            ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                        encabezado.addCell(ReporteUtil.crearCelda("FECHA",         ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
-                        encabezado.addCell(ReporteUtil.crearCelda("TIMBRE",        ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
-                        encabezado.addCell(ReporteUtil.crearCelda("TIPO PERMISO",  ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                        encabezado.addCell(ReporteUtil.crearCelda("DESDE",         ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                        encabezado.addCell(ReporteUtil.crearCelda("HASTA",         ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                        encabezado.addCell(ReporteUtil.crearCelda("PERMISO",       ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                        encabezado.addCell(ReporteUtil.crearCelda("TOLERANCIA",    ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                        encabezado.addCell(ReporteUtil.crearCelda("ATRASO",        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("N°", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
+                    encabezado.addCell(ReporteUtil.crearCelda("TIPO PERMISO", ReporteUtil.fuenteEncabezado(),
+                            colorPrincipal, 2, 1));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("DESDE", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("HASTA", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("PERMISO", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("TOLERANCIA", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("ATRASO", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
 
-                        for (int i = 0; i < 2; i++) {
-                        encabezado.addCell(ReporteUtil.crearCelda("HORARIO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
-                        encabezado.addCell(ReporteUtil.crearCelda("TIMBRE",  ReporteUtil.fuenteEncabezado(), colorSecundario));
-                        }
-                        encabezado.setSpacingAfter(0f);
-                        document.add(encabezado);
+                    for (int i = 0; i < 2; i++) {
+                        encabezado.addCell(
+                                ReporteUtil.crearCelda("HORARIO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                        encabezado.addCell(
+                                ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(), colorSecundario));
+                    }
+                    encabezado.setSpacingAfter(0f);
+                    document.add(encabezado);
 
-                        // Datos (13 columnas, como en tu código original)
-                        PdfPTable tablaData = new PdfPTable(13);
-                        tablaData.setWidthPercentage(100);
-                        tablaData.setWidths(WIDTHS_DATA_13);
+                    // Datos (13 columnas, como en tu código original)
+                    PdfPTable tablaData = new PdfPTable(13);
+                    tablaData.setWidthPercentage(100);
+                    tablaData.setWidths(WIDTHS_DATA_13);
 
-                        int   contador     = 1;
-                        long  totalSegs    = 0L;
-                        double totalMins   = 0.0;
+                    int contador = 1;
+                    long totalSegs = 0L;
+                    double totalMins = 0.0;
 
-                        for (AtrasoDTO atraso : emp.getAtrasos()) {
+                    for (AtrasoDTO atraso : emp.getAtrasos()) {
                         Color fondo = (contador % 2 == 0) ? zebraColor : Color.WHITE;
 
-                        tablaData.addCell(ReporteUtil.crearCelda(String.valueOf(contador),                    ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(ReporteUtil.formatearFechaConDia(atraso.getFechaHorario()), ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getHoraHorario(),                     ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(ReporteUtil.formatearFechaConDia(atraso.getFechaTimbre()),  ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getHoraTimbre(),                      ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getTipo_permiso(),                    ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getDesde(),                           ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getHasta(),                           ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getPermiso(),                         ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getPermiso(),                         ReporteUtil.fuenteTexto(), fondo)); // (duplicado en tu diseño)
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getTolerancia(),                      ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getTiempoAtraso(),                    ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getMinutosAtraso(),                   ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(String.valueOf(contador), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(ReporteUtil.formatearFechaConDia(atraso.getFechaHorario()),
+                                        ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(atraso.getHoraHorario(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(ReporteUtil.formatearFechaConDia(atraso.getFechaTimbre()),
+                                        ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(atraso.getHoraTimbre(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(atraso.getTipo_permiso(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getDesde(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getHasta(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData
+                                .addCell(ReporteUtil.crearCelda(atraso.getPermiso(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData
+                                .addCell(ReporteUtil.crearCelda(atraso.getPermiso(), ReporteUtil.fuenteTexto(), fondo)); // (duplicado
+                                                                                                                         // en
+                                                                                                                         // tu
+                                                                                                                         // diseño)
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(atraso.getTolerancia(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(atraso.getTiempoAtraso(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(atraso.getMinutosAtraso(), ReporteUtil.fuenteTexto(), fondo));
 
                         contador++;
-                        totalSegs  += convertirTiempoAtrasoASegundos(atraso.getTiempoAtraso());
-                        totalMins  += convertirMinutos(atraso.getMinutosAtraso());
-                        }
+                        totalSegs += convertirTiempoAtrasoASegundos(atraso.getTiempoAtraso());
+                        totalMins += convertirMinutos(atraso.getMinutosAtraso());
+                    }
 
-                        // Totales al final
-                        Color fondoTotal = new Color(230, 240, 255);
+                    // Totales al final
+                    Color fondoTotal = new Color(230, 240, 255);
 
-                        // Vacías hasta columna 9 (como en tu código)
-                        for (int i = 0; i < 9; i++) {
+                    // Vacías hasta columna 9 (como en tu código)
+                    for (int i = 0; i < 9; i++) {
                         PdfPCell vacia = ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(), Color.WHITE);
                         vacia.setBorder(Rectangle.NO_BORDER);
                         tablaData.addCell(vacia);
-                        }
+                    }
 
-                        // "TOTAL"
-                        tablaData.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), fondoTotal));
+                    // "TOTAL"
+                    tablaData.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), fondoTotal));
 
-                        // Tiempo total formateado
-                        long h = totalSegs / 3600;
-                        long m = (totalSegs % 3600) / 60;
-                        long s = totalSegs % 60;
-                        String totalFormateado = String.format("%02d:%02d:%02d", h, m, s);
+                    // Tiempo total formateado
+                    long h = totalSegs / 3600;
+                    long m = (totalSegs % 3600) / 60;
+                    long s = totalSegs % 60;
+                    String totalFormateado = String.format("%02d:%02d:%02d", h, m, s);
 
-                        // Tiempo y minutos
-                        tablaData.addCell(ReporteUtil.crearCelda(totalFormateado, ReporteUtil.fuenteTexto(), fondoTotal));
-                        tablaData.addCell(ReporteUtil.crearCelda(
-                        String.format("%.2f", totalMins).replace(",", "."),
-                        ReporteUtil.fuenteTexto(), fondoTotal
-                        ));
+                    // Tiempo y minutos
+                    tablaData.addCell(ReporteUtil.crearCelda(totalFormateado, ReporteUtil.fuenteTexto(), fondoTotal));
+                    tablaData.addCell(ReporteUtil.crearCelda(
+                            String.format("%.2f", totalMins).replace(",", "."),
+                            ReporteUtil.fuenteTexto(), fondoTotal));
 
-                        tablaData.setSpacingAfter(10f);
-                        document.add(tablaData);
+                    tablaData.setSpacingAfter(10f);
+                    document.add(tablaData);
                 }
-                }
+            }
 
-                // 3) Cierre y retorno
-                document.close();
-                return baos.toByteArray();
+            // 3) Cierre y retorno
+            document.close();
+            return baos.toByteArray();
 
         } catch (IllegalArgumentException e) {
-                // Si algún helper lanza IAEx, dejamos que el controller decida si es 400
-                throw e;
+            // Si algún helper lanza IAEx, dejamos que el controller decida si es 400
+            throw e;
         } catch (Exception e) {
-                // 500 interno uniforme
-                throw new ReportBuildException("No se pudo generar ReporteAtrasos.pdf", e);
+            // 500 interno uniforme
+            throw new ReportBuildException("No se pudo generar ReporteAtrasos.pdf", e);
         } finally {
-                // 4) Ciclo de recursos garantizado
-                if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+            // 4) Ciclo de recursos garantizado
+            if (document != null && document.isOpen()) {
+                try {
+                    document.close();
+                } catch (Exception ignore) {
                 }
-                if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+            }
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
                 }
-                if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+            }
+            if (baos != null) {
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
                 }
+            }
         }
-        }
+    }
 
-        
     public byte[] generarReporteAtrasosExcel(ReporteAtrasosRequest request) {
         // =========================
         // 0) Constantes DRY locales
@@ -246,25 +277,25 @@ public class ReporteAtrasosService {
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 15;
 
         final String[] HEADERS = {
-            "ITEM","IDENTIFICACIÓN","CÓDIGO","APELLIDO NOMBRE",
-            "CIUDAD","SUCURSAL","RÉGIMEN","DEPARTAMENTO","CARGO",
-            "FECHA HORARIO","HORA HORARIO",
-            "FECHA TIMBRE","HORA TIMBRE",
-            "TOLERANCIA","ATRASO","ATRASO MINUTOS"
+                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
+                "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
+                "FECHA HORARIO", "HORA HORARIO",
+                "FECHA TIMBRE", "HORA TIMBRE",
+                "TOLERANCIA", "ATRASO", "ATRASO MINUTOS"
         };
         final int[] ANCHOS = {
-            10,20,20,28,
-            20,20,20,20,20,
-            20,20,
-            20,20,
-            20,20,20
+                10, 20, 20, 28,
+                20, 20, 20, 20, 20,
+                20, 20,
+                20, 20,
+                20, 20, 20
         };
 
         // ===========================================================
         // 1) Inicialización de recursos (try-with-resources obligatorio)
         // ===========================================================
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
@@ -286,14 +317,17 @@ public class ReporteAtrasosService {
 
             // 2.3 Títulos
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())), estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())),
+                    estiloTitulo);
 
             String activosInactivos = ("1".equals(safe(request.getOpcionBusqueda())) ||
-                                    "1".equals(String.valueOf(request.getOpcionBusqueda())))
-                                    ? "ACTIVOS" : "INACTIVOS";
+                    "1".equals(String.valueOf(request.getOpcionBusqueda())))
+                            ? "ACTIVOS"
+                            : "INACTIVOS";
             UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE ATRASOS - " + activosInactivos, estiloTitulo);
 
-            String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL " + safe(request.getFechaFin());
+            String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL "
+                    + safe(request.getFechaFin());
             UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
 
             // 2.4 Encabezados + anchos (fila 6 → idx 5)
@@ -313,24 +347,27 @@ public class ReporteAtrasosService {
 
             if (request.getGrupos() != null) {
                 for (GrupoAtrasoDTO grupo : request.getGrupos()) {
-                    if (grupo == null || grupo.getEmpleados() == null) continue;
+                    if (grupo == null || grupo.getEmpleados() == null)
+                        continue;
 
                     for (EmpleadoAtrasoDTO emp : grupo.getEmpleados()) {
-                        if (emp == null || emp.getAtrasos() == null) continue;
+                        if (emp == null || emp.getAtrasos() == null)
+                            continue;
 
-                        String apenom   = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
-                        String ciudad   = firstNonEmpty(safe(emp.getCiudad()),   safe(grupo.getCiudad()));
+                        String apenom = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
+                        String ciudad = firstNonEmpty(safe(emp.getCiudad()), safe(grupo.getCiudad()));
                         String sucursal = firstNonEmpty(safe(emp.getSucursal()), safe(grupo.getSucursal()));
 
                         for (AtrasoDTO reg : emp.getAtrasos()) {
-                            if (reg == null) continue;
+                            if (reg == null)
+                                continue;
 
-                            String fechaHor  = safe(reg.getFechaHorario());
-                            String horaHor   = safe(reg.getHoraHorario());
-                            String fechaTim  = safe(reg.getFechaTimbre());
-                            String horaTim   = safe(reg.getHoraTimbre());
-                            String toler     = safe(reg.getTolerancia());                // "HH:mm:ss" o "00:00:00"
-                            String atrasoFmt = safe(reg.getTiempoAtraso());              // "HH:mm:ss"
+                            String fechaHor = safe(reg.getFechaHorario());
+                            String horaHor = safe(reg.getHoraHorario());
+                            String fechaTim = safe(reg.getFechaTimbre());
+                            String horaTim = safe(reg.getHoraTimbre());
+                            String toler = safe(reg.getTolerancia()); // "HH:mm:ss" o "00:00:00"
+                            String atrasoFmt = safe(reg.getTiempoAtraso()); // "HH:mm:ss"
                             String atrasoMin = normalize2(safe(reg.getMinutosAtraso())); // "xx.yy"
 
                             Row r = UtilExcel.asegurarFila(hoja, filaAct++);
@@ -363,35 +400,37 @@ public class ReporteAtrasosService {
 
             // 2.6 Estilos de cuerpo (bordes + alineación)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Header centrado con bordes
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             if (ultimaFila >= filaDatosIni) {
                 // ITEM centrado
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
                 // Texto largo a la izquierda
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 3, 3,  estiloIzqBorde, true); // APELLIDO NOMBRE
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 7, 9,  estiloIzqBorde, true); // DEPTO/CARGO
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 3, 3, estiloIzqBorde, true); // APELLIDO
+                                                                                                            // NOMBRE
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 7, 9, estiloIzqBorde, true); // DEPTO/CARGO
                 // Resto centrado
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 2,  estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 4, 6,  estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 2, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 4, 6, estiloCentroBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 10, 15, estiloCentroBorde, true);
 
                 // 2.7 Tabla con filtros (ITEM sin filtro)
                 boolean[] filtros = new boolean[HEADERS.length];
-                for (int i = 0; i < filtros.length; i++) filtros[i] = true;
+                for (int i = 0; i < filtros.length; i++)
+                    filtros[i] = true;
                 filtros[0] = false; // ITEM sin filtro
 
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "AtrasosReporteTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "AtrasosReporteTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // ======================
@@ -407,18 +446,21 @@ public class ReporteAtrasosService {
         }
     }
 
-
     /* ===== Helpers locales ===== */
     private String safe(Object v) {
-        if (v == null) return "";
+        if (v == null)
+            return "";
         String s = String.valueOf(v).trim();
         return "null".equalsIgnoreCase(s) ? "" : s;
     }
+
     private String firstNonEmpty(String a, String b) {
         return (a == null || a.isBlank()) ? (b == null ? "" : b) : a;
     }
+
     private String normalize2(String v) {
-        if (v == null || v.isBlank()) return "0.00";
+        if (v == null || v.isBlank())
+            return "0.00";
         String s = v.replace(",", ".");
         try {
             double d = Double.parseDouble(s);
@@ -427,9 +469,6 @@ public class ReporteAtrasosService {
             return s;
         }
     }
-
-
-
 
     public static long convertirTiempoAtrasoASegundos(String tiempo) {
         if (tiempo == null || !tiempo.matches("\\d{2}:\\d{2}:\\d{2}"))

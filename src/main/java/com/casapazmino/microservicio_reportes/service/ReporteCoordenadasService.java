@@ -28,7 +28,7 @@ import java.util.List;
 @Service
 public class ReporteCoordenadasService {
 
-    //METODO QUE GENERA EL PDF
+    // METODO QUE GENERA EL PDF
     public byte[] generarReportePDF(ReporteCoordenadasRequest request) {
 
         // DRY: constantes locales
@@ -42,14 +42,14 @@ public class ReporteCoordenadasService {
         try {
             // 1) Inicialización
             baos = new ByteArrayOutputStream();
-            Document doc = new Document(PageSize.A4); // alias local para claridad, pero mantenemos referencia en 'document'
+            Document doc = new Document(PageSize.A4); // alias local para claridad, pero mantenemos referencia en
+                                                      // 'document'
             document = doc;
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -65,7 +65,7 @@ public class ReporteCoordenadasService {
 
             // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color zebraColor     = ReporteUtil.colorZebraClaro();
+            Color zebraColor = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(4);
@@ -84,10 +84,10 @@ public class ReporteCoordenadasService {
                 Color fondo = zebra ? zebraColor : Color.WHITE;
                 zebra = !zebra;
 
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(c.getId()),    ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(c.getDescripcion(),           ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(c.getLatitud(),               ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(c.getLongitud(),              ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(c.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(c.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(c.getLatitud(), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.crearCelda(c.getLongitud(), ReporteUtil.fuenteTablaData(), fondo));
             }
 
             document.add(tabla);
@@ -105,20 +105,28 @@ public class ReporteCoordenadasService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-    
-    
+
     // =========================
-    //          XLSX (idéntico al front)
+    // XLSX (idéntico al front)
     // =========================
     public byte[] generarReporteXLSX(ReporteCoordenadasRequest request) {
         // =========================
@@ -127,15 +135,15 @@ public class ReporteCoordenadasService {
         final String NOMBRE_HOJA = "Coordenadas";
         final int FILA_ENCABEZADO = 5;
 
-        // Merges B1:E1 ... B5:E5  => (row 0..4, col 1..4)
+        // Merges B1:E1 ... B5:E5 => (row 0..4, col 1..4)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 4;
 
         final String[] HEADERS = { "ITEM", "CÓDIGO", "LATITUD", "LONGITUD", "DESCRIPCIÓN" };
-        final int[] ANCHOS     = {   10,      20,        30,        30,          30     };
+        final int[] ANCHOS = { 10, 20, 30, 30, 30 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
@@ -185,11 +193,13 @@ public class ReporteCoordenadasService {
 
             int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
-            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto izquierda)
+            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto
+            // izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             if (ultimaFila >= filaDatosIni) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
@@ -200,13 +210,12 @@ public class ReporteCoordenadasService {
             if (ultimaFila >= filaDatosIni) {
                 boolean[] filtros = new boolean[] { false, true, true, true, true }; // ITEM sin filtro
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "CoordenadasTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "CoordenadasTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -221,7 +230,7 @@ public class ReporteCoordenadasService {
     }
 
     // =========================
-    //           CSV (orden fijo)
+    // CSV (orden fijo)
     // =========================
     public byte[] generarReporteCSV(ReporteCoordenadasRequest request) {
         // === Contrato del CSV ===
@@ -235,7 +244,8 @@ public class ReporteCoordenadasService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -244,15 +254,15 @@ public class ReporteCoordenadasService {
             List<CoordenadaDTO> items = request.getCoordenadas();
             if (items != null && !items.isEmpty()) {
                 for (CoordenadaDTO c : items) {
-                    String id   = (c.getId() == null)          ? "" : String.valueOf(c.getId());
-                    String lat  = (c.getLatitud() == null)     ? "" : c.getLatitud();
-                    String lon  = (c.getLongitud() == null)    ? "" : c.getLongitud();
+                    String id = (c.getId() == null) ? "" : String.valueOf(c.getId());
+                    String lat = (c.getLatitud() == null) ? "" : c.getLatitud();
+                    String lon = (c.getLongitud() == null) ? "" : c.getLongitud();
                     String desc = (c.getDescripcion() == null) ? "" : c.getDescripcion();
 
                     sb.append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(lat)).append(DELIM)
-                    .append(UtilCsv.csvEscape(lon)).append(DELIM)
-                    .append(UtilCsv.csvEscape(desc)).append(EOL);
+                            .append(UtilCsv.csvEscape(lat)).append(DELIM)
+                            .append(UtilCsv.csvEscape(lon)).append(DELIM)
+                            .append(UtilCsv.csvEscape(desc)).append(EOL);
                 }
             }
 
@@ -269,7 +279,7 @@ public class ReporteCoordenadasService {
     }
 
     // =========================
-    //            XML (según front)
+    // XML (según front)
     // =========================
     public byte[] generarReporteXML(ReporteCoordenadasRequest request) {
         final String NOMBRE_REPORTE = "Coordenadas.xml";
@@ -290,19 +300,19 @@ public class ReporteCoordenadasService {
             } else {
                 for (CoordenadaDTO c : items) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(c.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(c.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<descripcion>")
-                    .append(UtilXml.xmlEsc(c.getDescripcion()))
-                    .append("</descripcion>").append(EOL);
+                            .append(UtilXml.xmlEsc(c.getDescripcion()))
+                            .append("</descripcion>").append(EOL);
 
                     sb.append(IND).append(IND).append("<latitud>")
-                    .append(UtilXml.xmlEsc(c.getLatitud()))
-                    .append("</latitud>").append(EOL);
+                            .append(UtilXml.xmlEsc(c.getLatitud()))
+                            .append("</latitud>").append(EOL);
 
                     sb.append(IND).append(IND).append("<longitud>")
-                    .append(UtilXml.xmlEsc(c.getLongitud()))
-                    .append("</longitud>").append(EOL);
+                            .append(UtilXml.xmlEsc(c.getLongitud()))
+                            .append("</longitud>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }

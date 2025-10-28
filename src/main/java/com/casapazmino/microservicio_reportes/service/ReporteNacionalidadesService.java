@@ -43,10 +43,9 @@ public class ReporteNacionalidadesService {
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -62,7 +61,7 @@ public class ReporteNacionalidadesService {
 
             // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra     = ReporteUtil.colorZebraClaro();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Tabla
             PdfPTable tabla = new PdfPTable(2);
@@ -71,8 +70,9 @@ public class ReporteNacionalidadesService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO",        ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NACIONALIDAD",  ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(
+                    ReporteUtil.crearCelda("NACIONALIDAD", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
             // Cuerpo (zebra)
             List<NacionalidadDTO> lista = request.getNacionalidades();
@@ -80,8 +80,9 @@ public class ReporteNacionalidadesService {
             if (lista != null) {
                 for (NacionalidadDTO n : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(n.getNombre(),             ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(n.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
             }
@@ -99,17 +100,26 @@ public class ReporteNacionalidadesService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-    
+
     // =========================
     // XLSX (igual al front)
     // =========================
@@ -117,8 +127,8 @@ public class ReporteNacionalidadesService {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA     = "Nacionalidad"; // nombre exacto del front (≤31)
-        final int    FILA_ENCABEZADO = 5;
+        final String NOMBRE_HOJA = "Nacionalidad"; // nombre exacto del front (≤31)
+        final int FILA_ENCABEZADO = 5;
 
         // Merges B1:C1 ... B5:C5 => (row 0..4, col 1..2)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
@@ -126,10 +136,10 @@ public class ReporteNacionalidadesService {
 
         final String TITULO_REPORTE = "LISTA DE NACIONALIDADES";
         final String[] HEADERS = { "ITEM", "CODIGO", "NACIONALIDAD" }; // sin tildes como el front
-        final int[]    ANCHOS  = {   20,       30,          40        };
+        final int[] ANCHOS = { 20, 30, 40 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener encabezado visible
@@ -165,28 +175,30 @@ public class ReporteNacionalidadesService {
             List<NacionalidadDTO> ordenados = new java.util.ArrayList<>(data == null ? java.util.List.of() : data);
             ordenados.sort(java.util.Comparator.comparing(
                     NacionalidadDTO::getId,
-                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())
-            ));
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
 
             int filaDatosInicio = FILA_ENCABEZADO + 1;
             int filaActual = filaDatosInicio;
             int item = 1;
 
             for (NacionalidadDTO n : ordenados) {
-                if (n == null) continue;
+                if (n == null)
+                    continue;
                 Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                UtilExcel.establecerValor(r, 0, item++, null);                                // ITEM
-                UtilExcel.establecerValor(r, 1, n.getId(), null);                             // CODIGO
+                UtilExcel.establecerValor(r, 0, item++, null); // ITEM
+                UtilExcel.establecerValor(r, 1, n.getId(), null); // CODIGO
                 UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(n.getNombre()), null);// NACIONALIDAD
             }
 
             int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
-            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada; resto izquierda)
+            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada; resto
+            // izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true);
@@ -195,13 +207,12 @@ public class ReporteNacionalidadesService {
                 // 7) Tabla estilizada (nombre histórico del front) + filtros (ITEM sin filtro)
                 boolean[] filtros = new boolean[] { false, true, true };
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "NivelesTitulosTabla", // se mantiene el nombre usado en front
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "NivelesTitulosTabla", // se mantiene el nombre usado en front
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -215,7 +226,6 @@ public class ReporteNacionalidadesService {
         }
     }
 
-    
     // =========================
     // CSV (como el front: keys = id, nombre)
     // =========================
@@ -231,7 +241,8 @@ public class ReporteNacionalidadesService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -240,11 +251,11 @@ public class ReporteNacionalidadesService {
             List<NacionalidadDTO> items = request.getNacionalidades();
             if (items != null && !items.isEmpty()) {
                 for (NacionalidadDTO n : items) {
-                    String id  = (n == null || n.getId() == null)     ? "" : String.valueOf(n.getId());
+                    String id = (n == null || n.getId() == null) ? "" : String.valueOf(n.getId());
                     String nom = (n == null || n.getNombre() == null) ? "" : n.getNombre();
 
                     sb.append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nom)).append(EOL);
+                            .append(UtilCsv.csvEscape(nom)).append(EOL);
                 }
             }
 
@@ -260,7 +271,6 @@ public class ReporteNacionalidadesService {
         }
     }
 
-    
     // =========================
     // XML (replica exacta del front, incl. raíz con tilde)
     // =========================
@@ -283,11 +293,11 @@ public class ReporteNacionalidadesService {
             } else {
                 for (NacionalidadDTO n : items) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(n.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(n.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<nacionalidad>")
-                    .append(UtilXml.xmlEsc(n.getNombre()))
-                    .append("</nacionalidad>").append(EOL);
+                            .append(UtilXml.xmlEsc(n.getNombre()))
+                            .append("</nacionalidad>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -302,6 +312,5 @@ public class ReporteNacionalidadesService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
 }

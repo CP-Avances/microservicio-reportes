@@ -27,14 +27,14 @@ import java.util.List;
 @Service
 public class ReporteEmpleadoService {
 
-    //METODO QUE GENERA EL REPORTE PDF
+    // METODO QUE GENERA EL REPORTE PDF
     public byte[] generarReporteEmpleadosPDF(ReporteEmpleadosRequest request) {
 
         // DRY: constantes locales
         final float[] WIDTHS = { 1.8f, 5.5f, 3.7f, 3f, 7.3f, 2.7f, 3f, 3f, 3f, 2f, 3f };
         final String[] HEADERS = {
-            "Código", "Nombre", "Identificación", "Fecha Nacimiento", "Correo",
-            "Género", "Estado Civil", "Domicilio", "Teléfono", "Estado", "Nacionalidad"
+                "Código", "Nombre", "Identificación", "Fecha Nacimiento", "Correo",
+                "Género", "Estado Civil", "Domicilio", "Teléfono", "Estado", "Nacionalidad"
         };
 
         Document document = null;
@@ -47,10 +47,9 @@ public class ReporteEmpleadoService {
             document = new Document(PageSize.A4.rotate());
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -64,7 +63,7 @@ public class ReporteEmpleadoService {
 
             // Colores
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra     = ReporteUtil.colorZebraClaro();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Tabla principal
             PdfPTable tabla = new PdfPTable(11);
@@ -83,17 +82,17 @@ public class ReporteEmpleadoService {
             if (empleados != null) {
                 for (EmpleadoDTO e : empleados) {
                     Color bg = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(e.getCodigo(),          ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getNombreCompleto(),  ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getIdentificacion(),  ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getCodigo(), ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getNombreCompleto(), ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getIdentificacion(), ReporteUtil.fuenteTablaData(), bg));
                     tabla.addCell(ReporteUtil.crearCelda(e.getFechaNacimiento(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getCorreo(),          ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getGenero(),          ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getEstadoCivil(),     ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getDomicilio(),       ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getTelefono(),        ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getEstadoTexto(),     ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getNacionalidad(),    ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getCorreo(), ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getGenero(), ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getEstadoCivil(), ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getDomicilio(), ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getTelefono(), ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getEstadoTexto(), ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.crearCelda(e.getNacionalidad(), ReporteUtil.fuenteTablaData(), bg));
                     zebra = !zebra;
                 }
             }
@@ -113,19 +112,28 @@ public class ReporteEmpleadoService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-    
+
     // =========================
-    //          XLSX
+    // XLSX
     // =========================
     public byte[] generarReporteEmpleadosXLSX(ReporteEmpleadosRequest request) {
         // =========================
@@ -134,18 +142,18 @@ public class ReporteEmpleadoService {
         final String NOMBRE_HOJA = "Empleados";
         final int FILA_ENCABEZADO = 5;
 
-        // Merges B1:M1 ... B5:M5  => (row 0..4, col 1..12)
+        // Merges B1:M1 ... B5:M5 => (row 0..4, col 1..12)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 12;
 
         final String[] HEADERS = {
-            "ITEM","CODIGO","IDENTIFICACION","APELLIDO","NOMBRE","FECHA_NACIMIENTO",
-            "ESTADO_CIVIL","GENERO","CORREO","ESTADO","DOMICILIO","TELEFONO","NACIONALIDAD"
+                "ITEM", "CODIGO", "IDENTIFICACION", "APELLIDO", "NOMBRE", "FECHA_NACIMIENTO",
+                "ESTADO_CIVIL", "GENERO", "CORREO", "ESTADO", "DOMICILIO", "TELEFONO", "NACIONALIDAD"
         };
-        final int[] ANCHOS = { 10,20,20,20,20,20,20,20,20,20,20,20,20 };
+        final int[] ANCHOS = { 10, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
@@ -185,7 +193,7 @@ public class ReporteEmpleadoService {
                 for (int i = 0; i < items.size(); i++) {
                     EmpleadoDTO e = items.get(i);
                     Row r = UtilExcel.asegurarFila(hoja, filaAct++);
-                    UtilExcel.establecerValor(r, 0, i + 1, null);             // ITEM
+                    UtilExcel.establecerValor(r, 0, i + 1, null); // ITEM
                     UtilExcel.establecerValor(r, 1, nvl(e.getCodigo()), null);
                     UtilExcel.establecerValor(r, 2, nvl(e.getIdentificacion()), null);
                     UtilExcel.establecerValor(r, 3, nvl(e.getApellido()), null);
@@ -195,9 +203,9 @@ public class ReporteEmpleadoService {
                     UtilExcel.establecerValor(r, 7, nvl(e.getGenero()), null);
                     UtilExcel.establecerValor(r, 8, nvl(e.getCorreo()), null);
                     UtilExcel.establecerValor(r, 9, nvl(e.getEstadoTexto()), null);
-                    UtilExcel.establecerValor(r,10, nvl(e.getDomicilio()), null);
-                    UtilExcel.establecerValor(r,11, nvl(e.getTelefono()), null);
-                    UtilExcel.establecerValor(r,12, nvl(e.getNacionalidad()), null);
+                    UtilExcel.establecerValor(r, 10, nvl(e.getDomicilio()), null);
+                    UtilExcel.establecerValor(r, 11, nvl(e.getTelefono()), null);
+                    UtilExcel.establecerValor(r, 12, nvl(e.getNacionalidad()), null);
                 }
             }
 
@@ -205,10 +213,11 @@ public class ReporteEmpleadoService {
 
             // 6) Alineación + bordes
             CellStyle centroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle izqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle izqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Header centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, centroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, centroBorde,
+                    true);
 
             // Cuerpo: col 0 centrada; resto izquierda
             if (ultimaFila >= filaDatosIni) {
@@ -219,16 +228,15 @@ public class ReporteEmpleadoService {
             // 7) Tabla estilizada + filtros (ITEM sin filtro)
             if (ultimaFila >= filaDatosIni) {
                 boolean[] filtros = new boolean[] {
-                    false, true, true, true, true, true, true, true, true, true, true, true, true
+                        false, true, true, true, true, true, true, true, true, true, true, true, true
                 };
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "Empleados",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "Empleados",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -242,9 +250,8 @@ public class ReporteEmpleadoService {
         }
     }
 
-
     // =========================
-    //          CSV (LEGACY)
+    // CSV (LEGACY)
     // =========================
     public byte[] generarReporteEmpleadosCSV(ReporteEmpleadosRequest request) {
         // === Contrato del CSV ===
@@ -252,8 +259,8 @@ public class ReporteEmpleadoService {
         final String DELIM = ",";
         final String EOL = "\r\n"; // CRLF para Excel/Windows
         final String[] HEADERS = {
-            "CODIGO","IDENTIFICACION","APELLIDO","NOMBRE","FECHA_NACIMIENTO","ESTADO_CIVIL",
-            "GENERO","CORREO","ESTADO","DOMICILIO","TELEFONO","NACIONALIDAD"
+                "CODIGO", "IDENTIFICACION", "APELLIDO", "NOMBRE", "FECHA_NACIMIENTO", "ESTADO_CIVIL",
+                "GENERO", "CORREO", "ESTADO", "DOMICILIO", "TELEFONO", "NACIONALIDAD"
         };
 
         try {
@@ -261,7 +268,8 @@ public class ReporteEmpleadoService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -270,31 +278,31 @@ public class ReporteEmpleadoService {
             List<EmpleadoDTO> items = request.getEmpleados();
             if (items != null && !items.isEmpty()) {
                 for (EmpleadoDTO e : items) {
-                    String codigo          = (e.getCodigo() == null)          ? "" : e.getCodigo();
-                    String identificacion  = (e.getIdentificacion() == null)  ? "" : e.getIdentificacion();
-                    String apellido        = (e.getApellido() == null)        ? "" : e.getApellido();
-                    String nombre          = (e.getNombre() == null)          ? "" : e.getNombre();
-                    String fechaNac        = (e.getFechaNacimiento() == null) ? "" : e.getFechaNacimiento();
-                    String estadoCivil     = (e.getEstadoCivil() == null)     ? "" : e.getEstadoCivil();
-                    String genero          = (e.getGenero() == null)          ? "" : e.getGenero();
-                    String correo          = (e.getCorreo() == null)          ? "" : e.getCorreo();
-                    String estadoTexto     = (e.getEstadoTexto() == null)     ? "" : e.getEstadoTexto();
-                    String domicilio       = (e.getDomicilio() == null)       ? "" : e.getDomicilio();
-                    String telefono        = (e.getTelefono() == null)        ? "" : e.getTelefono();
-                    String nacionalidad    = (e.getNacionalidad() == null)    ? "" : e.getNacionalidad();
+                    String codigo = (e.getCodigo() == null) ? "" : e.getCodigo();
+                    String identificacion = (e.getIdentificacion() == null) ? "" : e.getIdentificacion();
+                    String apellido = (e.getApellido() == null) ? "" : e.getApellido();
+                    String nombre = (e.getNombre() == null) ? "" : e.getNombre();
+                    String fechaNac = (e.getFechaNacimiento() == null) ? "" : e.getFechaNacimiento();
+                    String estadoCivil = (e.getEstadoCivil() == null) ? "" : e.getEstadoCivil();
+                    String genero = (e.getGenero() == null) ? "" : e.getGenero();
+                    String correo = (e.getCorreo() == null) ? "" : e.getCorreo();
+                    String estadoTexto = (e.getEstadoTexto() == null) ? "" : e.getEstadoTexto();
+                    String domicilio = (e.getDomicilio() == null) ? "" : e.getDomicilio();
+                    String telefono = (e.getTelefono() == null) ? "" : e.getTelefono();
+                    String nacionalidad = (e.getNacionalidad() == null) ? "" : e.getNacionalidad();
 
                     sb.append(UtilCsv.csvEscape(codigo)).append(DELIM)
-                    .append(UtilCsv.csvEscape(identificacion)).append(DELIM)
-                    .append(UtilCsv.csvEscape(apellido)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nombre)).append(DELIM)
-                    .append(UtilCsv.csvEscape(fechaNac)).append(DELIM)
-                    .append(UtilCsv.csvEscape(estadoCivil)).append(DELIM)
-                    .append(UtilCsv.csvEscape(genero)).append(DELIM)
-                    .append(UtilCsv.csvEscape(correo)).append(DELIM)
-                    .append(UtilCsv.csvEscape(estadoTexto)).append(DELIM)
-                    .append(UtilCsv.csvEscape(domicilio)).append(DELIM)
-                    .append(UtilCsv.csvEscape(telefono)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nacionalidad)).append(EOL);
+                            .append(UtilCsv.csvEscape(identificacion)).append(DELIM)
+                            .append(UtilCsv.csvEscape(apellido)).append(DELIM)
+                            .append(UtilCsv.csvEscape(nombre)).append(DELIM)
+                            .append(UtilCsv.csvEscape(fechaNac)).append(DELIM)
+                            .append(UtilCsv.csvEscape(estadoCivil)).append(DELIM)
+                            .append(UtilCsv.csvEscape(genero)).append(DELIM)
+                            .append(UtilCsv.csvEscape(correo)).append(DELIM)
+                            .append(UtilCsv.csvEscape(estadoTexto)).append(DELIM)
+                            .append(UtilCsv.csvEscape(domicilio)).append(DELIM)
+                            .append(UtilCsv.csvEscape(telefono)).append(DELIM)
+                            .append(UtilCsv.csvEscape(nacionalidad)).append(EOL);
                 }
             }
 
@@ -310,9 +318,8 @@ public class ReporteEmpleadoService {
         }
     }
 
-    
     // =========================
-    //           XML (LEGACY)
+    // XML (LEGACY)
     // =========================
     public byte[] generarReporteEmpleadosXML(ReporteEmpleadosRequest request) {
         final String NOMBRE_REPORTE = "Empleados.xml";
@@ -333,55 +340,55 @@ public class ReporteEmpleadoService {
             } else {
                 for (EmpleadoDTO e : items) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" codigo=\"").append(UtilXml.xmlEsc(e.getCodigo())).append("\">").append(EOL);
+                            .append(" codigo=\"").append(UtilXml.xmlEsc(e.getCodigo())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<identificacion>")
-                    .append(UtilXml.xmlEsc(e.getIdentificacion()))
-                    .append("</identificacion>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getIdentificacion()))
+                            .append("</identificacion>").append(EOL);
 
                     sb.append(IND).append(IND).append("<apellido>")
-                    .append(UtilXml.xmlEsc(e.getApellido()))
-                    .append("</apellido>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getApellido()))
+                            .append("</apellido>").append(EOL);
 
                     sb.append(IND).append(IND).append("<nombre>")
-                    .append(UtilXml.xmlEsc(e.getNombre()))
-                    .append("</nombre>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getNombre()))
+                            .append("</nombre>").append(EOL);
 
                     sb.append(IND).append(IND).append("<estadoCivil>")
-                    .append(UtilXml.xmlEsc(e.getEstadoCivil()))
-                    .append("</estadoCivil>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getEstadoCivil()))
+                            .append("</estadoCivil>").append(EOL);
 
                     sb.append(IND).append(IND).append("<genero>")
-                    .append(UtilXml.xmlEsc(e.getGenero()))
-                    .append("</genero>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getGenero()))
+                            .append("</genero>").append(EOL);
 
                     sb.append(IND).append(IND).append("<correo>")
-                    .append(UtilXml.xmlEsc(e.getCorreo()))
-                    .append("</correo>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getCorreo()))
+                            .append("</correo>").append(EOL);
 
                     sb.append(IND).append(IND).append("<fechaNacimiento>")
-                    .append(UtilXml.xmlEsc(e.getFechaNacimiento()))
-                    .append("</fechaNacimiento>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getFechaNacimiento()))
+                            .append("</fechaNacimiento>").append(EOL);
 
                     sb.append(IND).append(IND).append("<estado>")
-                    .append(UtilXml.xmlEsc(e.getEstadoTexto()))
-                    .append("</estado>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getEstadoTexto()))
+                            .append("</estado>").append(EOL);
 
                     sb.append(IND).append(IND).append("<domicilio>")
-                    .append(UtilXml.xmlEsc(e.getDomicilio()))
-                    .append("</domicilio>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getDomicilio()))
+                            .append("</domicilio>").append(EOL);
 
                     sb.append(IND).append(IND).append("<telefono>")
-                    .append(UtilXml.xmlEsc(e.getTelefono()))
-                    .append("</telefono>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getTelefono()))
+                            .append("</telefono>").append(EOL);
 
                     sb.append(IND).append(IND).append("<nacionalidad>")
-                    .append(UtilXml.xmlEsc(e.getNacionalidad()))
-                    .append("</nacionalidad>").append(EOL);
+                            .append(UtilXml.xmlEsc(e.getNacionalidad()))
+                            .append("</nacionalidad>").append(EOL);
 
                     sb.append(IND).append(IND).append("<imagen>")
-                    .append("") // sin imagen en payload (se deja vacío)
-                    .append("</imagen>").append(EOL);
+                            .append("") // sin imagen en payload (se deja vacío)
+                            .append("</imagen>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -397,7 +404,6 @@ public class ReporteEmpleadoService {
         }
     }
 
-    
     private static String nvl(String s) {
         return (s == null) ? "" : s;
     }

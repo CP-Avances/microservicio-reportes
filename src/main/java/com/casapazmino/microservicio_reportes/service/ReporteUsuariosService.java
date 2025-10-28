@@ -24,26 +24,25 @@ public class ReporteUsuariosService {
 
     public byte[] generarReportePDF(ReporteUsuariosRequest request) {
         // DRY: constantes locales
-        final float[] WIDTHS_CABECERA     = { 3f, 3f, 2f };
-        final float[] WIDTHS_TABLA_USU    = { 1f, 3f, 3f, 4f, 3f, 2f, 3f, 3f, 3f, 3f, 3f, 3f, 3f, 5f };
-        final String  PREF_SUCURSAL       = "SUCURSAL: ";
-        final String  PREF_REGISTROS      = "N° Registros: ";
-        final float   MARGEN_IZQ          = 40f, MARGEN_DER = 40f, MARGEN_SUP = 60f, MARGEN_INF = 40f;
+        final float[] WIDTHS_CABECERA = { 3f, 3f, 2f };
+        final float[] WIDTHS_TABLA_USU = { 1f, 3f, 3f, 4f, 3f, 2f, 3f, 3f, 3f, 3f, 3f, 3f, 3f, 5f };
+        final String PREF_SUCURSAL = "SUCURSAL: ";
+        final String PREF_REGISTROS = "N° Registros: ";
+        final float MARGEN_IZQ = 40f, MARGEN_DER = 40f, MARGEN_SUP = 60f, MARGEN_INF = 40f;
 
         Document document = null;
-        PdfWriter writer  = null;
+        PdfWriter writer = null;
         ByteArrayOutputStream baos = null;
 
         try {
             // 1) Inicialización
-            baos     = new ByteArrayOutputStream();
+            baos = new ByteArrayOutputStream();
             document = new Document(PageSize.A4.rotate(), MARGEN_IZQ, MARGEN_DER, MARGEN_SUP, MARGEN_INF);
-            writer   = PdfWriter.getInstance(document, baos);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
-            ));
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (respetando tu diseño/estilos actuales)
@@ -65,9 +64,9 @@ public class ReporteUsuariosService {
             document.add(titulo);
 
             // Colores y fuente (calculados una vez)
-            final Color colorPrincipal   = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            final Color colorSecundario  = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            final Font  fuente           = ReporteUtil.fuenteTexto();
+            final Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            final Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+            final Font fuente = ReporteUtil.fuenteTexto();
 
             // Por cada grupo (según filtro)
             for (AgrupadorUsuariosDTO grupo : request.getDatos()) {
@@ -112,8 +111,7 @@ public class ReporteUsuariosService {
                             widths[0][0],
                             heights[heights.length - 1],
                             widths[0][widths[0].length - 1] - widths[0][0],
-                            heights[0] - heights[heights.length - 1]
-                    );
+                            heights[0] - heights[heights.length - 1]);
                     cb.stroke();
                 });
 
@@ -126,20 +124,20 @@ public class ReporteUsuariosService {
                 tablaUsuarios.setWidths(WIDTHS_TABLA_USU);
 
                 // Encabezados
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("N°",             fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("N°", fuente, colorPrincipal));
                 tablaUsuarios.addCell(ReporteUtil.crearCelda("IDENTIFICACIÓN", fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("CÓDIGO",         fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("EMPLEADO",       fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("USUARIO",        fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("GÉNERO",         fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("NACIONALIDAD",   fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("CIUDAD",         fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("SUCURSAL",       fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("RÉGIMEN",        fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("DEPARTAMENTO",   fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("CARGO",          fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("ROL",            fuente, colorPrincipal));
-                tablaUsuarios.addCell(ReporteUtil.crearCelda("CORREO",         fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("CÓDIGO", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("EMPLEADO", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("USUARIO", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("GÉNERO", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("NACIONALIDAD", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("CIUDAD", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("SUCURSAL", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("RÉGIMEN", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("DEPARTAMENTO", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("CARGO", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("ROL", fuente, colorPrincipal));
+                tablaUsuarios.addCell(ReporteUtil.crearCelda("CORREO", fuente, colorPrincipal));
 
                 // Cuerpo
                 int index = 1;
@@ -147,7 +145,8 @@ public class ReporteUsuariosService {
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(String.valueOf(index++), fuente));
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getIdentificacion()), fuente));
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getCodigo()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaIzquierda(safe(usu.getApellido()) + " " + safe(usu.getNombre()), fuente));
+                    tablaUsuarios.addCell(
+                            ReporteUtil.celdaIzquierda(safe(usu.getApellido()) + " " + safe(usu.getNombre()), fuente));
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getUsuario()), fuente));
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getGenero()), fuente));
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getNacionalidad()), fuente));
@@ -176,13 +175,22 @@ public class ReporteUsuariosService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
@@ -194,34 +202,34 @@ public class ReporteUsuariosService {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA     = "Usuarios"; // ≤ 31 chars
-        final int    FILA_ENCABEZADO = 5;         // fila 6 (idx 5)
+        final String NOMBRE_HOJA = "Usuarios"; // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5; // fila 6 (idx 5)
 
         // MERGES exactos (B1:L1 ... B5:L5) => (row 0..4, col 1..11)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 11;
 
         final String[] HEADERS = {
-            "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO", "NOMBRE",
-            "USUARIO", "GÉNERO", "NACIONALIDAD", "CIUDAD", "SUCURSAL",
-            "RÉGIMEN", "DEPARTAMENTO", "CARGO", "ROL", "CORREO"
+                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO", "NOMBRE",
+                "USUARIO", "GÉNERO", "NACIONALIDAD", "CIUDAD", "SUCURSAL",
+                "RÉGIMEN", "DEPARTAMENTO", "CARGO", "ROL", "CORREO"
         };
 
         final int[] ANCHOS = {
-            10, 20, 20, 30, 20,
-            20, 20, 20, 20, 20,
-            20, 20, 20, 30, 35
+                10, 20, 20, 30, 20,
+                20, 20, 20, 20, 20,
+                20, 20, 20, 30, 35
         };
 
         // Filtros: ITEM sin filtro; resto con filtro
         final boolean[] FILTROS = new boolean[] {
-            false, true, true, true, true,
-            true,  true, true, true, true,
-            true,  true, true, true, true
+                false, true, true, true, true,
+                true, true, true, true, true,
+                true, true, true, true, true
         };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
@@ -240,10 +248,9 @@ public class ReporteUsuariosService {
             // 3) Títulos centrados (Empresa + Título)
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(
-                hoja, 0, 1,
-                UtilExcel.aMayusculasSeguras(request.getEmpresa()),
-                estiloTitulo
-            ); // B1
+                    hoja, 0, 1,
+                    UtilExcel.aMayusculasSeguras(request.getEmpresa()),
+                    estiloTitulo); // B1
             String titulo = (request.getTitulo() == null || request.getTitulo().isEmpty())
                     ? "LISTA DE USUARIOS"
                     : request.getTitulo();
@@ -266,57 +273,58 @@ public class ReporteUsuariosService {
 
             if (request.getDatos() != null) {
                 for (AgrupadorUsuariosDTO grupo : request.getDatos()) {
-                    if (grupo.getEmpleados() == null) continue;
+                    if (grupo.getEmpleados() == null)
+                        continue;
 
                     for (UsuarioDTO u : grupo.getEmpleados()) {
                         Row r = UtilExcel.asegurarFila(hoja, filaActual++);
                         UtilExcel.establecerValor(r, 0, item++, null);
-                        UtilExcel.establecerTexto(r, 1,  safe(u.getIdentificacion()), null);
-                        UtilExcel.establecerTexto(r, 2,  safe(u.getCodigo()),         null);
-                        UtilExcel.establecerTexto(r, 3,  safe(u.getApellido()),       null);
-                        UtilExcel.establecerTexto(r, 4,  safe(u.getNombre()),         null);
-                        UtilExcel.establecerTexto(r, 5,  safe(u.getUsuario()),        null);
-                        UtilExcel.establecerTexto(r, 6,  safe(u.getGenero()),         null);
-                        UtilExcel.establecerTexto(r, 7,  safe(u.getNacionalidad()),   null);
-                        UtilExcel.establecerTexto(r, 8,  safe(u.getCiudad()),         null);
-                        UtilExcel.establecerTexto(r, 9,  safe(u.getSucursal()),       null);
-                        UtilExcel.establecerTexto(r, 10, safe(u.getRegimen()),        null);
-                        UtilExcel.establecerTexto(r, 11, safe(u.getDepartamento()),   null);
-                        UtilExcel.establecerTexto(r, 12, safe(u.getCargo()),          null);
-                        UtilExcel.establecerTexto(r, 13, safe(u.getRol()),            null);
-                        UtilExcel.establecerTexto(r, 14, safe(u.getCorreo()),         null);
+                        UtilExcel.establecerTexto(r, 1, safe(u.getIdentificacion()), null);
+                        UtilExcel.establecerTexto(r, 2, safe(u.getCodigo()), null);
+                        UtilExcel.establecerTexto(r, 3, safe(u.getApellido()), null);
+                        UtilExcel.establecerTexto(r, 4, safe(u.getNombre()), null);
+                        UtilExcel.establecerTexto(r, 5, safe(u.getUsuario()), null);
+                        UtilExcel.establecerTexto(r, 6, safe(u.getGenero()), null);
+                        UtilExcel.establecerTexto(r, 7, safe(u.getNacionalidad()), null);
+                        UtilExcel.establecerTexto(r, 8, safe(u.getCiudad()), null);
+                        UtilExcel.establecerTexto(r, 9, safe(u.getSucursal()), null);
+                        UtilExcel.establecerTexto(r, 10, safe(u.getRegimen()), null);
+                        UtilExcel.establecerTexto(r, 11, safe(u.getDepartamento()), null);
+                        UtilExcel.establecerTexto(r, 12, safe(u.getCargo()), null);
+                        UtilExcel.establecerTexto(r, 13, safe(u.getRol()), null);
+                        UtilExcel.establecerTexto(r, 14, safe(u.getCorreo()), null);
                     }
                 }
             }
 
             int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
-            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto izquierda)
+            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto
+            // izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado
             UtilExcel.aplicarEstiloARegion(
-                hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
-                0, HEADERS.length - 1, estiloCentroBorde, true
-            );
+                    hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
+                    0, HEADERS.length - 1, estiloCentroBorde, true);
 
             // Cuerpo
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true); // ITEM
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde,
+                        true);
             }
 
             // 7) Tabla estilizada (zebra + AutoFilter) — ITEM sin filtro
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "UsuariosexcelTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    FILTROS
-                );
+                        hoja,
+                        "UsuariosexcelTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        FILTROS);
             }
 
             // 8) Cierre + retorno
@@ -332,7 +340,6 @@ public class ReporteUsuariosService {
         }
     }
 
-    
     private PdfPCell celdaSinBorde(String texto, Font fuente, Color fondo) {
         PdfPCell celda = new PdfPCell(new Phrase(texto, fuente));
         celda.setBackgroundColor(fondo);

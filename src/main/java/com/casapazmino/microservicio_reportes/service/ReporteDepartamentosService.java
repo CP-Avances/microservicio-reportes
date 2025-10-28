@@ -28,7 +28,7 @@ import java.util.List;
 public class ReporteDepartamentosService {
 
     // =========================
-    //          PDF 
+    // PDF
     // =========================
     public byte[] generarReportePDF(ReporteDepartamentosRequest request) {
 
@@ -45,10 +45,9 @@ public class ReporteDepartamentosService {
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -61,7 +60,7 @@ public class ReporteDepartamentosService {
             document.add(ReporteUtil.crearTituloReporte("LISTA DE DEPARTAMENTOS"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra     = ReporteUtil.colorZebraClaro();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             PdfPTable tabla = new PdfPTable(5);
             tabla.setWidthPercentage(90);
@@ -69,11 +68,14 @@ public class ReporteDepartamentosService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO",                       ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL/ ESTABLECIMIENTO",    ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("DEPARTAMENTO",                 ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NIVEL",                        ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("DEPARTAMENTO SUPERIOR",        ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL/ ESTABLECIMIENTO", ReporteUtil.fuenteEncabezadoTablaData(),
+                    colorPrincipal));
+            tabla.addCell(
+                    ReporteUtil.crearCelda("DEPARTAMENTO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("NIVEL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("DEPARTAMENTO SUPERIOR", ReporteUtil.fuenteEncabezadoTablaData(),
+                    colorPrincipal));
 
             // Cuerpo (zebra)
             List<DepartamentoDTO> lista = request.getDepartamentos();
@@ -81,11 +83,14 @@ public class ReporteDepartamentosService {
             if (lista != null) {
                 for (DepartamentoDTO d : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getId()),         ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(d.getNomsucursal(),                 ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(d.getNombre(),                      ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getNivel()),       ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(d.getDepartamento_padre(),          ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(String.valueOf(d.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(d.getNomsucursal(), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(d.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(String.valueOf(d.getNivel()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(d.getDepartamento_padre(), ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
             }
@@ -105,20 +110,28 @@ public class ReporteDepartamentosService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
 
-    
     // =========================
-    //          XLSX (idéntico al ExcelJS del front)
+    // XLSX (idéntico al ExcelJS del front)
     // =========================
     public byte[] generarReporteXLSX(ReporteDepartamentosRequest request) {
         // =========================
@@ -132,12 +145,12 @@ public class ReporteDepartamentosService {
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 6;
 
         final String[] HEADERS = {
-            "ITEM", "ID_SUCURSALES", "NOMBRE SUCURSAL", "ID", "NOMBRE", "NIVEL", "DEPARTAMENTO SUPERIOR"
+                "ITEM", "ID_SUCURSALES", "NOMBRE SUCURSAL", "ID", "NOMBRE", "NIVEL", "DEPARTAMENTO SUPERIOR"
         };
         final int[] ANCHOS = { 10, 20, 30, 20, 20, 20, 30 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
@@ -168,7 +181,8 @@ public class ReporteDepartamentosService {
             UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
             hoja.getRow(FILA_ENCABEZADO).setHeightInPoints(18f);
 
-            // 5) Cuerpo (datos = [index+1, id_sucursal, nomsucursal, id, nombre, nivel, departamento_padre])
+            // 5) Cuerpo (datos = [index+1, id_sucursal, nomsucursal, id, nombre, nivel,
+            // departamento_padre])
             int filaDatosIni = FILA_ENCABEZADO + 1;
             int filaAct = filaDatosIni;
 
@@ -177,42 +191,45 @@ public class ReporteDepartamentosService {
                 for (int i = 0; i < deps.size(); i++) {
                     DepartamentoDTO d = deps.get(i);
                     Row r = UtilExcel.asegurarFila(hoja, filaAct++);
-                    UtilExcel.establecerValor(r, 0, i + 1, null);                                           // ITEM
-                    UtilExcel.establecerValor(r, 1, d.getId_sucursal(), null);                              // ID_SUCURSALES
-                    UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(d.getNomsucursal()), null);     // NOMBRE SUCURSAL
-                    UtilExcel.establecerValor(r, 3, d.getId(), null);                                       // ID
-                    UtilExcel.establecerValor(r, 4, UtilExcel.nuloComoVacio(d.getNombre()), null);          // NOMBRE
-                    UtilExcel.establecerValor(r, 5, d.getNivel(), null);                                     // NIVEL
-                    UtilExcel.establecerValor(r, 6, UtilExcel.nuloComoVacio(d.getDepartamento_padre()), null); // DEP. SUPERIOR
+                    UtilExcel.establecerValor(r, 0, i + 1, null); // ITEM
+                    UtilExcel.establecerValor(r, 1, d.getId_sucursal(), null); // ID_SUCURSALES
+                    UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(d.getNomsucursal()), null); // NOMBRE
+                                                                                                        // SUCURSAL
+                    UtilExcel.establecerValor(r, 3, d.getId(), null); // ID
+                    UtilExcel.establecerValor(r, 4, UtilExcel.nuloComoVacio(d.getNombre()), null); // NOMBRE
+                    UtilExcel.establecerValor(r, 5, d.getNivel(), null); // NIVEL
+                    UtilExcel.establecerValor(r, 6, UtilExcel.nuloComoVacio(d.getDepartamento_padre()), null); // DEP.
+                                                                                                               // SUPERIOR
                 }
             }
 
             int ultimaFila = (filaAct == filaDatosIni) ? FILA_ENCABEZADO : (filaAct - 1);
 
-            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto izquierda)
+            // 6) Alineaciones + bordes (header centrado; cuerpo col 0 centrada, resto
+            // izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Header
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             // Cuerpo
             if (ultimaFila >= filaDatosIni) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true); // ITEM
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 6, estiloIzqBorde, true);   // resto
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 6, estiloIzqBorde, true); // resto
             }
 
             // 7) Tabla estilizada (TableStyleMedium16), zebra y AutoFilter (A6:Gn)
             if (ultimaFila >= filaDatosIni) {
                 boolean[] filtros = new boolean[] { false, true, true, true, true, true, true }; // ITEM off, resto on
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "DepartamentosTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "DepartamentosTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -226,9 +243,8 @@ public class ReporteDepartamentosService {
         }
     }
 
-    
     // =========================
-    //           CSV (idéntico al front)
+    // CSV (idéntico al front)
     // =========================
     public byte[] generarReporteCSV(ReporteDepartamentosRequest request) {
         // === Contrato del CSV ===
@@ -242,7 +258,8 @@ public class ReporteDepartamentosService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -251,19 +268,19 @@ public class ReporteDepartamentosService {
             List<DepartamentoDTO> items = request.getDepartamentos();
             if (items != null && !items.isEmpty()) {
                 for (DepartamentoDTO d : items) {
-                    String idSuc  = (d.getId_sucursal() == null)        ? "" : String.valueOf(d.getId_sucursal());
-                    String nomSuc = (d.getNomsucursal() == null)        ? "" : d.getNomsucursal();
-                    String id     = (d.getId() == null)                 ? "" : String.valueOf(d.getId());
-                    String nombre = (d.getNombre() == null)             ? "" : d.getNombre();
-                    String nivel  = (d.getNivel() == null)              ? "" : String.valueOf(d.getNivel());
+                    String idSuc = (d.getId_sucursal() == null) ? "" : String.valueOf(d.getId_sucursal());
+                    String nomSuc = (d.getNomsucursal() == null) ? "" : d.getNomsucursal();
+                    String id = (d.getId() == null) ? "" : String.valueOf(d.getId());
+                    String nombre = (d.getNombre() == null) ? "" : d.getNombre();
+                    String nivel = (d.getNivel() == null) ? "" : String.valueOf(d.getNivel());
                     String depSup = (d.getDepartamento_padre() == null) ? "" : d.getDepartamento_padre();
 
                     sb.append(UtilCsv.csvEscape(idSuc)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nomSuc)).append(DELIM)
-                    .append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nombre)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nivel)).append(DELIM)
-                    .append(UtilCsv.csvEscape(depSup)).append(EOL);
+                            .append(UtilCsv.csvEscape(nomSuc)).append(DELIM)
+                            .append(UtilCsv.csvEscape(id)).append(DELIM)
+                            .append(UtilCsv.csvEscape(nombre)).append(DELIM)
+                            .append(UtilCsv.csvEscape(nivel)).append(DELIM)
+                            .append(UtilCsv.csvEscape(depSup)).append(EOL);
                 }
             }
 
@@ -279,9 +296,8 @@ public class ReporteDepartamentosService {
         }
     }
 
-    
     // =========================
-    //            XML (igual al xml2js del front)
+    // XML (igual al xml2js del front)
     // =========================
     public byte[] generarReporteXML(ReporteDepartamentosRequest request) {
         final String NOMBRE_REPORTE = "Departamentos.xml";
@@ -302,23 +318,23 @@ public class ReporteDepartamentosService {
             } else {
                 for (DepartamentoDTO d : items) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(d.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(d.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<establecimiento>")
-                    .append(UtilXml.xmlEsc(d.getNomsucursal()))
-                    .append("</establecimiento>").append(EOL);
+                            .append(UtilXml.xmlEsc(d.getNomsucursal()))
+                            .append("</establecimiento>").append(EOL);
 
                     sb.append(IND).append(IND).append("<departamento>")
-                    .append(UtilXml.xmlEsc(d.getNombre()))
-                    .append("</departamento>").append(EOL);
+                            .append(UtilXml.xmlEsc(d.getNombre()))
+                            .append("</departamento>").append(EOL);
 
                     sb.append(IND).append(IND).append("<nivel>")
-                    .append(UtilXml.xmlEsc(d.getNivel()))
-                    .append("</nivel>").append(EOL);
+                            .append(UtilXml.xmlEsc(d.getNivel()))
+                            .append("</nivel>").append(EOL);
 
                     sb.append(IND).append(IND).append("<departamento_superior>")
-                    .append(UtilXml.xmlEsc(d.getDepartamento_padre()))
-                    .append("</departamento_superior>").append(EOL);
+                            .append(UtilXml.xmlEsc(d.getDepartamento_padre()))
+                            .append("</departamento_superior>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }

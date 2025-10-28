@@ -28,7 +28,7 @@ import java.util.List;
 public class ReporteSucursalesService {
 
     // =========================
-    //          PDF
+    // PDF
     // =========================
     public byte[] generarReportePDF(ReporteSucursalesRequest request) {
 
@@ -39,7 +39,7 @@ public class ReporteSucursalesService {
         final float SPACING_BEFORE = 10f;
 
         final Color COLOR_PRIMARIO = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-        final Color COLOR_ZEBRA    = ReporteUtil.colorZebraClaro();
+        final Color COLOR_ZEBRA = ReporteUtil.colorZebraClaro();
 
         Document document = null;
         PdfWriter writer = null;
@@ -53,8 +53,7 @@ public class ReporteSucursalesService {
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
-            ));
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -72,9 +71,10 @@ public class ReporteSucursalesService {
             tabla.setSpacingBefore(SPACING_BEFORE);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO",                     ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
-            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL / ESTABLECIMIENTO", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
-            tabla.addCell(ReporteUtil.crearCelda("CIUDAD",                     ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL / ESTABLECIMIENTO", ReporteUtil.fuenteEncabezadoTablaData(),
+                    COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.crearCelda("CIUDAD", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
 
             // Cuerpo con zebra
             boolean zebra = false;
@@ -82,9 +82,10 @@ public class ReporteSucursalesService {
             if (lista != null) {
                 for (SucursalDTO s : lista) {
                     Color fondo = zebra ? COLOR_ZEBRA : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(s.getId()),  ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(s.getNombre(),              ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(s.getDescripcion(),         ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(String.valueOf(s.getId()), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(s.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(s.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
             }
@@ -104,39 +105,48 @@ public class ReporteSucursalesService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
 
     // =========================
-    //          XLSX
+    // XLSX
     // =========================
     public byte[] generarReporteXLSX(ReporteSucursalesRequest request) {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA     = "Sucursales";  // ≤ 31 chars
-        final int    FILA_ENCABEZADO = 5;            // fila visual 6 (idx 5)
+        final String NOMBRE_HOJA = "Sucursales"; // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5; // fila visual 6 (idx 5)
 
         // MERGES exactos (B1:D1 ... B5:D5) => (row 0..4, col 1..3)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 3;
 
         final String[] HEADERS = { "ITEM", "ID", "CIUDAD", "NOMBRE" };
-        final int[]    ANCHOS  = {    10,   20,     20,      30  };
+        final int[] ANCHOS = { 10, 20, 20, 30 };
 
         // Filtros: ITEM sin filtro; resto con filtro
         final boolean[] FILTROS = new boolean[] { false, true, true, true };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
@@ -155,10 +165,9 @@ public class ReporteSucursalesService {
             // 3) Títulos (B1 EMPRESA, B2 LISTA DE SUCURSALES)
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(
-                hoja, 0, 1,
-                UtilExcel.aMayusculasSeguras(request.getEmpresa()),
-                estiloTitulo
-            ); // B1
+                    hoja, 0, 1,
+                    UtilExcel.aMayusculasSeguras(request.getEmpresa()),
+                    estiloTitulo); // B1
             UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE SUCURSALES", estiloTitulo); // B2
 
             // 4) Encabezados + anchos (fila 6 → idx 5)
@@ -180,41 +189,40 @@ public class ReporteSucursalesService {
             if (sucursales != null) {
                 for (SucursalDTO s : sucursales) {
                     Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                    UtilExcel.establecerValor(r, 0, item++, null);                                    // ITEM
-                    UtilExcel.establecerValor(r, 1, s.getId(), null);                                 // ID
+                    UtilExcel.establecerValor(r, 0, item++, null); // ITEM
+                    UtilExcel.establecerValor(r, 1, s.getId(), null); // ID
                     UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(s.getDescripcion()), null); // CIUDAD
-                    UtilExcel.establecerValor(r, 3, UtilExcel.nuloComoVacio(s.getNombre()), null);      // NOMBRE
+                    UtilExcel.establecerValor(r, 3, UtilExcel.nuloComoVacio(s.getNombre()), null); // NOMBRE
                 }
             }
 
             int ultimaFila = (filaActual == filaDatosInicio) ? FILA_ENCABEZADO : (filaActual - 1);
 
-            // 6) Alineaciones + bordes (header centrado; cuerpo: col 0 centrada, resto izquierda)
+            // 6) Alineaciones + bordes (header centrado; cuerpo: col 0 centrada, resto
+            // izquierda)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Header
             UtilExcel.aplicarEstiloARegion(
-                hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
-                estiloCentroBorde, true
-            );
+                    hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             // Cuerpo
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 0, 0, estiloCentroBorde, true); // ITEM
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 3, estiloIzqBorde, true);    // ID..NOMBRE
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 1, 3, estiloIzqBorde, true); // ID..NOMBRE
             }
 
             // 7) Tabla estilizada (zebra) + AutoFilter (ITEM sin filtro)
             if (ultimaFila >= filaDatosInicio) {
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "SucursalesTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    FILTROS
-                );
+                        hoja,
+                        "SucursalesTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        FILTROS);
             }
 
             // 8) Cierre + retorno
@@ -230,9 +238,8 @@ public class ReporteSucursalesService {
         }
     }
 
-    
     // =========================
-    //           CSV (como el front: id, ciudad, nombre)
+    // CSV (como el front: id, ciudad, nombre)
     // =========================
     public byte[] generarReporteCSV(ReporteSucursalesRequest request) {
         // === Contrato del CSV ===
@@ -246,7 +253,8 @@ public class ReporteSucursalesService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -255,13 +263,14 @@ public class ReporteSucursalesService {
             List<SucursalDTO> items = request.getSucursales();
             if (items != null && !items.isEmpty()) {
                 for (SucursalDTO s : items) {
-                    String id     = (s == null || s.getId() == null)           ? "" : String.valueOf(s.getId());
-                    String ciudad = (s == null || s.getDescripcion() == null)  ? "" : s.getDescripcion(); // descripcion = ciudad
-                    String nombre = (s == null || s.getNombre() == null)       ? "" : s.getNombre();
+                    String id = (s == null || s.getId() == null) ? "" : String.valueOf(s.getId());
+                    String ciudad = (s == null || s.getDescripcion() == null) ? "" : s.getDescripcion(); // descripcion
+                                                                                                         // = ciudad
+                    String nombre = (s == null || s.getNombre() == null) ? "" : s.getNombre();
 
                     sb.append(UtilCsv.csvEscape(id)).append(DELIM)
-                    .append(UtilCsv.csvEscape(ciudad)).append(DELIM)
-                    .append(UtilCsv.csvEscape(nombre)).append(EOL);
+                            .append(UtilCsv.csvEscape(ciudad)).append(DELIM)
+                            .append(UtilCsv.csvEscape(nombre)).append(EOL);
                 }
             }
 
@@ -277,9 +286,8 @@ public class ReporteSucursalesService {
         }
     }
 
-        
     // =========================
-    //            XML (igual a xml2js del front)
+    // XML (igual a xml2js del front)
     // =========================
     public byte[] generarReporteXML(ReporteSucursalesRequest request) {
         final String NOMBRE_REPORTE = "Sucursales.xml";
@@ -302,16 +310,18 @@ public class ReporteSucursalesService {
             } else {
                 for (SucursalDTO s : items) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(s == null ? null : s.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(s == null ? null : s.getId())).append("\">")
+                            .append(EOL);
 
                     sb.append(IND).append(IND).append("<ciudad>")
-                    .append(UtilXml.xmlEsc(s == null ? null : s.getDescripcion()))
-                    .append("</ciudad>").append(EOL);
+                            .append(UtilXml.xmlEsc(s == null ? null : s.getDescripcion()))
+                            .append("</ciudad>").append(EOL);
 
-                    // Importante: mantener etiqueta hija llamada también "establecimiento" (diseño original del front)
+                    // Importante: mantener etiqueta hija llamada también "establecimiento" (diseño
+                    // original del front)
                     sb.append(IND).append(IND).append("<establecimiento>")
-                    .append(UtilXml.xmlEsc(s == null ? null : s.getNombre()))
-                    .append("</establecimiento>").append(EOL);
+                            .append(UtilXml.xmlEsc(s == null ? null : s.getNombre()))
+                            .append("</establecimiento>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -327,6 +337,5 @@ public class ReporteSucursalesService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
 }

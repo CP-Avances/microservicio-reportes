@@ -28,7 +28,7 @@ import java.util.List;
 public class ReporteModalidadLaboralService {
 
     // =========================
-    //          PDF (sin cambios)
+    // PDF (sin cambios)
     // =========================
     public byte[] generarReportePDF(ReporteModalidadLaboralRequest request) {
 
@@ -45,10 +45,9 @@ public class ReporteModalidadLaboralService {
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
-                request.getUsuario(),
-                request.getFraseMarcaAgua(),
-                request.getColorPrincipal()
-            ));
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (helpers existentes)
@@ -61,7 +60,7 @@ public class ReporteModalidadLaboralService {
             document.add(ReporteUtil.crearTituloReporte("MODALIDAD LABORAL"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-            Color colorZebra     = ReporteUtil.colorZebraClaro();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(50);
@@ -69,8 +68,9 @@ public class ReporteModalidadLaboralService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("ITEM",               ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("MODALIDAD LABORAL",  ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("ITEM", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.crearCelda("MODALIDAD LABORAL", ReporteUtil.fuenteEncabezadoTablaData(),
+                    colorPrincipal));
 
             // Cuerpo (zebra)
             List<ModalidadLaboralDTO> lista = request.getModalidades();
@@ -78,8 +78,10 @@ public class ReporteModalidadLaboralService {
             if (lista != null) {
                 for (ModalidadLaboralDTO modalidad : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(modalidad.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(modalidad.getDescripcion(),        ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(modalidad.getId()),
+                            ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(
+                            ReporteUtil.crearCelda(modalidad.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
                     zebra = !zebra;
                 }
             }
@@ -99,27 +101,35 @@ public class ReporteModalidadLaboralService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
-    
-    
+
     // =========================
-    //          XLSX (idéntico al ExcelJS del front)
+    // XLSX (idéntico al ExcelJS del front)
     // =========================
     public byte[] generarReporteXLSX(ReporteModalidadLaboralRequest request) {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA     = "Modalidad Laboral"; // ≤ 31 chars
-        final int    FILA_ENCABEZADO = 5;
+        final String NOMBRE_HOJA = "Modalidad Laboral"; // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5;
 
         // Merges B1:C1 ... B5:C5 => (row 0..4, col 1..2)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
@@ -128,10 +138,10 @@ public class ReporteModalidadLaboralService {
         final String TITULO_REPORTE = "LISTA DE MODALIDAD LABORAL";
 
         final String[] HEADERS = { "ITEM", "CÓDIGO", "DESCRIPCION" };
-        final int[]    ANCHOS  = {    20,      30,           40    };
+        final int[] ANCHOS = { 20, 30, 40 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener encabezado visible
@@ -150,7 +160,7 @@ public class ReporteModalidadLaboralService {
             // 3) TÍTULOS en B1 y B2
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo); // B1
-            UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo);                                     // B2
+            UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo); // B2
 
             // 4) ENCABEZADOS + ANCHOS
             Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
@@ -170,10 +180,11 @@ public class ReporteModalidadLaboralService {
             List<ModalidadLaboralDTO> modalidades = request.getModalidades();
             if (modalidades != null) {
                 for (ModalidadLaboralDTO m : modalidades) {
-                    if (m == null) continue;
+                    if (m == null)
+                        continue;
                     Row r = UtilExcel.asegurarFila(hoja, filaActual++);
-                    UtilExcel.establecerValor(r, 0, item++, null);                                     // ITEM
-                    UtilExcel.establecerValor(r, 1, m.getId(), null);                                  // CÓDIGO
+                    UtilExcel.establecerValor(r, 0, item++, null); // ITEM
+                    UtilExcel.establecerValor(r, 1, m.getId(), null); // CÓDIGO
                     UtilExcel.establecerValor(r, 2, UtilExcel.nuloComoVacio(m.getDescripcion()), null);// DESCRIPCION
                 }
             }
@@ -182,10 +193,11 @@ public class ReporteModalidadLaboralService {
 
             // 6) ALINEACIONES + BORDES
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con borde
-            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentroBorde, true);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1,
+                    estiloCentroBorde, true);
 
             // Cuerpo: col 0 centrado; col 1..2 izquierda
             if (ultimaFila >= filaDatosInicio) {
@@ -197,13 +209,12 @@ public class ReporteModalidadLaboralService {
             if (ultimaFila >= filaDatosInicio) {
                 boolean[] filtros = new boolean[] { false, true, true };
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "RegimenTabla", // se mantiene el nombre histórico para paridad con el front
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    filtros
-                );
+                        hoja,
+                        "RegimenTabla", // se mantiene el nombre histórico para paridad con el front
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        filtros);
             }
 
             // 8) Cierre + retorno
@@ -217,9 +228,8 @@ public class ReporteModalidadLaboralService {
         }
     }
 
-    
     // =========================
-    //           CSV (idéntico a tu ExportToCSV)
+    // CSV (idéntico a tu ExportToCSV)
     // =========================
     public byte[] generarReporteCSV(ReporteModalidadLaboralRequest request) {
         // === Contrato del CSV ===
@@ -233,7 +243,8 @@ public class ReporteModalidadLaboralService {
 
             // Encabezados (orden exacto)
             for (int i = 0; i < HEADERS.length; i++) {
-                if (i > 0) sb.append(DELIM);
+                if (i > 0)
+                    sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
@@ -246,7 +257,7 @@ public class ReporteModalidadLaboralService {
                     String desc = (m == null || m.getDescripcion() == null) ? "" : m.getDescripcion();
 
                     sb.append(UtilCsv.csvEscape(item)).append(DELIM)
-                    .append(UtilCsv.csvEscape(desc)).append(EOL);
+                            .append(UtilCsv.csvEscape(desc)).append(EOL);
                 }
             }
 
@@ -262,10 +273,8 @@ public class ReporteModalidadLaboralService {
         }
     }
 
-
-    
     // =========================
-    //            XML (idéntico a tu xml2js)
+    // XML (idéntico a tu xml2js)
     // =========================
     public byte[] generarReporteXML(ReporteModalidadLaboralRequest request) {
         final String NOMBRE_REPORTE = "Modalidad_laboral.xml";
@@ -286,11 +295,11 @@ public class ReporteModalidadLaboralService {
             } else {
                 for (ModalidadLaboralDTO m : items) {
                     sb.append(IND).append("<").append(ITEM_TAG)
-                    .append(" id=\"").append(UtilXml.xmlEsc(m.getId())).append("\">").append(EOL);
+                            .append(" id=\"").append(UtilXml.xmlEsc(m.getId())).append("\">").append(EOL);
 
                     sb.append(IND).append(IND).append("<modalidad_laboral>")
-                    .append(UtilXml.xmlEsc(m.getDescripcion()))
-                    .append("</modalidad_laboral>").append(EOL);
+                            .append(UtilXml.xmlEsc(m.getDescripcion()))
+                            .append("</modalidad_laboral>").append(EOL);
 
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
@@ -305,6 +314,5 @@ public class ReporteModalidadLaboralService {
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
-
 
 }

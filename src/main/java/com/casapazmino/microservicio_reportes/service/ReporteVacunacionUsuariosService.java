@@ -30,33 +30,33 @@ public class ReporteVacunacionUsuariosService {
 
     public byte[] generarReportePDF(ReporteVacunacionUsuariosRequest request) {
         // DRY: constantes locales
-        final float   M_I = 40f, M_D = 40f, M_S = 50f, M_INF = 50f;
-        final float[] WIDTHS_CABECERA   = { 3f, 3f, 2f };
-        final float[] WIDTHS_EMPLEADO   = { 3f, 4f, 3f };
-        final float[] WIDTHS_VACUNAS    = { 1f, 3f, 2f, 5f };
-        final String  PREF_SUCURSAL     = "SUCURSAL: ";
-        final String  PREF_REGISTROS    = "N° Registros: ";
+        final float M_I = 40f, M_D = 40f, M_S = 50f, M_INF = 50f;
+        final float[] WIDTHS_CABECERA = { 3f, 3f, 2f };
+        final float[] WIDTHS_EMPLEADO = { 3f, 4f, 3f };
+        final float[] WIDTHS_VACUNAS = { 1f, 3f, 2f, 5f };
+        final String PREF_SUCURSAL = "SUCURSAL: ";
+        final String PREF_REGISTROS = "N° Registros: ";
 
         Document document = null;
-        PdfWriter writer  = null;
+        PdfWriter writer = null;
         ByteArrayOutputStream baos = null;
 
         try {
             // 1) Inicialización de recursos PDF
-            baos     = new ByteArrayOutputStream();
+            baos = new ByteArrayOutputStream();
             document = new Document(PageSize.A4, M_I, M_D, M_S, M_INF);
-            writer   = PdfWriter.getInstance(document, baos);
+            writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
                     request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()
-            ));
+                    request.getColorPrincipal()));
             document.open();
 
             // 2) Construcción (solo helpers existentes; no cambiamos diseño)
             // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-            if (logo != null) document.add(logo);
+            if (logo != null)
+                document.add(logo);
 
             // Encabezados
             Paragraph empresa = new Paragraph(request.getEmpresa(), ReporteUtil.fuenteEncabezado());
@@ -70,9 +70,9 @@ public class ReporteVacunacionUsuariosService {
             document.add(titulo);
 
             // Colores y fuente
-            final Color colorPrincipal  = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            final Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             final Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-            final Font  fuente          = ReporteUtil.fuenteTexto();
+            final Font fuente = ReporteUtil.fuenteTexto();
 
             for (AgrupadorVacunaUsuarioDTO grupo : request.getDatos()) {
 
@@ -110,8 +110,8 @@ public class ReporteVacunacionUsuariosService {
                 tablaCabecera.setSpacingBefore(10f);
                 tablaCabecera.getDefaultCell().setBorder(Rectangle.NO_BORDER);
 
-                tablaCabecera.addCell(celdaSinBordeIzquierda(descripcion,     fuente, colorSecundario));
-                tablaCabecera.addCell(celdaSinBordeIzquierda(establecimiento,  fuente, colorSecundario));
+                tablaCabecera.addCell(celdaSinBordeIzquierda(descripcion, fuente, colorSecundario));
+                tablaCabecera.addCell(celdaSinBordeIzquierda(establecimiento, fuente, colorSecundario));
                 tablaCabecera.addCell(celdaSinBordeIzquierda(PREF_REGISTROS + totalRegistros, fuente, colorSecundario));
 
                 tablaCabecera.setTableEvent((table, widths, heights, headerRows, rowStart, canvas) -> {
@@ -120,8 +120,7 @@ public class ReporteVacunacionUsuariosService {
                             widths[0][0],
                             heights[heights.length - 1],
                             widths[0][widths[0].length - 1] - widths[0][0],
-                            heights[0] - heights[heights.length - 1]
-                    );
+                            heights[0] - heights[heights.length - 1]);
                     cb.stroke();
                 });
                 document.add(tablaCabecera);
@@ -135,15 +134,15 @@ public class ReporteVacunacionUsuariosService {
                     tablaEmpleado.setWidths(WIDTHS_EMPLEADO);
 
                     String[][] filas = new String[][] {
-                        { "C.C.: " + safe(empl.getIdentificacion()),
-                        "EMPLEADO: " + safe(empl.getApellido()) + " " + safe(empl.getNombre()),
-                        "DEPARTAMENTO: " + safe(empl.getDepartamento()) },
-                        { "CORREO: " + safe(empl.getCorreo()),
-                        "GENERO: " + safe(empl.getGenero()),
-                        "CARGO: " + safe(empl.getCargo()) },
-                        { "REGIMEN: " + safe(empl.getRegimen()),
-                        "COD: " + safe(empl.getCodigo()),
-                        "ROL: " + safe(empl.getRol()) }
+                            { "C.C.: " + safe(empl.getIdentificacion()),
+                                    "EMPLEADO: " + safe(empl.getApellido()) + " " + safe(empl.getNombre()),
+                                    "DEPARTAMENTO: " + safe(empl.getDepartamento()) },
+                            { "CORREO: " + safe(empl.getCorreo()),
+                                    "GENERO: " + safe(empl.getGenero()),
+                                    "CARGO: " + safe(empl.getCargo()) },
+                            { "REGIMEN: " + safe(empl.getRegimen()),
+                                    "COD: " + safe(empl.getCodigo()),
+                                    "ROL: " + safe(empl.getRol()) }
                     };
 
                     for (String[] fila : filas) {
@@ -162,8 +161,7 @@ public class ReporteVacunacionUsuariosService {
                                 widths[0][0],
                                 heights[heights.length - 1],
                                 widths[0][widths[0].length - 1] - widths[0][0],
-                                heights[0] - heights[heights.length - 1]
-                        );
+                                heights[0] - heights[heights.length - 1]);
                         cb.stroke();
                     });
                     document.add(tablaEmpleado);
@@ -184,10 +182,10 @@ public class ReporteVacunacionUsuariosService {
 
                     int index = 1;
                     for (VacunaUsuarioDTO vac : empl.getVacunas()) {
-                        PdfPCell c1 = new PdfPCell(new Phrase(String.valueOf(index++),           fuente));
-                        PdfPCell c2 = new PdfPCell(new Phrase(safe(vac.getTipo_vacuna()),        fuente));
-                        PdfPCell c3 = new PdfPCell(new Phrase(formatearFecha(vac.getFecha()),    fuente));
-                        PdfPCell c4 = new PdfPCell(new Phrase(safe(vac.getDescripcion()),        fuente));
+                        PdfPCell c1 = new PdfPCell(new Phrase(String.valueOf(index++), fuente));
+                        PdfPCell c2 = new PdfPCell(new Phrase(safe(vac.getTipo_vacuna()), fuente));
+                        PdfPCell c3 = new PdfPCell(new Phrase(formatearFecha(vac.getFecha()), fuente));
+                        PdfPCell c4 = new PdfPCell(new Phrase(safe(vac.getDescripcion()), fuente));
                         for (PdfPCell c : new PdfPCell[] { c1, c2, c3, c4 }) {
                             c.setHorizontalAlignment(Element.ALIGN_CENTER);
                         }
@@ -214,13 +212,22 @@ public class ReporteVacunacionUsuariosService {
         } finally {
             // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
@@ -232,31 +239,31 @@ public class ReporteVacunacionUsuariosService {
         // =========================
         // 0) Constantes DRY locales
         // =========================
-        final String NOMBRE_HOJA     = "Vacunación"; // ≤ 31 chars
-        final int    FILA_ENCABEZADO = 5;            // fila 6 (idx 5)
+        final String NOMBRE_HOJA = "Vacunación"; // ≤ 31 chars
+        final int FILA_ENCABEZADO = 5; // fila 6 (idx 5)
 
         // MERGES exactos (B1:P5) → 16 columnas totales (0..15) => B es 1 → 1..15
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 15;
 
         final String[] HEADERS = {
-            "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "GÉNERO",
-            "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
-            "ROL", "CORREO", "CARNET", "TIPO VACUNA", "FECHA", "DESCRIPCIÓN"
+                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "GÉNERO",
+                "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
+                "ROL", "CORREO", "CARNET", "TIPO VACUNA", "FECHA", "DESCRIPCIÓN"
         };
         final int[] ANCHOS = {
-            10, 20, 20, 25, 15,
-            18, 18, 15, 20, 18,
-            14, 28, 12, 18, 15, 24
+                10, 20, 20, 25, 15,
+                18, 18, 15, 20, 18,
+                14, 28, 12, 18, 15, 24
         };
         // Filtros: ITEM sin filtro; resto con filtro
         final boolean[] FILTROS = new boolean[] {
-            false, true, true, true, true, true, true, true, true,
-            true,  true, true, true, true, true, true
+                false, true, true, true, true, true, true, true, true,
+                true, true, true, true, true, true, true
         };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
             hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener visible encabezado
@@ -281,9 +288,10 @@ public class ReporteVacunacionUsuariosService {
                     ? "REGISTRO DE VACUNACIÓN"
                     : request.getTitulo();
             UtilExcel.establecerTexto(hoja, 1, 1,
-                    UtilExcel.aMayusculasSeguras(titulo), estiloTitulo);               // B2
+                    UtilExcel.aMayusculasSeguras(titulo), estiloTitulo); // B2
 
-            // (Si tu módulo usa periodo visible, puedes añadir una 3ra línea cuando aplique:)
+            // (Si tu módulo usa periodo visible, puedes añadir una 3ra línea cuando
+            // aplique:)
             // UtilExcel.establecerTexto(hoja, 2, 1, "PERIODO: ...", estiloTitulo);
 
             // 4) ENCABEZADOS + ANCHOS (fila 6 → idx 5)
@@ -303,10 +311,12 @@ public class ReporteVacunacionUsuariosService {
 
             if (request.getDatos() != null) {
                 for (AgrupadorVacunaUsuarioDTO grupo : request.getDatos()) {
-                    if (grupo == null || grupo.getEmpleados() == null) continue;
+                    if (grupo == null || grupo.getEmpleados() == null)
+                        continue;
 
                     for (EmpleadoVacunaUsuarioDTO e : grupo.getEmpleados()) {
-                        if (e == null) continue;
+                        if (e == null)
+                            continue;
 
                         String apenom = (safe(e.getApellido()) + " " + safe(e.getNombre())).trim();
 
@@ -323,17 +333,18 @@ public class ReporteVacunacionUsuariosService {
                             UtilExcel.establecerTexto(r, 7, safe(e.getRegimen()), null);
                             UtilExcel.establecerTexto(r, 8, safe(e.getDepartamento()), null);
                             UtilExcel.establecerTexto(r, 9, safe(e.getCargo()), null);
-                            UtilExcel.establecerTexto(r,10, safe(e.getRol()), null);
-                            UtilExcel.establecerTexto(r,11, safe(e.getCorreo()), null);
-                            UtilExcel.establecerTexto(r,12, "", null); // CARNET
-                            UtilExcel.establecerTexto(r,13, "", null); // TIPO VACUNA
-                            UtilExcel.establecerTexto(r,14, "", null); // FECHA
-                            UtilExcel.establecerTexto(r,15, "", null); // DESCRIPCIÓN
+                            UtilExcel.establecerTexto(r, 10, safe(e.getRol()), null);
+                            UtilExcel.establecerTexto(r, 11, safe(e.getCorreo()), null);
+                            UtilExcel.establecerTexto(r, 12, "", null); // CARNET
+                            UtilExcel.establecerTexto(r, 13, "", null); // TIPO VACUNA
+                            UtilExcel.establecerTexto(r, 14, "", null); // FECHA
+                            UtilExcel.establecerTexto(r, 15, "", null); // DESCRIPCIÓN
                             continue;
                         }
 
                         for (VacunaUsuarioDTO v : e.getVacunas()) {
-                            if (v == null) continue;
+                            if (v == null)
+                                continue;
 
                             Row r = UtilExcel.asegurarFila(hoja, filaAct++);
                             UtilExcel.establecerValor(r, 0, item++, null);
@@ -346,15 +357,15 @@ public class ReporteVacunacionUsuariosService {
                             UtilExcel.establecerTexto(r, 7, safe(e.getRegimen()), null);
                             UtilExcel.establecerTexto(r, 8, safe(e.getDepartamento()), null);
                             UtilExcel.establecerTexto(r, 9, safe(e.getCargo()), null);
-                            UtilExcel.establecerTexto(r,10, safe(e.getRol()), null);
-                            UtilExcel.establecerTexto(r,11, safe(e.getCorreo()), null);
+                            UtilExcel.establecerTexto(r, 10, safe(e.getRol()), null);
+                            UtilExcel.establecerTexto(r, 11, safe(e.getCorreo()), null);
 
                             // CARNET Sí/No
                             String carnetSN = (v.getCarnet() != null && !v.getCarnet().trim().isEmpty()) ? "Si" : "No";
-                            UtilExcel.establecerTexto(r,12, carnetSN, null);
-                            UtilExcel.establecerTexto(r,13, safe(v.getTipo_vacuna()), null);
-                            UtilExcel.establecerTexto(r,14, fechaCortaExcel(v.getFecha()), null);
-                            UtilExcel.establecerTexto(r,15, safe(v.getDescripcion()), null);
+                            UtilExcel.establecerTexto(r, 12, carnetSN, null);
+                            UtilExcel.establecerTexto(r, 13, safe(v.getTipo_vacuna()), null);
+                            UtilExcel.establecerTexto(r, 14, fechaCortaExcel(v.getFecha()), null);
+                            UtilExcel.establecerTexto(r, 15, safe(v.getDescripcion()), null);
                         }
                     }
                 }
@@ -364,7 +375,7 @@ public class ReporteVacunacionUsuariosService {
 
             // 6) Alineaciones + bordes (por región)
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-            CellStyle estiloIzqBorde    = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
 
             // Encabezado centrado con bordes
             UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO,
@@ -374,19 +385,19 @@ public class ReporteVacunacionUsuariosService {
                 // ITEM centrado
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
                 // resto izquierda
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, HEADERS.length - 1, estiloIzqBorde,
+                        true);
             }
 
             // 7) Tabla estilizada + AutoFilter (ITEM sin filtro)
             if (ultimaFila >= filaDatosIni) {
                 UtilExcel.crearTablaEstilizada(
-                    hoja,
-                    "VacunasReporteTabla",
-                    FILA_ENCABEZADO, 0,
-                    ultimaFila, HEADERS.length - 1,
-                    true,
-                    FILTROS
-                );
+                        hoja,
+                        "VacunasReporteTabla",
+                        FILA_ENCABEZADO, 0,
+                        ultimaFila, HEADERS.length - 1,
+                        true,
+                        FILTROS);
             }
 
             // 8) Cierre + retorno
@@ -402,8 +413,6 @@ public class ReporteVacunacionUsuariosService {
         }
     }
 
-    
-    
     private PdfPCell celdaSinBordeIzquierda(String texto, Font fuente, Color fondo) {
         PdfPCell celda = new PdfPCell(new Phrase(texto, fuente));
         celda.setBackgroundColor(fondo);
