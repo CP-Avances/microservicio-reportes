@@ -59,15 +59,8 @@ public class ReporteVacunacionUsuariosService {
                 document.add(logo);
 
             // Encabezados
-            Paragraph empresa = new Paragraph(request.getEmpresa(), ReporteUtil.fuenteEncabezado());
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
-
-            Paragraph titulo = new Paragraph(safe(request.getTitulo()), ReporteUtil.fuenteEncabezado());
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte(safe(request.getTitulo())));
 
             // Colores y fuente
             final Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());

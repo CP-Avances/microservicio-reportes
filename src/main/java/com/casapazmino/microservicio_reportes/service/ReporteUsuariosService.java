@@ -53,15 +53,9 @@ public class ReporteUsuariosService {
             }
 
             // Encabezados empresa/título (manteniendo Paragraph + fuente existente)
-            Paragraph empresa = new Paragraph(request.getEmpresa(), ReporteUtil.fuenteEncabezado());
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte(safe(request.getTitulo())));
 
-            Paragraph titulo = new Paragraph(request.getTitulo(), ReporteUtil.fuenteEncabezado());
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(10f);
-            document.add(titulo);
 
             // Colores y fuente (calculados una vez)
             final Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());

@@ -12,13 +12,11 @@ import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
-
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
-
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -31,8 +29,6 @@ public class ReporteGeneroService {
     // PDF
     // =========================
     public byte[] generarReporteGenerosPDF(ReporteGenerosRequest request) {
-
-        // DRY: constantes locales
         final float[] WIDTHS = { 2f, 4f };
 
         Document document = null;
@@ -50,7 +46,7 @@ public class ReporteGeneroService {
                     request.getColorPrincipal()));
             document.open();
 
-            // 2) Construcción (helpers existentes)
+            // 2) Construcción 
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
@@ -61,7 +57,6 @@ public class ReporteGeneroService {
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorZebra = ReporteUtil.colorZebraClaro();
-
             PdfPTable tabla = new PdfPTable(2);
             tabla.setWidthPercentage(40);
             tabla.setSpacingBefore(10f);
@@ -121,46 +116,40 @@ public class ReporteGeneroService {
     }
 
     // =========================
-    // XLSX (idéntico al estilo del front)
+    // XLSX 
     // =========================
     public byte[] generarReporteGenerosXLSX(ReporteGenerosRequest request) {
-        // =========================
-        // 0) Constantes DRY locales
-        // =========================
-        final String NOMBRE_HOJA = "Género"; // ≤ 31 chars (nombre exacto)
+        final String NOMBRE_HOJA = "Género"; 
         final int FILA_ENCABEZADO = 5;
-
-        // Merges B1:C1 ... B5:C5 => (row 0..4, col 1..2)
+        // Merges
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 2;
-
         final String TITULO_REPORTE = "LISTA DE GÉNEROS";
-        final String[] HEADERS = { "ITEM", "CODIGO", "GENERO" }; // labels exactos (sin tildes)
-        final int[] ANCHOS = { 20, 30, 40 }; // anchos exactos
+        final String[] HEADERS = { "ITEM", "CODIGO", "GENERO" }; 
+        final int[] ANCHOS = { 20, 30, 40 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
-                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
+            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
-            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); // mantener encabezado visible
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1); 
 
-            // 1) Logo estándar A1:B5 (si existe)
+            //Logo 
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
             if (logo != null && logo.length > 0) {
                 UtilExcel.insertarLogoEstandar(libro, hoja, logo);
             }
 
-            // 2) Merges B1:C1 ... B5:C5
+            //Merges
             for (int r = MERGE_FIL_INI; r <= MERGE_FIL_FIN; r++) {
                 UtilExcel.combinarCeldas(hoja, r, r, MERGE_COL_INI, MERGE_COL_FIN);
             }
-
-            // 3) Títulos
+            //Títulos
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(request.getEmpresa()), estiloTitulo);
             UtilExcel.establecerTexto(hoja, 1, 1, TITULO_REPORTE, estiloTitulo);
 
-            // 4) Encabezados + anchos
+            //Encabezados
             Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
             for (int c = 0; c < HEADERS.length; c++) {
                 UtilExcel.establecerTexto(filaHeader, c, HEADERS[c], null);
@@ -228,26 +217,22 @@ public class ReporteGeneroService {
     }
 
     // =========================
-    // CSV (orden simple de keys)
+    // CSV
     // =========================
     public byte[] generarReporteGenerosCSV(ReporteGenerosRequest request) {
-        // === Contrato del CSV ===
         final String NOMBRE_REPORTE = "Generos.csv";
         final String DELIM = ",";
-        final String EOL = "\r\n"; // CRLF para Excel/Windows
+        final String EOL = "\r\n";
         final String[] HEADERS = { "id", "genero" };
-
         try {
             StringBuilder sb = new StringBuilder();
-
-            // Encabezados (orden exacto)
+            // Encabezados
             for (int i = 0; i < HEADERS.length; i++) {
                 if (i > 0)
                     sb.append(DELIM);
                 sb.append(HEADERS[i]);
             }
             sb.append(EOL);
-
             // Cuerpo
             List<GeneroDTO> items = request.getGeneros();
             if (items != null && !items.isEmpty()) {
@@ -259,21 +244,17 @@ public class ReporteGeneroService {
                             .append(UtilCsv.csvEscape(genero)).append(EOL);
                 }
             }
-
-            // Retorno (nunca null)
+            // Retorno 
             return sb.toString().getBytes(StandardCharsets.UTF_8);
-
         } catch (IllegalArgumentException e) {
-            // Validación → 400
             throw e;
         } catch (Exception e) {
-            // Interno → 500
             throw new ReportBuildException("No se pudo generar " + NOMBRE_REPORTE, e);
         }
     }
 
     // =========================
-    // XML (estructura simple y legible)
+    // XML
     // =========================
     public byte[] generarReporteGenerosXML(ReporteGenerosRequest request) {
         final String NOMBRE_REPORTE = "G\u00E9neros.xml";
@@ -281,13 +262,10 @@ public class ReporteGeneroService {
         final String ITEM_TAG = "genero";
         final String EOL = "\n";
         final String IND = "  ";
-
         try {
             StringBuilder sb = new StringBuilder(4_096);
-
             sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(EOL);
             sb.append("<").append(ROOT_TAG).append(">").append(EOL);
-
             List<GeneroDTO> items = request.getGeneros();
             if (items == null || items.isEmpty()) {
                 sb.append(IND).append("<lista>NO DEFINIDO</lista>").append(EOL);
@@ -303,10 +281,8 @@ public class ReporteGeneroService {
                     sb.append(IND).append("</").append(ITEM_TAG).append(">").append(EOL);
                 }
             }
-
             sb.append("</").append(ROOT_TAG).append(">").append(EOL);
             return sb.toString().getBytes(StandardCharsets.UTF_8);
-
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {

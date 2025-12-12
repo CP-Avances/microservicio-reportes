@@ -62,19 +62,11 @@ public class ReportePlanificacionService {
             }
 
             // Títulos (empresa, título, periodo)
-            Paragraph nombreEmpresa = new Paragraph(request.getEmpresa(), ReporteUtil.fuenteEncabezado());
-            nombreEmpresa.setAlignment(Element.ALIGN_CENTER);
-            document.add(nombreEmpresa);
+            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            document.add(ReporteUtil.crearTituloReporte(safe(request.getTitulo())));
 
-            Paragraph tituloPrincipal = new Paragraph(request.getTitulo(), ReporteUtil.fuenteEncabezado());
-            tituloPrincipal.setAlignment(Element.ALIGN_CENTER);
-            document.add(tituloPrincipal);
-
-            Paragraph periodo = new Paragraph(
-                    "PERIODO DEL: " + request.getPeriodoInicio() + " AL " + request.getPeriodoFin(),
-                    ReporteUtil.fuenteEncabezado());
-            periodo.setAlignment(Element.ALIGN_CENTER);
-            document.add(periodo);
+            String periodo = "PERIODO DEL: " + request.getPeriodoInicio() + " AL " + request.getPeriodoFin();
+            document.add(ReporteUtil.crearTituloReporte(periodo));
             document.add(Chunk.NEWLINE);
 
             // Colores
