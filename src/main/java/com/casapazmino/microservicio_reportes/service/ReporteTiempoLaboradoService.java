@@ -4,8 +4,8 @@ import com.casapazmino.microservicio_reportes.model.ReporteTiempoLaborado.*;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
-import com.lowagie.text.*;
-import com.lowagie.text.pdf.*;
+import org.openpdf.text.*;
+import org.openpdf.text.pdf.*;
 import org.springframework.stereotype.Service;
 
 import java.awt.Color;

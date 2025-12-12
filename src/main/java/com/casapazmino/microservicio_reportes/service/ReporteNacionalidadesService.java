@@ -10,8 +10,8 @@ import com.casapazmino.microservicio_reportes.util.UtilXml;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
-import com.lowagie.text.*;
-import com.lowagie.text.pdf.*;
+import org.openpdf.text.*;
+import org.openpdf.text.pdf.*;
 
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;

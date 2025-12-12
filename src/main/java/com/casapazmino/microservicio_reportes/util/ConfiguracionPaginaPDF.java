@@ -1,7 +1,7 @@
 package com.casapazmino.microservicio_reportes.util;
 
-import com.lowagie.text.*;
-import com.lowagie.text.pdf.*;
+import org.openpdf.text.*;
+import org.openpdf.text.pdf.*;
 
 import java.awt.Color;
 import java.time.LocalDateTime;

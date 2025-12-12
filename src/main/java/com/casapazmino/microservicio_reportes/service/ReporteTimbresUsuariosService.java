@@ -7,8 +7,8 @@ import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 
-import com.lowagie.text.*;
-import com.lowagie.text.pdf.*;
+import org.openpdf.text.*;
+import org.openpdf.text.pdf.*;
 
 import org.springframework.stereotype.Service;
 
