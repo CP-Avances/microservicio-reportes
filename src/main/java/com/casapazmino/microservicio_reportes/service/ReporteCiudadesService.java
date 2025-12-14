@@ -67,15 +67,15 @@ public class ReporteCiudadesService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("Provincia", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("Ciudad", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Provincia", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Ciudad", colorPrincipal));
 
             // Cuerpo (zebra)
             boolean zebra = false;
             for (CiudadDTO ciudad : request.getCiudades()) {
                 Color fondo = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(ReporteUtil.crearCelda(ciudad.getProvincia(), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(ciudad.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(ciudad.getProvincia(), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(ciudad.getNombre(), fondo));
                 zebra = !zebra;
             }
 

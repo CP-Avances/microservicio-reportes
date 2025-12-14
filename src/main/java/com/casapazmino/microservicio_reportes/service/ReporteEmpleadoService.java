@@ -73,7 +73,7 @@ public class ReporteEmpleadoService {
 
             // Encabezados
             for (String h : HEADERS) {
-                tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+                tabla.addCell(ReporteUtil.celdaEncabezadoTabla(h, colorPrincipal));
             }
 
             // Cuerpo (zebra)
@@ -82,17 +82,17 @@ public class ReporteEmpleadoService {
             if (empleados != null) {
                 for (EmpleadoDTO e : empleados) {
                     Color bg = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(e.getCodigo(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getNombreCompleto(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getIdentificacion(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getFechaNacimiento(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getCorreo(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getGenero(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getEstadoCivil(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getDomicilio(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getTelefono(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getEstadoTexto(), ReporteUtil.fuenteTablaData(), bg));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getNacionalidad(), ReporteUtil.fuenteTablaData(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getCodigo(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getNombreCompleto(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getIdentificacion(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getFechaNacimiento(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getCorreo(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getGenero(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getEstadoCivil(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getDomicilio(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getTelefono(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getEstadoTexto(), bg));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getNacionalidad(), bg));
                     zebra = !zebra;
                 }
             }

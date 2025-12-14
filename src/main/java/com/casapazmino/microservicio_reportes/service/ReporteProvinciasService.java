@@ -74,9 +74,9 @@ public class ReporteProvinciasService {
             tabla.setSpacingBefore(SPACING_BEFORE);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("PAÍS", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("PAÍS", COLOR_PRIMARIO));
             tabla.addCell(
-                    ReporteUtil.crearCelda("PROVINCIAS", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+                    ReporteUtil.celdaEncabezadoTabla("PROVINCIAS", COLOR_PRIMARIO));
 
             // Cuerpo con zebra
             boolean zebra = false;
@@ -84,8 +84,8 @@ public class ReporteProvinciasService {
             if (lista != null) {
                 for (ProvinciaDTO provincia : lista) {
                     Color fondo = zebra ? COLOR_ZEBRA : null; // null conserva blanco
-                    tabla.addCell(ReporteUtil.crearCelda(provincia.getPais(), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(provincia.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(provincia.getPais(), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(provincia.getNombre(), fondo));
                     zebra = !zebra;
                 }
             }

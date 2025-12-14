@@ -64,8 +64,8 @@ public class ReporteGeneroService {
             tabla.setHorizontalAlignment(Element.ALIGN_CENTER);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("GÉNERO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("GÉNERO", colorPrincipal));
 
             // Cuerpo (zebra)
             List<GeneroDTO> generos = request.getGeneros();
@@ -74,8 +74,8 @@ public class ReporteGeneroService {
                 for (GeneroDTO g : generos) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
                     tabla.addCell(
-                            ReporteUtil.crearCelda(String.valueOf(g.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(g.getGenero(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(String.valueOf(g.getId()), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(g.getGenero(), fondo));
                     zebra = !zebra;
                 }
             }

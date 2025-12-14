@@ -68,9 +68,8 @@ public class ReporteModalidadLaboralService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("ITEM", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("MODALIDAD LABORAL", ReporteUtil.fuenteEncabezadoTablaData(),
-                    colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("ITEM", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("MODALIDAD LABORAL", colorPrincipal));
 
             // Cuerpo (zebra)
             List<ModalidadLaboralDTO> lista = request.getModalidades();
@@ -78,10 +77,9 @@ public class ReporteModalidadLaboralService {
             if (lista != null) {
                 for (ModalidadLaboralDTO modalidad : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
-                    tabla.addCell(ReporteUtil.crearCelda(String.valueOf(modalidad.getId()),
-                            ReporteUtil.fuenteTablaData(), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(String.valueOf(modalidad.getId()), fondo));
                     tabla.addCell(
-                            ReporteUtil.crearCelda(modalidad.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(modalidad.getDescripcion(), fondo));
                     zebra = !zebra;
                 }
             }

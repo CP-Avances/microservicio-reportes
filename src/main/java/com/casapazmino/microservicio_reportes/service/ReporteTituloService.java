@@ -71,17 +71,17 @@ public class ReporteTituloService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados de la tabla
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NIVEL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NOMBRE", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("NIVEL", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("NOMBRE", colorPrincipal));
 
             // Filas (zebra)
             boolean zebra = false;
             for (TituloDTO t : request.getTitulos()) {
                 Color bg = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(t.getId()), ReporteUtil.fuenteTablaData(), bg));
-                tabla.addCell(ReporteUtil.crearCelda(t.getNivel(), ReporteUtil.fuenteTablaData(), bg));
-                tabla.addCell(ReporteUtil.crearCelda(t.getNombre(), ReporteUtil.fuenteTablaData(), bg));
+                tabla.addCell(ReporteUtil.celdaDataCentro(String.valueOf(t.getId()), bg));
+                tabla.addCell(ReporteUtil.celdaDataIzquierda(t.getNivel(), bg));
+                tabla.addCell(ReporteUtil.celdaDataIzquierda(t.getNombre(), bg));
                 zebra = !zebra;
             }
 

@@ -99,10 +99,8 @@ public class ReporteRolesService {
                     PdfPTable subtitulo = new PdfPTable(1);
                     subtitulo.setWidthPercentage(WIDTH_PERCENT_100);
 
-                    PdfPCell celdaTitulo = new PdfPCell(
-                            new Phrase("FUNCIONES DEL SISTEMA ASIGNADAS", ReporteUtil.fuenteEncabezadoTablaData()));
-                    celdaTitulo.setBackgroundColor(COLOR_SECUNDARIO);
-                    celdaTitulo.setHorizontalAlignment(PdfPCell.ALIGN_CENTER);
+                    PdfPCell celdaTitulo = ReporteUtil.celdaEncabezadoTabla("FUNCIONES DEL SISTEMA ASIGNADAS",
+                            COLOR_SECUNDARIO);
                     celdaTitulo.setPadding(PADDING_TITULOS);
                     subtitulo.addCell(celdaTitulo);
                     document.add(subtitulo);
@@ -116,7 +114,7 @@ public class ReporteRolesService {
                     // Encabezados
                     for (String h : HEADERS) {
                         tabla.addCell(
-                                ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), COLOR_SECUNDARIO));
+                                ReporteUtil.celdaEncabezadoTabla(h, COLOR_SECUNDARIO));
                     }
 
                     // Cuerpo con zebra
@@ -126,17 +124,15 @@ public class ReporteRolesService {
                             Color fondo = zebra ? COLOR_ZEBRA : Color.WHITE;
                             zebra = !zebra;
 
-                            tabla.addCell(ReporteUtil.crearCelda(f.getPagina(), ReporteUtil.fuenteTablaData(), fondo));
-                            tabla.addCell(ReporteUtil.crearCelda(f.getAccion(), ReporteUtil.fuenteTablaData(), fondo));
-                            tabla.addCell(ReporteUtil.crearCelda(
-                                    transformarModulo(f.getNombre_modulo()), ReporteUtil.fuenteTablaData(), fondo));
+                            tabla.addCell(ReporteUtil.celdaDataCentro(f.getPagina(), fondo));
+                            tabla.addCell(ReporteUtil.celdaDataCentro(f.getAccion(), fondo));
+                            tabla.addCell(ReporteUtil.celdaDataCentro(
+                                    transformarModulo(f.getNombre_modulo()), fondo));
 
                             // Mantener la lógica original: WEB = "Sí" cuando !movil; MÓVIL = "Sí" cuando
                             // movil
-                            tabla.addCell(ReporteUtil.crearCelda(f.getMovil() ? "" : "Sí",
-                                    ReporteUtil.fuenteTablaData(), fondo));
-                            tabla.addCell(ReporteUtil.crearCelda(f.getMovil() ? "Sí" : "",
-                                    ReporteUtil.fuenteTablaData(), fondo));
+                            tabla.addCell(ReporteUtil.celdaDataCentro(f.getMovil() ? "" : "Sí", fondo));
+                            tabla.addCell(ReporteUtil.celdaDataCentro(f.getMovil() ? "Sí" : "", fondo));
                         }
                     }
 

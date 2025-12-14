@@ -73,8 +73,8 @@ public class ReporteVacunaService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NOMBRE", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("NOMBRE", colorPrincipal));
 
             // Filas (zebra) – manteniendo el sort por id
             List<VacunaDTO> lista = request.getVacunas();
@@ -82,8 +82,8 @@ public class ReporteVacunaService {
             boolean zebra = false;
             for (VacunaDTO v : lista) {
                 Color bg = zebra ? colorZebra : Color.WHITE;
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(v.getId()), ReporteUtil.fuenteTablaData(), bg));
-                tabla.addCell(ReporteUtil.crearCelda(v.getNombre(), ReporteUtil.fuenteTablaData(), bg));
+                tabla.addCell(ReporteUtil.celdaDataCentro(String.valueOf(v.getId()), bg));
+                tabla.addCell(ReporteUtil.celdaDataCentro(v.getNombre(), bg));
                 zebra = !zebra;
             }
 

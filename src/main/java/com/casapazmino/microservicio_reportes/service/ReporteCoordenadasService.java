@@ -75,7 +75,7 @@ public class ReporteCoordenadasService {
 
             // Encabezados
             for (String h : HEADERS) {
-                tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+                tabla.addCell(ReporteUtil.celdaEncabezadoTabla(h, colorPrincipal));
             }
 
             // Filas (zebra)
@@ -84,10 +84,10 @@ public class ReporteCoordenadasService {
                 Color fondo = zebra ? zebraColor : Color.WHITE;
                 zebra = !zebra;
 
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(c.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(c.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(c.getLatitud(), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(c.getLongitud(), ReporteUtil.fuenteTablaData(), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(String.valueOf(c.getId()), fondo));
+                tabla.addCell(ReporteUtil.celdaDataIzquierda(c.getDescripcion(), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(c.getLatitud(), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(c.getLongitud(), fondo));
             }
 
             document.add(tabla);

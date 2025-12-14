@@ -68,16 +68,16 @@ public class ReporteCargosService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("ITEM", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("CARGOS", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("ITEM", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CARGOS", colorPrincipal));
 
             // Cuerpo (zebra)
             boolean zebra = false;
             for (CargoDTO cargo : request.getCargos()) {
                 Color fondo = zebra ? colorZebra : Color.WHITE;
                 tabla.addCell(
-                        ReporteUtil.crearCelda(String.valueOf(cargo.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(cargo.getCargo(), ReporteUtil.fuenteTablaData(), fondo));
+                        ReporteUtil.celdaDataCentro(String.valueOf(cargo.getId()), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(cargo.getCargo(), fondo));
                 zebra = !zebra;
             }
 

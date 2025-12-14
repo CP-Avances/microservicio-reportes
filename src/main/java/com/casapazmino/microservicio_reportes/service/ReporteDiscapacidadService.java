@@ -72,8 +72,8 @@ public class ReporteDiscapacidadService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NOMBRE", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("NOMBRE", colorPrincipal));
 
             // Cuerpo (zebra)
             List<DiscapacidadDTO> lista = request.getDiscapacidades();
@@ -82,8 +82,8 @@ public class ReporteDiscapacidadService {
                 for (DiscapacidadDTO d : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
                     tabla.addCell(
-                            ReporteUtil.crearCelda(String.valueOf(d.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(d.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(String.valueOf(d.getId()), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(d.getNombre(), fondo));
                     zebra = !zebra;
                 }
             }

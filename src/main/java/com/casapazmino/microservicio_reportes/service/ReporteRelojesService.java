@@ -84,7 +84,7 @@ public class ReporteRelojesService {
 
             // Encabezados
             for (String h : HEADERS) {
-                tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+                tabla.addCell(ReporteUtil.celdaEncabezadoTabla(h, COLOR_PRIMARIO));
             }
 
             // Cuerpo con zebra

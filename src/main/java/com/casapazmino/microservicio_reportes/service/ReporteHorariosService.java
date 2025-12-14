@@ -104,11 +104,7 @@ public class ReporteHorariosService {
                     PdfPTable tituloDetalles = new PdfPTable(1);
                     tituloDetalles.setWidthPercentage(100);
 
-                    PdfPCell celdaDetalles = new PdfPCell(
-                            new Phrase("DETALLES", ReporteUtil.fuenteEncabezadoTablaData()));
-                    celdaDetalles.setBackgroundColor(colorSecundario);
-                    celdaDetalles.setHorizontalAlignment(Element.ALIGN_CENTER);
-                    celdaDetalles.setPadding(5);
+                    PdfPCell celdaDetalles = ReporteUtil.celdaEncabezadoTabla("DETALLES", colorSecundario);
                     celdaDetalles.setBorder(Rectangle.BOX);
                     tituloDetalles.addCell(celdaDetalles);
 
@@ -127,27 +123,22 @@ public class ReporteHorariosService {
                             "MINUTOS DESPUÉS" };
                     for (String col : headers) {
                         tabla.addCell(
-                                ReporteUtil.crearCelda(col, ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+                                ReporteUtil.celdaEncabezadoTabla(col, colorSecundario));
                     }
 
                     // Cuerpo
                     boolean zebra = false;
                     for (DetalleHorarioDTO d : h.getDetalles()) {
                         Color fondo = zebra ? zebraColor : Color.WHITE;
-                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getOrden()),
-                                ReporteUtil.fuenteTablaData(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(d.getHora(), ReporteUtil.fuenteTablaData(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(
-                                d.getTolerancia() != null ? d.getTolerancia().toString() : "",
-                                ReporteUtil.fuenteTablaData(), fondo));
+                        tabla.addCell(ReporteUtil.celdaDataCentro(String.valueOf(d.getOrden()), fondo));
+                        tabla.addCell(ReporteUtil.celdaDataCentro(d.getHora(), fondo));
+                        tabla.addCell(ReporteUtil.celdaDataCentro(
+                                d.getTolerancia() != null ? d.getTolerancia().toString() : "", fondo));
                         tabla.addCell(
-                                ReporteUtil.crearCelda(d.getTipoAccionShow(), ReporteUtil.fuenteTablaData(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(d.isSegundoDia() ? "Sí" : "No",
-                                ReporteUtil.fuenteTablaData(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getMinutosAntes()),
-                                ReporteUtil.fuenteTablaData(), fondo));
-                        tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getMinutosDespues()),
-                                ReporteUtil.fuenteTablaData(), fondo));
+                                ReporteUtil.celdaDataCentro(d.getTipoAccionShow(), fondo));
+                        tabla.addCell(ReporteUtil.celdaDataCentro(d.isSegundoDia() ? "Sí" : "No", fondo));
+                        tabla.addCell(ReporteUtil.celdaDataCentro(String.valueOf(d.getMinutosAntes()), fondo));
+                        tabla.addCell(ReporteUtil.celdaDataCentro(String.valueOf(d.getMinutosDespues()), fondo));
                         zebra = !zebra;
                     }
 

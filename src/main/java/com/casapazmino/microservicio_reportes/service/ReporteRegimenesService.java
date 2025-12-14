@@ -110,10 +110,8 @@ public class ReporteRegimenesService {
                     PdfPTable configVac = new PdfPTable(2);
                     configVac.setWidthPercentage(WIDTH_PERCENT_100);
                     configVac.setWidths(WIDTHS_DOBLE);
-                    configVac.addCell(ReporteUtil.crearCelda(
-                            "CONFIGURACIÓN DE VACACIONES",
-                            ReporteUtil.fuenteEncabezadoTablaData(),
-                            COLOR_PRIMARIO, 1, 2));
+                    configVac.addCell(ReporteUtil.celdaEncabezadoTabla(
+                            "CONFIGURACIÓN DE VACACIONES", COLOR_PRIMARIO, 1, 2));
 
                     configVac.addCell(ReporteUtil.celdaCentro("DÍAS HÁBILES", COLOR_SECUNDARIO));
                     configVac.addCell(ReporteUtil.celdaCentro(
@@ -169,10 +167,8 @@ public class ReporteRegimenesService {
                     PdfPTable vacGanadas = new PdfPTable(2);
                     vacGanadas.setWidthPercentage(WIDTH_PERCENT_100);
                     vacGanadas.setWidths(WIDTHS_DOBLE);
-                    vacGanadas.addCell(ReporteUtil.crearCelda(
-                            "VACACIONES GANADAS",
-                            ReporteUtil.fuenteEncabezadoTablaData(),
-                            COLOR_PRIMARIO, 1, 2));
+                    vacGanadas.addCell(ReporteUtil.celdaEncabezadoTabla(
+                            "VACACIONES GANADAS", COLOR_PRIMARIO, 1, 2));
 
                     vacGanadas.addCell(
                             ReporteUtil.celdaCentro("POR MES (HÁBILES)", COLOR_SECUNDARIO));
@@ -202,10 +198,8 @@ public class ReporteRegimenesService {
                     PdfPTable antiguedad = new PdfPTable(2);
                     antiguedad.setWidthPercentage(WIDTH_PERCENT_100);
                     antiguedad.setWidths(WIDTHS_DOBLE);
-                    antiguedad.addCell(ReporteUtil.crearCelda(
-                            "CONFIGURACIÓN DE ANTIGÜEDAD",
-                            ReporteUtil.fuenteEncabezadoTablaData(),
-                            COLOR_PRIMARIO, 1, 2));
+                    antiguedad.addCell(ReporteUtil.celdaEncabezadoTabla(
+                            "CONFIGURACIÓN DE ANTIGÜEDAD", COLOR_PRIMARIO, 1, 2));
 
                     if (Boolean.TRUE.equals(reg.getAntiguedad())) {
                         if (Boolean.TRUE.equals(reg.getAntiguedad_fija())) {

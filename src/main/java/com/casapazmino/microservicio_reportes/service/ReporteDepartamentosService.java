@@ -68,14 +68,12 @@ public class ReporteDepartamentosService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL/ ESTABLECIMIENTO", ReporteUtil.fuenteEncabezadoTablaData(),
-                    colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("SUCURSAL/ ESTABLECIMIENTO", colorPrincipal));
             tabla.addCell(
-                    ReporteUtil.crearCelda("DEPARTAMENTO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NIVEL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("DEPARTAMENTO SUPERIOR", ReporteUtil.fuenteEncabezadoTablaData(),
-                    colorPrincipal));
+                    ReporteUtil.celdaEncabezadoTabla("DEPARTAMENTO", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("NIVEL", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("DEPARTAMENTO SUPERIOR", colorPrincipal));
 
             // Cuerpo (zebra)
             List<DepartamentoDTO> lista = request.getDepartamentos();
@@ -84,13 +82,13 @@ public class ReporteDepartamentosService {
                 for (DepartamentoDTO d : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
                     tabla.addCell(
-                            ReporteUtil.crearCelda(String.valueOf(d.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(d.getNomsucursal(), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(d.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(String.valueOf(d.getId()), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(d.getNomsucursal(), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(d.getNombre(), fondo));
                     tabla.addCell(
-                            ReporteUtil.crearCelda(String.valueOf(d.getNivel()), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(String.valueOf(d.getNivel()), fondo));
                     tabla.addCell(
-                            ReporteUtil.crearCelda(d.getDepartamento_padre(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(d.getDepartamento_padre(), fondo));
                     zebra = !zebra;
                 }
             }

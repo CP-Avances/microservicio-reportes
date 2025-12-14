@@ -71,10 +71,9 @@ public class ReporteSucursalesService {
             tabla.setSpacingBefore(SPACING_BEFORE);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
-            tabla.addCell(ReporteUtil.crearCelda("SUCURSAL / ESTABLECIMIENTO", ReporteUtil.fuenteEncabezadoTablaData(),
-                    COLOR_PRIMARIO));
-            tabla.addCell(ReporteUtil.crearCelda("CIUDAD", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("SUCURSAL / ESTABLECIMIENTO", COLOR_PRIMARIO));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CIUDAD", COLOR_PRIMARIO));
 
             // Cuerpo con zebra
             boolean zebra = false;
@@ -83,9 +82,9 @@ public class ReporteSucursalesService {
                 for (SucursalDTO s : lista) {
                     Color fondo = zebra ? COLOR_ZEBRA : Color.WHITE;
                     tabla.addCell(
-                            ReporteUtil.crearCelda(String.valueOf(s.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(s.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(s.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(String.valueOf(s.getId()), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(s.getNombre(), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(s.getDescripcion(), fondo));
                     zebra = !zebra;
                 }
             }

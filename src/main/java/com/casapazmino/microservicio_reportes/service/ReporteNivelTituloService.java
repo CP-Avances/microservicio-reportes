@@ -72,8 +72,8 @@ public class ReporteNivelTituloService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("NIVEL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("NIVEL", colorPrincipal));
 
             // Cuerpo (zebra)
             List<NivelTituloDTO> lista = request.getNivelesTitulos();
@@ -82,8 +82,8 @@ public class ReporteNivelTituloService {
                 for (NivelTituloDTO n : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
                     tabla.addCell(
-                            ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(n.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(String.valueOf(n.getId()), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(n.getNombre(), fondo));
                     zebra = !zebra;
                 }
             }

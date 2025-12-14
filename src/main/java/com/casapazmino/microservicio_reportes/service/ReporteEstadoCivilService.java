@@ -72,9 +72,9 @@ public class ReporteEstadoCivilService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", colorPrincipal));
             tabla.addCell(
-                    ReporteUtil.crearCelda("ESTADO CIVIL", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+                    ReporteUtil.celdaEncabezadoTabla("ESTADO CIVIL", colorPrincipal));
 
             // Cuerpo (zebra)
             List<EstadoCivilDTO> lista = request.getEstadosCivil();
@@ -83,8 +83,8 @@ public class ReporteEstadoCivilService {
                 for (EstadoCivilDTO e : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
                     tabla.addCell(
-                            ReporteUtil.crearCelda(String.valueOf(e.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(e.getEstadoCivil(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(String.valueOf(e.getId()), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(e.getEstadoCivil(), fondo));
                     zebra = !zebra;
                 }
             }

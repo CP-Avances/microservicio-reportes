@@ -73,12 +73,12 @@ public class ReporteFeriadosService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", colorPrincipal));
             tabla.addCell(
-                    ReporteUtil.crearCelda("DESCRIPCIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
-            tabla.addCell(ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+                    ReporteUtil.celdaEncabezadoTabla("DESCRIPCIÓN", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("FECHA", colorPrincipal));
             tabla.addCell(
-                    ReporteUtil.crearCelda("RECUPERACIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+                    ReporteUtil.celdaEncabezadoTabla("RECUPERACIÓN", colorPrincipal));
 
             // Cuerpo (zebra)
             List<FeriadoDTO> lista = request.getFeriados();
@@ -88,11 +88,11 @@ public class ReporteFeriadosService {
                 for (FeriadoDTO f : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
                     tabla.addCell(
-                            ReporteUtil.crearCelda(String.valueOf(f.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(f.getDescripcion(), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(f.getFecha(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(String.valueOf(f.getId()), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(f.getDescripcion(), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(f.getFecha(), fondo));
                     tabla.addCell(
-                            ReporteUtil.crearCelda(f.getFechaRecuperacion(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(f.getFechaRecuperacion(), fondo));
                     zebra = !zebra;
                 }
             }

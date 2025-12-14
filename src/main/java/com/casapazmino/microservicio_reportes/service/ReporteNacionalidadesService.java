@@ -70,9 +70,9 @@ public class ReporteNacionalidadesService {
             tabla.setSpacingBefore(10f);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", colorPrincipal));
             tabla.addCell(
-                    ReporteUtil.crearCelda("NACIONALIDAD", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+                    ReporteUtil.celdaEncabezadoTabla("NACIONALIDAD", colorPrincipal));
 
             // Cuerpo (zebra)
             List<NacionalidadDTO> lista = request.getNacionalidades();
@@ -81,8 +81,8 @@ public class ReporteNacionalidadesService {
                 for (NacionalidadDTO n : lista) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
                     tabla.addCell(
-                            ReporteUtil.crearCelda(String.valueOf(n.getId()), ReporteUtil.fuenteTablaData(), fondo));
-                    tabla.addCell(ReporteUtil.crearCelda(n.getNombre(), ReporteUtil.fuenteTablaData(), fondo));
+                            ReporteUtil.celdaDataCentro(String.valueOf(n.getId()), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(n.getNombre(), fondo));
                     zebra = !zebra;
                 }
             }

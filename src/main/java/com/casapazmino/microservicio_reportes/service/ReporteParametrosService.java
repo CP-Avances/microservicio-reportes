@@ -110,18 +110,14 @@ public class ReporteParametrosService {
 
                         // Encabezados de detalles
                         for (String h : HEADERS_DETALLES) {
-                            tabla.addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(),
-                                    colorSecundario));
+                            tabla.addCell(ReporteUtil.celdaEncabezadoTabla(h, colorSecundario));
                         }
 
                         // Cuerpo de detalles (diseño original en blanco)
                         for (DetalleParametroDTO d : parametro.getDetalles()) {
-                            tabla.addCell(ReporteUtil.crearCelda(String.valueOf(d.getId()),
-                                    ReporteUtil.fuenteTablaData(), Color.WHITE));
-                            tabla.addCell(ReporteUtil.crearCelda(d.getDescripcion(), ReporteUtil.fuenteTablaData(),
-                                    Color.WHITE));
-                            tabla.addCell(ReporteUtil.crearCelda(d.getObservacion(), ReporteUtil.fuenteTablaData(),
-                                    Color.WHITE));
+                            tabla.addCell(ReporteUtil.celdaDataCentro(String.valueOf(d.getId()), Color.WHITE));
+                            tabla.addCell(ReporteUtil.celdaDataCentro(d.getDescripcion(), Color.WHITE));
+                            tabla.addCell(ReporteUtil.celdaDataCentro(d.getObservacion(), Color.WHITE));
                         }
 
                         document.add(tabla);
