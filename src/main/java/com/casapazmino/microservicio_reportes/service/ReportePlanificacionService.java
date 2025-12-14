@@ -17,6 +17,12 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.TextStyle;
+import java.util.Locale;
+
+
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -34,7 +40,6 @@ public class ReportePlanificacionService {
         final float[] W_NOMENCLATURA = { 5f, 7f };
         final float[] W_CONTENEDORA = { 60f, 40f };
         final int[] W_ENCAB_EMPLE = { 5, 3, 3 };
-        final int COLS_MES = 7;
         final String T_HEADER_HOR = "DETALLE DE HORARIOS";
         final String T_HEADER_DEF = "DEFINICIONES";
 
@@ -145,7 +150,6 @@ public class ReportePlanificacionService {
             celdaDerecha.addElement(tablaNomenclatura);
             tablaContenedora.addCell(celdaDerecha);
 
-            document.add(tablaContenedora);
 
             // === BLOQUES POR EMPLEADO ===
             if (request.getDatos() != null) {
@@ -153,7 +157,11 @@ public class ReportePlanificacionService {
 
                     // Encabezado de datos del empleado
                     PdfPTable encabezado = new PdfPTable(3);
+                    encabezado.setWidthPercentage(100); // ✅ MISMO ANCHO QUE CALENDARIO
                     encabezado.setWidths(W_ENCAB_EMPLE);
+                    encabezado.setSpacingAfter(0f); 
+
+
 
                     encabezado.addCell(
                             ReporteUtil.celdaInfoEmpleado("EMPLEADO: " + emp.getApellido() + " " + emp.getNombre()));
@@ -163,62 +171,41 @@ public class ReportePlanificacionService {
                     encabezado.addCell(ReporteUtil.celdaInfoEmpleado("DEPARTAMENTO: " + emp.getDepartamento()));
                     encabezado.addCell(ReporteUtil.celdaInfoEmpleado("CARGO: " + emp.getCargo()));
                     encabezado.addCell(ReporteUtil.celdaInfoEmpleado(""));
-                    document.add(encabezado);
 
-                    Paragraph espacio = new Paragraph("", new Font());
-                    espacio.setSpacingBefore(10f);
-                    document.add(espacio);
+                    for (PdfPCell cell : encabezado.getRow(0).getCells()) {
+                        if (cell != null) cell.setBorder(Rectangle.NO_BORDER);
+                    }
+                    for (PdfPCell cell : encabezado.getRow(1).getCells()) {
+                        if (cell != null) cell.setBorder(Rectangle.NO_BORDER);
+                    }
+
+                    PdfPTable contenedorEnc = new PdfPTable(1);
+                    contenedorEnc.setWidthPercentage(100);
+
+                    PdfPCell wrap = new PdfPCell(encabezado);
+                    wrap.setBorder(Rectangle.BOX);   // ✅ solo borde exterior
+                    wrap.setPadding(0f);             // pegado
+                    contenedorEnc.addCell(wrap);
+
+                    document.add(contenedorEnc);
 
                     // Meses (tablas de 7 columnas)
                     if (emp.getHorarios() != null) {
                         for (PlanificacionHorarioMensualDTO mes : emp.getHorarios()) {
-                            PdfPTable tablaMes = new PdfPTable(COLS_MES);
-                            tablaMes.setWidthPercentage(100);
 
-                            PdfPCell celdaTituloMes = new PdfPCell(new Phrase(
-                                    "AÑO: " + mes.getAnio() + " MES: " + mes.getMes(),
-                                    ReporteUtil.fuenteEncabezado()));
-                            celdaTituloMes.setColspan(COLS_MES);
-                            celdaTituloMes.setBackgroundColor(colorSecundario);
-                            celdaTituloMes.setHorizontalAlignment(Element.ALIGN_CENTER);
-                            tablaMes.addCell(celdaTituloMes);
-
-                            // cabecera de días (en bloques de 7)
-                            for (int i = 1; i <= 31; i += 7) {
-                                for (int j = i; j < i + 7; j++) {
-                                    if (j <= 31) {
-                                        PdfPCell celdaDia = new PdfPCell(
-                                                new Phrase(String.format("%02d", j), ReporteUtil.fuenteEncabezado()));
-                                        celdaDia.setBackgroundColor(colorPrincipal);
-                                        celdaDia.setHorizontalAlignment(Element.ALIGN_CENTER);
-                                        celdaDia.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                                        tablaMes.addCell(celdaDia);
-                                    } else {
-                                        tablaMes.addCell("");
-                                    }
-                                }
-
-                                // valores de los días
-                                for (int j = i; j < i + 7; j++) {
-                                    if (j <= 31) {
-                                        Method getter = PlanificacionHorarioMensualDTO.class.getMethod("getDia" + j);
-                                        String valor = (String) getter.invoke(mes);
-                                        tablaMes.addCell(ReporteUtil.celdaCentro(valor != null ? valor : ""));
-                                    } else {
-                                        tablaMes.addCell("");
-                                    }
-                                }
-                            }
-
+                            PdfPTable tablaMes = crearTablaMesPlanificacion(mes, colorPrincipal, colorSecundario);
                             document.add(tablaMes);
 
-                            Paragraph espacioEntreEmpleados = new Paragraph("", new Font());
-                            espacioEntreEmpleados.setSpacingBefore(25f);
-                            document.add(espacioEntreEmpleados);
+                            Paragraph espacioEntreMeses = new Paragraph("", new Font());
+                            espacioEntreMeses.setSpacingBefore(25f);
+                            document.add(espacioEntreMeses);
                         }
                     }
+
                 }
             }
+
+            document.add(tablaContenedora);
 
             // 3) Cierre y retorno
             document.close();
@@ -580,6 +567,117 @@ public class ReportePlanificacionService {
             return "";
         String s = String.valueOf(v).trim();
         return "null".equalsIgnoreCase(s) ? "" : s;
+    }
+
+    private static final Locale LOCALE_ES_EC =
+        new Locale.Builder()
+                .setLanguage("es")
+                .setRegion("EC")
+                .build();
+
+    private static String nombreMesES(int mes) {
+        return java.time.Month.of(mes)
+                .getDisplayName(TextStyle.FULL, LOCALE_ES_EC)
+                .toUpperCase(LOCALE_ES_EC);
+    }
+
+
+    private PdfPTable crearTablaMesPlanificacion(
+            PlanificacionHorarioMensualDTO mesDto,
+            Color colorPrincipal,
+            Color colorSecundario
+    ) {
+        final int COLS = 7;
+        final Locale es = LOCALE_ES_EC;
+
+        int anio = mesDto.getAnio();
+        int mes = mesDto.getMes(); // 1..12
+
+        YearMonth ym = YearMonth.of(anio, mes);
+        int diasDelMes = ym.lengthOfMonth();
+
+        // Día 1 del mes
+        LocalDate first = LocalDate.of(anio, mes, 1);
+
+        // Queremos columnas LUN..DOM (0..6)
+        int startCol = (first.getDayOfWeek().getValue() + 6) % 7; // LUN=0 ... DOM=6
+
+        // Empezamos desde el lunes de la semana donde cae el día 1
+        LocalDate start = first.minusDays(startCol);
+
+        // Número de semanas necesarias (5 o 6)
+        int totalCells = startCol + diasDelMes;
+        int weeks = (int) Math.ceil(totalCells / 7.0);
+
+        PdfPTable tablaMes = new PdfPTable(COLS);
+        tablaMes.setWidthPercentage(100);
+
+        // ===== TÍTULO DEL MES (con nombre) =====
+        String titulo = "AÑO: " + anio + "  MES: " + mes + " (" + nombreMesES(mes) + ")";
+        PdfPCell celdaTituloMes = new PdfPCell(new Phrase(titulo, ReporteUtil.fuenteEncabezado()));
+        celdaTituloMes.setColspan(COLS);
+        celdaTituloMes.setBackgroundColor(colorSecundario);
+        celdaTituloMes.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celdaTituloMes.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celdaTituloMes.setPadding(6f);
+        tablaMes.addCell(celdaTituloMes);
+
+        // ===== CUERPO: 2 FILAS POR SEMANA (Día+N°) + (Código) =====
+        for (int w = 0; w < weeks; w++) {
+
+            // ---- fila superior: "Jueves 01" ----
+            for (int col = 0; col < 7; col++) {
+                LocalDate date = start.plusDays(w * 7L + col);
+
+                // Si NO pertenece al mes, celda vacía (igual que al inicio)
+                if (date.getMonthValue() != mes) {
+                    PdfPCell empty = new PdfPCell(new Phrase(""));
+                    empty.setFixedHeight(22f);
+                    empty.setHorizontalAlignment(Element.ALIGN_CENTER);
+                    empty.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                    tablaMes.addCell(empty);
+                } else {
+                    String dowFull = date.getDayOfWeek().getDisplayName(TextStyle.FULL, es); // "jueves"
+                    String label = String.format("%s %02d", capitalize(dowFull), date.getDayOfMonth());
+
+                    PdfPCell c = new PdfPCell(new Phrase(label, ReporteUtil.fuenteEncabezado()));
+                    c.setBackgroundColor(colorPrincipal);
+                    c.setHorizontalAlignment(Element.ALIGN_CENTER);
+                    c.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                    c.setPadding(5f);
+                    c.setFixedHeight(22f);
+                    tablaMes.addCell(c);
+                }
+            }
+
+            // ---- fila inferior: código del día (JO1/L/...) ----
+            for (int col = 0; col < 7; col++) {
+                LocalDate date = start.plusDays(w * 7L + col);
+
+                if (date.getMonthValue() != mes) {
+                    PdfPCell empty = new PdfPCell(new Phrase(""));
+                    empty.setFixedHeight(20f);
+                    tablaMes.addCell(empty);
+                } else {
+                    String valor = obtenerDia(mesDto, date.getDayOfMonth());
+                    PdfPCell c = new PdfPCell(new Phrase(valor != null ? valor : "", ReporteUtil.fuenteTexto()));
+                    c.setHorizontalAlignment(Element.ALIGN_CENTER);
+                    c.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                    c.setPadding(4f);
+                    c.setFixedHeight(20f);
+                    tablaMes.addCell(c);
+                }
+            }
+        }
+
+        return tablaMes;
+    }
+
+
+    private static String capitalize(String s) {
+        if (s == null || s.isBlank()) return "";
+        s = s.trim();
+        return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
     }
 
 }

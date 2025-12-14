@@ -42,7 +42,7 @@ public class ReporteUtil {
 
     // Fuente de texto general
     public static Font fuenteTexto() {
-        return FontFactory.getFont(FontFactory.HELVETICA, 6.5f);
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7f);
     }
 
     // Fuente para el nombre de la empresa
@@ -57,7 +57,7 @@ public class ReporteUtil {
 
     // Fuente para subtítulos / periodos
     public static Font fuenteSubtitulo() {
-        return FontFactory.getFont(FontFactory.HELVETICA, 10);
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10);
     }
 
     // Crear titulo del periodo (alias de subtítulo)
@@ -277,6 +277,14 @@ public class ReporteUtil {
         celda.setPadding(5f);
         return celda;
     }
+
+    public static PdfPCell celdaEncabezadoTabla(String texto, Color fondo, int rowspan, int colspan) {
+        PdfPCell celda = celdaEncabezadoTabla(texto, fondo); // reutiliza estilos del método base
+        if (rowspan > 1) celda.setRowspan(rowspan);
+        if (colspan > 1) celda.setColspan(colspan);
+        return celda;
+    }
+
 
     // Celdas de datos centradas
     public static PdfPCell celdaDataCentro(String texto, Color fondo) {

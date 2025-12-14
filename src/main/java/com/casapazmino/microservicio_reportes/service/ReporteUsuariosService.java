@@ -25,7 +25,7 @@ public class ReporteUsuariosService {
     public byte[] generarReportePDF(ReporteUsuariosRequest request) {
         // DRY: constantes locales
         final float[] WIDTHS_CABECERA = { 3f, 3f, 2f };
-        final float[] WIDTHS_TABLA_USU = { 1f, 3f, 3f, 4f, 3f, 2f, 3f, 3f, 3f, 3f, 3f, 3f, 3f, 5f };
+        final float[] WIDTHS_TABLA_USU = { 1f, 4f, 2.5f, 4f, 3f, 3f, 4f, 3f, 3f, 3f, 5f, 3f, 3f, 5f };
         final String PREF_SUCURSAL = "SUCURSAL: ";
         final String PREF_REGISTROS = "N° Registros: ";
         final float MARGEN_IZQ = 40f, MARGEN_DER = 40f, MARGEN_SUP = 60f, MARGEN_INF = 40f;
@@ -140,7 +140,7 @@ public class ReporteUsuariosService {
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getIdentificacion()), fuente));
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getCodigo()), fuente));
                     tablaUsuarios.addCell(
-                            ReporteUtil.celdaIzquierda(safe(usu.getApellido()) + " " + safe(usu.getNombre()), fuente));
+                            ReporteUtil.celdaCentro(safe(usu.getApellido()) + " " + safe(usu.getNombre()), fuente));
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getUsuario()), fuente));
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getGenero()), fuente));
                     tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getNacionalidad()), fuente));

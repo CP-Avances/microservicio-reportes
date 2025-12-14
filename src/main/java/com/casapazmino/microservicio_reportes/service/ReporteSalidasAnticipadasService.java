@@ -31,7 +31,7 @@ public class ReporteSalidasAnticipadasService {
         // ➊ DRY: constantes locales (no cambia look & feel)
         final float[] WIDTHS_TITULO_TABLA = { 8f, 2f };
         final float[] WIDTHS_INFO_EMPLEADO = { 4f, 4f, 4f };
-        final float[] WIDTHS_SALIDAS = { 0.5f, 1.8f, 1.5f, 1.8f, 2f, 2f, 2f, 2f, 2f, 2f, 2f, 2f };
+        final float[] WIDTHS_SALIDAS = { 1f, 1.8f, 2f, 2f, 2f, 2.5f, 2f, 2f, 1.5f, 1.5f, 2f, 2f };
         final int WIDTH_PERCENT_100 = 100;
         final float SPACING_AFTER_TITULO_TABLA = 10f;
         final float SPACING_BEFORE_SALIDAS = 5f;

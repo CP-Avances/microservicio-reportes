@@ -44,7 +44,7 @@ public class ReporteTimbresUsuariosService {
         final float[] WIDTHS_TIMBRES = { 1f, 2.5f, 1.5f, 1.5f, 2.3f, 4.5f, 2f, 2f };
         final int WIDTH_PERCENT_100 = 100;
         final float SPACING_AFTER_TIT = 10f;
-        final float SPACING_BEFORE_TB = 5f;
+        final float SPACING_BEFORE_TB = 0f;
         final float PADDING_TITULOS = 5f;
 
         final Color COLOR_PRIMARIO = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
@@ -144,7 +144,7 @@ public class ReporteTimbresUsuariosService {
                         // Tabla de timbres (8 columnas, encabezado 2 filas)
                         PdfPTable tablaTimbres = new PdfPTable(8);
                         tablaTimbres.setWidthPercentage(WIDTH_PERCENT_100);
-                        tablaTimbres.setSpacingBefore(SPACING_BEFORE_TB);
+                        tablaTimbres.setSpacingBefore(0f);
                         tablaTimbres.setWidths(WIDTHS_TIMBRES);
 
                         // Encabezado fila 1

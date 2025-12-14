@@ -139,7 +139,7 @@ public class ReporteNivelTituloService {
 
         final String TITULO_REPORTE = "LISTA DE NIVELES DE TÍTULOS PROFESIONALES";
         final String[] HEADERS = { "ITEM", "CODIGO", "NOMBRE" };
-        final int[] ANCHOS = { 20, 30, 40 };
+        final int[] ANCHOS = { 20, 30, 50 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {

@@ -121,7 +121,7 @@ public class ReporteTimbresVirtualesService {
                     // Tabla de timbres
                     PdfPTable tablaTimbres = new PdfPTable(8);
                     tablaTimbres.setWidthPercentage(100);
-                    tablaTimbres.setSpacingBefore(5f);
+                    tablaTimbres.setSpacingBefore(0f);
                     tablaTimbres.setWidths(WIDTHS_TABLA_TIMBRES);
 
                     // Encabezado fila 1

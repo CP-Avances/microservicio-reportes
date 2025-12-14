@@ -3,6 +3,7 @@ package com.casapazmino.microservicio_reportes.util;
 import org.apache.poi.ss.SpreadsheetVersion;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.*;
+import org.apache.poi.util.Units;
 import org.apache.poi.xssf.usermodel.*;
 import java.util.Base64;
 import java.util.regex.Pattern;
@@ -38,26 +39,35 @@ public final class UtilExcel {
      */
     // Inserta el logo ocupando A1:B5 (columnas A-B y filas 1..5), y se redimensiona
     // si cambian anchos/altos.
-// En UtilExcel.java
-public static void insertarLogoEstandar(Workbook wb, Sheet hoja, byte[] imagenBytes) {
-    if (imagenBytes == null || imagenBytes.length == 0) return;
+    // En UtilExcel.java
+    public static void insertarLogoEstandar(Workbook wb, Sheet hoja, byte[] imagenBytes) {
+        if (imagenBytes == null || imagenBytes.length == 0) return;
 
-    int tipo = Workbook.PICTURE_TYPE_PNG; // o JPEG si aplica
-    int idx = wb.addPicture(imagenBytes, tipo);
+        int idx = wb.addPicture(imagenBytes, Workbook.PICTURE_TYPE_PNG);
 
-    Drawing<?> dibujo = hoja.createDrawingPatriarch();
-    CreationHelper helper = wb.getCreationHelper();
-    ClientAnchor ancla = helper.createClientAnchor();
+        Drawing<?> dibujo = hoja.createDrawingPatriarch();
+        CreationHelper helper = wb.getCreationHelper();
+        ClientAnchor ancla = helper.createClientAnchor();
 
-    // A1..B5  => col1=0,row1=0 ; col2=2,row2=5
-    ancla.setCol1(0);
-    ancla.setRow1(0);
-    ancla.setCol2(2);
-    ancla.setRow2(5);
-    ancla.setAnchorType(ClientAnchor.AnchorType.MOVE_AND_RESIZE);
+        // Alto fijo: 5 filas
+        ancla.setRow1(0);
+        ancla.setRow2(5);
+        ancla.setDy1(0);
+        ancla.setDy2(0);
 
-    dibujo.createPicture(ancla, idx);
-}
+        // Ancho: A completa + 50% de B
+        ancla.setCol1(0); // A
+        ancla.setCol2(1); // B
+        ancla.setDx1(0);
+
+        float anchoBPx = hoja.getColumnWidthInPixels(1);
+        int mitadBPx = Math.round(anchoBPx * 1.5f);
+        ancla.setDx2(Units.pixelToEMU(mitadBPx));
+
+        ancla.setAnchorType(ClientAnchor.AnchorType.MOVE_DONT_RESIZE);
+
+        dibujo.createPicture(ancla, idx);
+    }
 
 
     // -------------------- Celdas / Escritura --------------------

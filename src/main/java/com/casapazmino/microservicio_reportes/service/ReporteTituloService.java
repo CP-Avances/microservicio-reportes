@@ -80,7 +80,7 @@ public class ReporteTituloService {
             for (TituloDTO t : request.getTitulos()) {
                 Color bg = zebra ? colorZebra : Color.WHITE;
                 tabla.addCell(ReporteUtil.celdaDataCentro(String.valueOf(t.getId()), bg));
-                tabla.addCell(ReporteUtil.celdaDataIzquierda(t.getNivel(), bg));
+                tabla.addCell(ReporteUtil.celdaDataCentro(t.getNivel(), bg));
                 tabla.addCell(ReporteUtil.celdaDataIzquierda(t.getNombre(), bg));
                 zebra = !zebra;
             }

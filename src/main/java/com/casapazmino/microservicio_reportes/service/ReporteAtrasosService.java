@@ -205,12 +205,13 @@ public class ReporteAtrasosService {
                     // Totales al final
                     Color fondoTotal = new Color(230, 240, 255);
 
-                    // Vacías hasta columna 9 (como en tu código)
-                    for (int i = 0; i < 9; i++) {
+                    // Vacías hasta la columna 10 (para que TOTAL quede alineado)
+                    for (int i = 0; i < 10; i++) {
                         PdfPCell vacia = ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(), Color.WHITE);
                         vacia.setBorder(Rectangle.NO_BORDER);
                         tablaData.addCell(vacia);
                     }
+
 
                     // "TOTAL"
                     tablaData.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), fondoTotal));

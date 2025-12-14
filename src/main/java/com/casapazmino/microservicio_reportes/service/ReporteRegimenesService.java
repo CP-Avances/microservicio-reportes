@@ -375,7 +375,7 @@ public class ReporteRegimenesService {
 
         // Anchos exactamente como los tenías
         final int[] ANCHOS = {
-                7, 8, 20, 10, 25, 25, 17, 15, 25, 25, 15, 15, 20, 25, 30, 30,
+                15, 15, 20, 10, 25, 25, 17, 15, 25, 25, 15, 15, 20, 25, 30, 30,
                 50, 27, 30, 27, 30, 20, 20, 20, 55
         };
 

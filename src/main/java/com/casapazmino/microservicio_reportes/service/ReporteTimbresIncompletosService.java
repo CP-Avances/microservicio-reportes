@@ -373,12 +373,12 @@ public class ReporteTimbresIncompletosService {
                 // Texto largo a la izquierda (apenombre, depto, cargo)
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 3, 3, estiloIzqBorde, true); // APELLIDO
                                                                                                             // NOMBRE
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 7, 8, estiloIzqBorde, true); // DEPARTAMENTO..CARGO
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 7, 7, estiloIzqBorde, true); // DEPARTAMENTO..CARGO
 
                 // Resto centrado
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 2, estiloCentroBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 4, 6, estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 9, 11, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 8, 11, estiloCentroBorde, true);
 
                 // 7) TABLA estilizada + filtros
                 UtilExcel.crearTablaEstilizada(

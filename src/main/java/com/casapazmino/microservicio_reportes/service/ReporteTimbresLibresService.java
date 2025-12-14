@@ -32,8 +32,10 @@ public class ReporteTimbresLibresService {
     public byte[] generarReportePDF(ReporteTimbresLibresRequest request) {
 
         // ➊ DRY: constantes locales (manteniendo el look & feel)
-        final String TITULO_DEF = "TIMBRES LIBRES - "
+        final String TITULO = "TIMBRES LIBRES - "
                 + ((request.getOpcionBusqueda() != null && request.getOpcionBusqueda() == 1) ? "ACTIVOS" : "INACTIVOS");
+        final String PERIODO = (request.getPeriodo() != null)
+        ? "PERIODO DEL: " + safe(request.getPeriodo().getInicio()) + " AL " + safe(request.getPeriodo().getFin()): null;
         final float[] WIDTHS_CABECERA = { 3f, 3f, 2f };
         final float[] WIDTHS_EMPLEADO = { 3f, 4f, 3f };
         final float[] WIDTHS_TABLA_CON_DISP = { 0.8f, 1.2f, 1.0f, 1.2f, 1.0f, 1.0f, 1.2f, 3.0f, 1.2f, 1.2f };
@@ -67,29 +69,10 @@ public class ReporteTimbresLibresService {
             if (logo != null)
                 document.add(logo);
 
-            // Empresa
-            Paragraph empresa = new Paragraph(safe(request.getEmpresa()), ReporteUtil.fuenteEncabezado());
-            empresa.setAlignment(Element.ALIGN_CENTER);
-            empresa.setSpacingAfter(5f);
-            document.add(empresa);
-
-            // Título
-            String tituloStr = (request.getTitulo() == null || request.getTitulo().isEmpty()) ? TITULO_DEF
-                    : request.getTitulo();
-            Paragraph titulo = new Paragraph(tituloStr, ReporteUtil.fuenteEncabezado());
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            titulo.setSpacingAfter(0f);
-            document.add(titulo);
-
-            // Periodo (si aplica)
-            if (request.getPeriodo() != null) {
-                Paragraph periodo = new Paragraph(
-                        "PERIODO DEL: " + safe(request.getPeriodo().getInicio()) + " AL "
-                                + safe(request.getPeriodo().getFin()),
-                        ReporteUtil.fuenteTexto());
-                periodo.setAlignment(Element.ALIGN_CENTER);
-                periodo.setSpacingAfter(0f);
-                document.add(periodo);
+            document.add(ReporteUtil.crearTituloEmpresa(safe(request.getEmpresa())));
+            document.add(ReporteUtil.crearTituloReporte(TITULO));
+            if (PERIODO != null) {
+                document.add(ReporteUtil.crearTituloPeriodo(PERIODO));
             }
 
             // Datos

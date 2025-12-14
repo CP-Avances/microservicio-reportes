@@ -168,7 +168,7 @@ public class ReporteParametrosService {
 
         // Merges B1:D1 ... B5:D5 => (row 0..4, col 1..3)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
-        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 3;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 4;
 
         final String TITULO_REPORTE = "LISTA DE PARÁMETROS GENERALES";
         final String[] HEADERS = { "ITEM", "CÓDIGO PARAMETRO", "PARÁMETRO", "DETALLE", "DESCRIPCIÓN" };

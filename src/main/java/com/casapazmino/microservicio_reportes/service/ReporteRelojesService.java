@@ -38,7 +38,7 @@ public class ReporteRelojesService {
         // ➊ DRY: constantes locales (no cambia look & feel)
         final String TITULO = "LISTA DE DISPOSITIVOS";
         final float[] WIDTHS = {
-                2.5f, 4f, 2.2f, 4f, 3.7f, 2.5f, 3f, 2f, 2f, 2.5f, 3f, 1.5f, 3.5f, 3f, 4.5f
+                2.2f, 3f, 2.2f, 4f, 4.5f, 2.5f, 3f, 2f, 2f, 2.5f, 2f, 4.5f, 3.5f, 3f, 4.5f
         };
         final String[] HEADERS = {
                 "Código", "Empresa", "Ciudad", "Establecimiento", "Departamento", "Nombre", "IP",

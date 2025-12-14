@@ -132,7 +132,7 @@ public class ReporteCargosService {
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 2;
 
         final String[] HEADERS = { "ITEM", "CÓDIGO", "CARGO" };
-        final int[] ANCHOS = { 10, 30, 45 };
+        final int[] ANCHOS = { 10, 30, 60 };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {

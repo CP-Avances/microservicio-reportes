@@ -94,7 +94,7 @@ public class ReporteHorariosService {
 
                 PdfPCell celdaCabecera = new PdfPCell(cabecera);
                 celdaCabecera.setPadding(0);
-                celdaCabecera.setBorder(Rectangle.NO_BORDER);
+                celdaCabecera.setBorder(Rectangle.BOX);
                 bloque.addCell(celdaCabecera);
 
                 // --- DETALLES DEL HORARIO ---
