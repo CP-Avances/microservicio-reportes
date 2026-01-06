@@ -25,7 +25,7 @@ public class ReporteUsuariosService {
     public byte[] generarReportePDF(ReporteUsuariosRequest request) {
         // DRY: constantes locales
         final float[] WIDTHS_CABECERA = { 3f, 3f, 2f };
-        final float[] WIDTHS_TABLA_USU = { 1f, 4f, 2.5f, 4f, 3f, 3f, 4f, 3f, 3f, 3f, 5f, 3f, 3f, 5f };
+        final float[] WIDTHS_TABLA_USU = { 1f, 4f, 2.9f, 4f, 3f, 2.7f, 4f, 2.5f, 3f, 3f, 5f, 3f, 3f, 5.5f };
         final String PREF_SUCURSAL = "SUCURSAL: ";
         final String PREF_REGISTROS = "N° Registros: ";
         final float MARGEN_IZQ = 40f, MARGEN_DER = 40f, MARGEN_SUP = 60f, MARGEN_INF = 40f;
@@ -61,6 +61,7 @@ public class ReporteUsuariosService {
             final Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             final Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
             final Font fuente = ReporteUtil.fuenteTexto();
+            Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // Por cada grupo (según filtro)
             for (AgrupadorUsuariosDTO grupo : request.getDatos()) {
@@ -135,22 +136,24 @@ public class ReporteUsuariosService {
 
                 // Cuerpo
                 int index = 1;
+                boolean zebra = false;
                 for (UsuarioDTO usu : grupo.getEmpleados()) {
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(String.valueOf(index++), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getIdentificacion()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getCodigo()), fuente));
+                    Color bg = zebra ? colorZebra : Color.WHITE;
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(String.valueOf(index++), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getIdentificacion()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getCodigo()), bg));
                     tablaUsuarios.addCell(
-                            ReporteUtil.celdaCentro(safe(usu.getApellido()) + " " + safe(usu.getNombre()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getUsuario()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getGenero()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getNacionalidad()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getCiudad()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getSucursal()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getRegimen()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getDepartamento()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getCargo()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaCentro(safe(usu.getRol()), fuente));
-                    tablaUsuarios.addCell(ReporteUtil.celdaIzquierda(safe(usu.getCorreo()), fuente));
+                            ReporteUtil.celdaDataCentro(safe(usu.getApellido()) + " " + safe(usu.getNombre()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getUsuario()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getGenero()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getNacionalidad()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getCiudad()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getSucursal()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getRegimen()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getDepartamento()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getCargo()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getRol()), bg));
+                    tablaUsuarios.addCell(ReporteUtil.celdaDataCentro(safe(usu.getCorreo()), bg));
                 }
 
                 document.add(tablaUsuarios);

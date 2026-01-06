@@ -65,6 +65,7 @@ public class ReporteVacunacionUsuariosService {
             // Colores y fuente
             final Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             final Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+            Color colorZebra = ReporteUtil.colorZebraClaro();
             final Font fuente = ReporteUtil.fuenteTexto();
 
             for (AgrupadorVacunaUsuarioDTO grupo : request.getDatos()) {
@@ -174,18 +175,17 @@ public class ReporteVacunacionUsuariosService {
                     }
 
                     int index = 1;
+                    boolean zebra = false;
                     for (VacunaUsuarioDTO vac : empl.getVacunas()) {
-                        PdfPCell c1 = new PdfPCell(new Phrase(String.valueOf(index++), fuente));
-                        PdfPCell c2 = new PdfPCell(new Phrase(safe(vac.getTipo_vacuna()), fuente));
-                        PdfPCell c3 = new PdfPCell(new Phrase(formatearFecha(vac.getFecha()), fuente));
-                        PdfPCell c4 = new PdfPCell(new Phrase(safe(vac.getDescripcion()), fuente));
-                        for (PdfPCell c : new PdfPCell[] { c1, c2, c3, c4 }) {
-                            c.setHorizontalAlignment(Element.ALIGN_CENTER);
-                        }
-                        tablaVacunas.addCell(c1);
-                        tablaVacunas.addCell(c2);
-                        tablaVacunas.addCell(c3);
-                        tablaVacunas.addCell(c4);
+                        Color bg = zebra ? colorZebra : Color.WHITE;
+                        tablaVacunas.addCell(
+                                ReporteUtil.celdaDataCentro(String.valueOf(index++), bg));
+                        tablaVacunas.addCell(
+                                ReporteUtil.celdaDataCentro(safe(vac.getTipo_vacuna()), bg));
+                        tablaVacunas.addCell(
+                                ReporteUtil.celdaDataCentro(formatearFecha(vac.getFecha()), bg));
+                        tablaVacunas.addCell(
+                                ReporteUtil.celdaDataCentro(safe(vac.getDescripcion()), bg));
                     }
 
                     document.add(tablaVacunas);

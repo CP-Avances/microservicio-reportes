@@ -142,27 +142,6 @@ public class ReporteRegimenesService {
                                 (contador++ % 2 == 0) ? COLOR_ZEBRA : Color.WHITE));
                     }
 
-                    configVac.addCell(ReporteUtil.celdaCentro("VACACIONES POR PERÍODOS",
-                            COLOR_SECUNDARIO));
-                    configVac.addCell(ReporteUtil.celdaCentro(
-                            reg.getVacacion_divisible() ? "SÍ" : "NO",
-                            (contador++ % 2 == 0) ? COLOR_ZEBRA : Color.WHITE));
-
-                    if (reg.getVacacion_divisible()
-                            && reg.getPeriodos_vacacionales() != null
-                            && !reg.getPeriodos_vacacionales().isEmpty()) {
-                        for (PeriodoVacacionalDTO p : reg.getPeriodos_vacacionales()) {
-                            configVac.addCell(ReporteUtil.celdaCentro(
-                                    p.getDescripcion(),
-                                    (contador++ % 2 == 0) ? COLOR_ZEBRA
-                                            : Color.WHITE));
-                            configVac.addCell(ReporteUtil.celdaCentro(
-                                    p.getDias_vacacion() + " días",
-                                    (contador++ % 2 == 0) ? COLOR_ZEBRA
-                                            : Color.WHITE));
-                        }
-                    }
-
                     // Tabla 2: Vacaciones ganadas
                     PdfPTable vacGanadas = new PdfPTable(2);
                     vacGanadas.setWidthPercentage(WIDTH_PERCENT_100);
@@ -366,8 +345,7 @@ public class ReporteRegimenesService {
                 "ANTIGÜEDAD LABORAL", "PERIODO LABORAL", "DÍAS POR MES",
                 "TRABAJO MÍNIMO (MES)", "TRABAJO MÍNIMO (HORAS)", "DÍAS HÁBILES",
                 "DÍAS LIBRES", "DÍAS CALENDARIO", "ACUMULA VACACIONES",
-                "MÁXIMO DÍAS ACUMULABLES", "VACACIONES POR PERÍODOS",
-                "DETALLE PERÍODOS", "VACACIONES HÁBILES MES",
+                "MÁXIMO DÍAS ACUMULABLES", "VACACIONES HÁBILES MES",
                 "VACACIONES CALENDARIO MES", "VACACIONES HÁBILES DÍA",
                 "VACACIONES CALENDARIO DÍA", "TIPO ANTIGÜEDAD",
                 "AÑOS ANTIGÜEDAD", "DÍAS ADICIONALES", "DETALLE RANGOS VARIABLE"
@@ -375,15 +353,15 @@ public class ReporteRegimenesService {
 
         // Anchos exactamente como los tenías
         final int[] ANCHOS = {
-                15, 15, 20, 10, 25, 25, 17, 15, 25, 25, 15, 15, 20, 25, 30, 30,
-                50, 27, 30, 27, 30, 20, 20, 20, 55
+                15, 15, 20, 10, 25, 25, 17, 15, 25, 25, 15, 15, 20, 25, 30,
+                27, 30, 27, 30, 20, 20, 20, 55
         };
 
         // Filtros: ITEM sin filtro; resto con filtro (igual patrón Provincias)
         final boolean[] FILTROS = {
                 false, true, true, true, true, true, true, true, true, true,
                 true, true, true, true, true, true, true, true, true, true,
-                true, true, true, true, true
+                true, true, true
         };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
@@ -429,7 +407,6 @@ public class ReporteRegimenesService {
             List<RegimenDTO> regimenes = request.getRegimenes();
             if (regimenes != null) {
                 for (RegimenDTO r : regimenes) {
-                    String textoPeriodos = construirTextoPeriodos(r);
                     String textoRangos = construirTextoRangos(r);
                     String tipoAntig = tipoAntiguedad(r);
 
@@ -465,19 +442,16 @@ public class ReporteRegimenesService {
                             estiloCentroBorde);
                     UtilExcel.establecerValor(row, 14, r.getDias_maximo_acumulacion(),
                             estiloCentroBorde);
-                    UtilExcel.establecerValor(row, 15, siNo(bool(r.getVacacion_divisible())),
+                    UtilExcel.establecerValor(row, 15, r.getVacacion_dias_laboral_mes(),
                             estiloCentroBorde);
-                    UtilExcel.establecerValor(row, 16, textoPeriodos, estiloIzqBorde);
-                    UtilExcel.establecerValor(row, 17, r.getVacacion_dias_laboral_mes(),
+                    UtilExcel.establecerValor(row, 16, r.getVacacion_dias_calendario_mes(),
                             estiloCentroBorde);
-                    UtilExcel.establecerValor(row, 18, r.getVacacion_dias_calendario_mes(),
-                            estiloCentroBorde);
-                    UtilExcel.establecerValor(row, 19, r.getLaboral_dias(), estiloCentroBorde);
-                    UtilExcel.establecerValor(row, 20, r.getCalendario_dias(), estiloCentroBorde);
-                    UtilExcel.establecerValor(row, 21, tipoAntig, estiloCentroBorde);
-                    UtilExcel.establecerValor(row, 22, r.getAnio_antiguedad(), estiloCentroBorde);
-                    UtilExcel.establecerValor(row, 23, r.getDias_antiguedad(), estiloCentroBorde);
-                    UtilExcel.establecerValor(row, 24, textoRangos, estiloIzqBorde);
+                    UtilExcel.establecerValor(row, 17, r.getLaboral_dias(), estiloCentroBorde);
+                    UtilExcel.establecerValor(row, 18, r.getCalendario_dias(), estiloCentroBorde);
+                    UtilExcel.establecerValor(row, 19, tipoAntig, estiloCentroBorde);
+                    UtilExcel.establecerValor(row, 20, r.getAnio_antiguedad(), estiloCentroBorde);
+                    UtilExcel.establecerValor(row, 21, r.getDias_antiguedad(), estiloCentroBorde);
+                    UtilExcel.establecerValor(row, 22, textoRangos, estiloIzqBorde);
                 }
             }
 
@@ -501,9 +475,7 @@ public class ReporteRegimenesService {
                 // Texto a la izquierda en columnas 2,3,16,24 (y otras textuales)
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 2, 3, estiloIzqBorde,
                         true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 16, 16,
-                        estiloIzqBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 24, 24,
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosInicio, ultimaFila, 22, 22,
                         estiloIzqBorde, true);
                 // El resto ya lo fijamos celda a celda arriba (números/booleans centrados)
             }
@@ -542,7 +514,7 @@ public class ReporteRegimenesService {
                 "PERIODO LABORAL", "DÍAS POR MES", "TRABAJO MÍNIMO (MES)",
                 "TRABAJO MÍNIMO (HORAS)",
                 "DÍAS HÁBILES", "DÍAS LIBRES", "DÍAS CALENDARIO", "ACUMULA VACACIONES",
-                "MÁXIMO DÍAS ACUMULABLES", "VACACIONES POR PERÍODOS", "DETALLE PERÍODOS",
+                "MÁXIMO DÍAS ACUMULABLES",
                 "VACACIONES HÁBILES MES", "VACACIONES CALENDARIO MES", "VACACIONES HÁBILES DÍA",
                 "VACACIONES CALENDARIO DÍA", "TIPO ANTIGÜEDAD", "AÑOS ANTIGÜEDAD",
                 "DÍAS ADICIONALES",
@@ -566,7 +538,6 @@ public class ReporteRegimenesService {
             if (items != null && !items.isEmpty()) {
                 for (RegimenDTO r : items) {
                     String tipoAntig = (r == null) ? "" : tipoAntiguedad(r);
-                    String textoPeriodos = (r == null) ? "" : construirTextoPeriodos(r);
                     String textoRangos = (r == null) ? "" : construirTextoRangos(r);
 
                     String[] row = new String[] {
@@ -585,8 +556,6 @@ public class ReporteRegimenesService {
                             (r == null) ? "" : str(r.getVacacion_dias_calendario()),
                             (r == null) ? "" : siNo(bool(r.getAcumular())),
                             (r == null) ? "" : str(r.getDias_maximo_acumulacion()),
-                            (r == null) ? "" : siNo(bool(r.getVacacion_divisible())),
-                            textoPeriodos,
                             (r == null) ? "" : str(r.getVacacion_dias_laboral_mes()),
                             (r == null) ? "" : str(r.getVacacion_dias_calendario_mes()),
                             (r == null) ? "" : str(r.getLaboral_dias()),
@@ -698,11 +667,6 @@ public class ReporteRegimenesService {
                             .append(UtilXml.xmlEsc(r.getDias_maximo_acumulacion()))
                             .append("</max_dias_acumulables>").append(EOL);
 
-                    sb.append(IND).append(IND).append(IND).append("<vacaciones_por_periodos>")
-                            .append(Boolean.TRUE.equals(r.getVacacion_divisible()) ? "Sí"
-                                    : "No")
-                            .append("</vacaciones_por_periodos>").append(EOL);
-
                     sb.append(IND).append(IND).append(IND).append("<dias_laborales_ganados_mes>")
                             .append(UtilXml.xmlEsc(r.getVacacion_dias_laboral_mes()))
                             .append("</dias_laborales_ganados_mes>").append(EOL);
@@ -733,44 +697,6 @@ public class ReporteRegimenesService {
                     sb.append(IND).append(IND).append(IND).append("<dias_adicionales>")
                             .append(UtilXml.xmlEsc(r.getDias_antiguedad()))
                             .append("</dias_adicionales>").append(EOL);
-
-                    // detalle_vacaciones_periodos
-                    sb.append(IND).append(IND).append(IND).append("<detalle_vacaciones_periodos>");
-                    if (!Boolean.TRUE.equals(r.getVacacion_divisible())) {
-                        sb.append("NO APLICA").append("</detalle_vacaciones_periodos>")
-                                .append(EOL);
-                    } else {
-                        List<PeriodoVacacionalDTO> per = r.getPeriodos_vacacionales();
-                        if (per == null || per.isEmpty()) {
-                            sb.append("NO DEFINIDO")
-                                    .append("</detalle_vacaciones_periodos>")
-                                    .append(EOL);
-                        } else {
-                            sb.append(EOL);
-                            for (PeriodoVacacionalDTO p : per) {
-                                sb.append(IND).append(IND).append(IND).append(IND)
-                                        .append("<periodo>").append(EOL);
-
-                                sb.append(IND).append(IND).append(IND).append(IND)
-                                        .append(IND).append("<descripcion>")
-                                        .append(UtilXml.xmlEsc(
-                                                p.getDescripcion()))
-                                        .append("</descripcion>").append(EOL);
-
-                                sb.append(IND).append(IND).append(IND).append(IND)
-                                        .append(IND).append("<dias>")
-                                        .append(UtilXml.xmlEsc(
-                                                p.getDias_vacacion()))
-                                        .append("</dias>").append(EOL);
-
-                                sb.append(IND).append(IND).append(IND).append(IND)
-                                        .append("</periodo>").append(EOL);
-                            }
-                            sb.append(IND).append(IND).append(IND)
-                                    .append("</detalle_vacaciones_periodos>")
-                                    .append(EOL);
-                        }
-                    }
 
                     // detalle_rangos_antiguedad_variable
                     sb.append(IND).append(IND).append(IND)
@@ -856,16 +782,6 @@ public class ReporteRegimenesService {
         if (bool(r.getAntiguedad_variable()))
             return "VARIABLE";
         return "NO APLICA";
-    }
-
-    private String construirTextoPeriodos(RegimenDTO r) {
-        if (!bool(r.getVacacion_divisible()))
-            return "NO APLICA";
-        if (r.getPeriodos_vacacionales() == null || r.getPeriodos_vacacionales().isEmpty())
-            return "NO DEFINIDO";
-        return r.getPeriodos_vacacionales().stream()
-                .map(p -> nz(p.getDescripcion()) + ": " + str(p.getDias_vacacion()) + " días")
-                .collect(java.util.stream.Collectors.joining(" | "));
     }
 
     private String construirTextoRangos(RegimenDTO r) {

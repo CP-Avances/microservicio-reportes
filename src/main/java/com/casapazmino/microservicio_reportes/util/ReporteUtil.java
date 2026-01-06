@@ -218,7 +218,7 @@ public class ReporteUtil {
 
     // METODO PARA FUENTE DE TABLA ENCABEZADO
     public static Font fuenteEncabezado() {
-        return FontFactory.getFont(FontFactory.HELVETICA, 9);
+        return FontFactory.getFont(FontFactory.HELVETICA, 8);
     }
 
     // METODO PARA FUENTE DE ENCABEZADO DE TABLA DATA (estándar)

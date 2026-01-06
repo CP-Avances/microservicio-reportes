@@ -15,7 +15,8 @@ public class CorsConfig {
                 registry.addMapping("/**")
                         .allowedOrigins(
                                 "http://localhost:61585",
-                                "http://localhost:4200" // ejemplo: agrega el segundo puerto aquí
+                                "http://localhost:4200",
+                                "http://192.168.0.145:4200" // ejemplo: agrega el segundo puerto aquí
                 )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")

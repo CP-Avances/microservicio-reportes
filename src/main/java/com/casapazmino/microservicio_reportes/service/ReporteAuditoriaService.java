@@ -11,23 +11,23 @@ import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class ReporteAuditoriaService {
 
     public byte[] generarReportePDF(ReporteAuditoriaRequest request) {
 
-        // Constantes DRY
         final float[] WIDTHS_CABECERA = { 8f, 2f };
-        final float[] WIDTHS_TABLA = { 1f, 3f, 2f, 2.5f, 3f, 2f, 2f, 2f, 6f, 6f };
+        final float[] WIDTHS_TABLA = { 1.3f, 3f, 2f, 2.3f, 3f, 2f, 2f, 2f, 6f, 6f };
+
+        // ✅ Ajusta este número según tu data (300-800 recomendado)
+        final int CHUNK_ROWS = 500;
 
         Document document = null;
         PdfWriter writer = null;
         ByteArrayOutputStream baos = null;
 
         try {
-            // 1) Inicialización
             baos = new ByteArrayOutputStream();
             document = new Document(PageSize.A4.rotate(), 40, 40, 30, 50);
             writer = PdfWriter.getInstance(document, baos);
@@ -37,11 +37,8 @@ public class ReporteAuditoriaService {
                     request.getColorPrincipal()));
             document.open();
 
-            // 2) Construcción (respetando helpers)
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-            if (logo != null) {
-                document.add(logo);
-            }
+            if (logo != null) document.add(logo);
 
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
             document.add(ReporteUtil.crearTituloReporte("AUDITORÍA"));
@@ -52,7 +49,6 @@ public class ReporteAuditoriaService {
 
             List<AuditoriaDTO> lista = request.getAuditorias();
 
-            // Si no hay registros
             if (lista == null || lista.isEmpty()) {
                 document.add(new Paragraph("No hay registros para mostrar.", ReporteUtil.fuenteTexto()));
                 document.close();
@@ -66,7 +62,7 @@ public class ReporteAuditoriaService {
             cabecera.setSpacingBefore(10f);
 
             PdfPCell celdaPlataforma = new PdfPCell(
-                    new Phrase("PLATAFORMA: " + lista.get(0).getPlataforma(), ReporteUtil.fuenteTexto()));
+                    new Phrase("PLATAFORMA: " + safe(lista.get(0).getPlataforma()), ReporteUtil.fuenteTexto()));
             celdaPlataforma.setBackgroundColor(colorSecundario);
             celdaPlataforma.setBorder(Rectangle.TOP | Rectangle.LEFT | Rectangle.BOTTOM);
             celdaPlataforma.setPadding(5f);
@@ -83,80 +79,108 @@ public class ReporteAuditoriaService {
 
             document.add(cabecera);
 
-            // Tabla principal de auditoría
-            PdfPTable tabla = new PdfPTable(10);
-            tabla.setWidthPercentage(100);
-            tabla.setSpacingBefore(5f);
-            tabla.setWidths(WIDTHS_TABLA);
+            // ===== ✅ Tabla por bloques =====
+            PdfPTable tabla = crearTablaAuditoria(colorPrincipal, WIDTHS_TABLA, WIDTHS_TABLA.length);
 
-            // Encabezados
-            String[] encabezados = {
-                    "ITEM", "PLATAFORMA", "USUARIO", "IP", "NOMBRE TABLA",
-                    "ACCIÓN", "FECHA", "HORA", "DATOS ORIGINALES", "DATOS NUEVOS"
-            };
-            for (String enc : encabezados) {
-                tabla.addCell(ReporteUtil.crearCelda(enc, ReporteUtil.fuenteEncabezado(), colorPrincipal));
-            }
+            int index = 1;
+            int rowsEnBloque = 0;
 
-            // Cuerpo de la tabla
-            AtomicInteger index = new AtomicInteger(1);
             for (AuditoriaDTO a : lista) {
-                Color fondo = (index.get() % 2 == 0) ? zebra : Color.WHITE;
+                Color fondo = (index % 2 == 0) ? zebra : Color.WHITE;
 
-                tabla.addCell(ReporteUtil.crearCelda(String.valueOf(index.getAndIncrement()), ReporteUtil.fuenteTexto(),
-                        fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getPlataforma(), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getUser_name(), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getIp_address(), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getTable_name(), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getAction(), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getFecha_hora_format(), ReporteUtil.fuenteTexto(), fondo));
-                tabla.addCell(ReporteUtil.crearCelda(a.getSolo_hora(), ReporteUtil.fuenteTexto(), fondo));
+                // celdas normales
+                tabla.addCell(ReporteUtil.celdaDataCentro(String.valueOf(index), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(safe(a.getPlataforma()), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(safe(a.getUser_name()), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(safe(a.getIp_address()), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(safe(a.getTable_name()), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(safe(a.getAction()), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(safe(a.getFecha_hora_format()), fondo));
+                tabla.addCell(ReporteUtil.celdaDataCentro(safe(a.getSolo_hora()), fondo));
 
-                PdfPCell celdaOriginal = ReporteUtil.crearCelda(a.getOriginal_data(), ReporteUtil.fuenteTexto(), fondo);
+                // ✅ columnas grandes: limita tamaño para evitar explosión de memoria
+                PdfPCell celdaOriginal = ReporteUtil.celdaDataCentro(truncar(safe(a.getOriginal_data()), 2500), fondo);
                 celdaOriginal.setNoWrap(false);
                 celdaOriginal.setMinimumHeight(20f);
                 tabla.addCell(celdaOriginal);
 
-                PdfPCell celdaNuevo = ReporteUtil.crearCelda(a.getNew_data(), ReporteUtil.fuenteTexto(), fondo);
+                PdfPCell celdaNuevo = ReporteUtil.celdaDataCentro(truncar(safe(a.getNew_data()), 2500), fondo);
                 celdaNuevo.setNoWrap(false);
                 celdaNuevo.setMinimumHeight(20f);
                 tabla.addCell(celdaNuevo);
+
+                index++;
+                rowsEnBloque++;
+
+                // ✅ flush cada CHUNK_ROWS
+                if (rowsEnBloque >= CHUNK_ROWS) {
+                    document.add(tabla);
+                    document.add(Chunk.NEWLINE);
+
+                    // recrear tabla (nueva instancia) para liberar memoria del bloque anterior
+                    tabla = crearTablaAuditoria(colorPrincipal, WIDTHS_TABLA, WIDTHS_TABLA.length);
+                    rowsEnBloque = 0;
+                }
             }
 
-            document.add(tabla);
+            // flush final si quedó algo
+            if (rowsEnBloque > 0) {
+                document.add(tabla);
+            }
 
-            // 3) Cierre y retorno
             document.close();
             return baos.toByteArray();
 
         } catch (IllegalArgumentException e) {
-            // Si algún helper lanza IAEx, dejamos que el controller maneje 400
             throw e;
         } catch (Exception e) {
-            // 500 uniforme con excepción de dominio
             throw new ReportBuildException("No se pudo generar ReporteAuditoria.pdf", e);
         } finally {
-            // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try {
-                    document.close();
-                } catch (Exception ignore) {
-                }
+                try { document.close(); } catch (Exception ignore) {}
             }
             if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ignore) {
-                }
+                try { writer.close(); } catch (Exception ignore) {}
             }
             if (baos != null) {
-                try {
-                    baos.close();
-                } catch (Exception ignore) {
-                }
+                try { baos.close(); } catch (Exception ignore) {}
             }
         }
     }
+
+    private PdfPTable crearTablaAuditoria(Color colorPrincipal, float[] widths, int cols) throws Exception {
+        PdfPTable tabla = new PdfPTable(cols);
+        tabla.setWidthPercentage(100);
+        tabla.setSpacingBefore(5f);
+        tabla.setWidths(widths);
+
+        // ✅ hace que el header se repita por página
+        tabla.setHeaderRows(1);
+
+        // ✅ ayuda a partir filas en páginas (cuando hay texto largo)
+        tabla.setSplitLate(false);
+        tabla.setSplitRows(true);
+        tabla.setKeepTogether(false);
+
+        String[] encabezados = {
+                "ITEM", "PLATAFORMA", "USUARIO", "IP", "NOMBRE TABLA",
+                "ACCIÓN", "FECHA", "HORA", "DATOS ORIGINALES", "DATOS NUEVOS"
+        };
+        for (String enc : encabezados) {
+            tabla.addCell(ReporteUtil.crearCelda(enc, ReporteUtil.fuenteEncabezado(), colorPrincipal));
+        }
+        return tabla;
+    }
+
+    private static String safe(String s) {
+        return s == null ? "" : s;
+    }
+
+    private static String truncar(String s, int max) {
+        if (s == null) return "";
+        if (s.length() <= max) return s;
+        return s.substring(0, max) + " ...";
+    }
+
 
 }

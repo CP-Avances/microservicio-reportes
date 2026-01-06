@@ -29,11 +29,11 @@ public class ReporteAsistenciaService {
         final float[] WIDTHS_6 = { 2, 2, 2, 2, 2, 2 };
         final float[] WIDTHS_2 = { 8, 2 };
         final float[] WIDTHS_16 = {
-                0.5f, 1.8f,
-                1.2f, 1.2f, 1.2f, 1.2f,
-                1.2f, 1.2f, 1.2f, 1.2f,
-                1.5f, 1.5f, 1.2f, 1.2f,
-                1.5f, 3f
+                0.7f, 1.6f,
+                1.8f, 1.5f, 1.8f, 1.5f,
+                1.8f, 1.5f, 1.8f, 1.5f,
+                1.5f, 1.5f, 2f, 1.7f,
+                2.1f, 3f
         };
 
         final Color COLOR_FALTA_TIMBRE = new Color(0xEE4444);

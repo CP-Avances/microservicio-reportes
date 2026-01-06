@@ -31,7 +31,7 @@ public class ReporteEmpleadoService {
     public byte[] generarReporteEmpleadosPDF(ReporteEmpleadosRequest request) {
 
         // DRY: constantes locales
-        final float[] WIDTHS = { 1.8f, 5.5f, 3.7f, 3f, 7.3f, 2.7f, 3f, 3f, 3f, 2f, 3f };
+        final float[] WIDTHS = { 2.4f, 5.5f, 3.1f, 3f, 7.3f, 2.7f, 3f, 3f, 3f, 2f, 3f };
         final String[] HEADERS = {
                 "Código", "Nombre", "Identificación", "Fecha Nacimiento", "Correo",
                 "Género", "Estado Civil", "Domicilio", "Teléfono", "Estado", "Nacionalidad"

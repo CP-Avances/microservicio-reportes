@@ -27,7 +27,6 @@ public class RegimenDTO {
     private Boolean acumular;
     private Integer dias_maximo_acumulacion;
     private Boolean vacacion_divisible;
-    private List<PeriodoVacacionalDTO> periodos_vacacionales;
 
     private Double vacacion_dias_laboral_mes;
     private Double vacacion_dias_calendario_mes;
