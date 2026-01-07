@@ -45,7 +45,7 @@ public class ReporteHorasExtraService {
             }
 
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-            document.add(ReporteUtil.crearTituloReporte("LISTA DE GÉNEROS"));
+            document.add(ReporteUtil.crearTituloReporte("Horas Extra"));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorZebra = ReporteUtil.colorZebraClaro();
@@ -56,8 +56,8 @@ public class ReporteHorasExtraService {
             tabla.setHorizontalAlignment(Element.ALIGN_CENTER);
 
             // Encabezados
-            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("CÓDIGO", colorPrincipal));
-            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("GÉNERO", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("TEST", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("TEST", colorPrincipal));
 
             // Cuerpo (zebra)
             List<GeneroDTO> generos =  new ArrayList<>();
