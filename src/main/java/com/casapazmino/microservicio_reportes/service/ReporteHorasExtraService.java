@@ -1,6 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
 import com.casapazmino.microservicio_reportes.model.Genero.GeneroDTO;
+import com.casapazmino.microservicio_reportes.model.HorasExtra.DataHoraExtra;
 import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -60,14 +61,13 @@ public class ReporteHorasExtraService {
             tabla.addCell(ReporteUtil.celdaEncabezadoTabla("TEST", colorPrincipal));
 
             // Cuerpo (zebra)
-            List<GeneroDTO> generos =  new ArrayList<>();
             boolean zebra = false;
-            if (generos != null) {
-                for (GeneroDTO g : generos) {
+            if (request.getDataHoraExtra() != null) {
+                for (DataHoraExtra dataHoraExtra : request.getDataHoraExtra()) {
                     Color fondo = zebra ? colorZebra : Color.WHITE;
                     tabla.addCell(
-                            ReporteUtil.celdaDataCentro(String.valueOf(g.getId()), fondo));
-                    tabla.addCell(ReporteUtil.celdaDataCentro(g.getGenero(), fondo));
+                            ReporteUtil.celdaDataCentro(String.valueOf(dataHoraExtra.getFecha()), fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(dataHoraExtra.getHora(), fondo));
                     zebra = !zebra;
                 }
             }
