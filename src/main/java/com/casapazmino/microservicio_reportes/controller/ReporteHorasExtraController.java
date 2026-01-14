@@ -21,16 +21,9 @@ public class ReporteHorasExtraController {
     public ResponseEntity<byte[]> generarReporteHorasExtra(@RequestBody ReporteHorasExtraRequest request) {
         try {
             byte[] bin = reporteHorasExtraService.generarPdf(request);
-            if (bin == null)
-                return ResponseEntity.status(500).build();
+            if (bin == null) return ResponseEntity.status(500).build();
 
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.pdf")
-                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
-                    .header(HttpHeaders.PRAGMA, "no-cache")
-                    .header(HttpHeaders.EXPIRES, "0")
-                    .body(bin);
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.pdf").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
@@ -42,16 +35,9 @@ public class ReporteHorasExtraController {
     public ResponseEntity<byte[]> generarReporteHorasExtraCsv(@RequestBody ReporteHorasExtraRequest request) {
         try {
             byte[] bin = reporteHorasExtraService.generarCsv(request);
-            if (bin == null)
-                return ResponseEntity.status(500).build();
+            if (bin == null) return ResponseEntity.status(500).build();
 
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("text/csv"))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.csv")
-                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
-                    .header(HttpHeaders.PRAGMA, "no-cache")
-                    .header(HttpHeaders.EXPIRES, "0")
-                    .body(bin);
+            return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv")).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.csv").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
