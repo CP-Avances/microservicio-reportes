@@ -13,11 +13,9 @@ import org.openpdf.text.Image;
 import org.openpdf.text.PageSize;
 import org.openpdf.text.pdf.PdfPTable;
 import org.openpdf.text.pdf.PdfWriter;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 @Component("reporteHoraExtraPdf")
-@Primary()
 public class ReporteHoraExtraPdf implements ReporteFile {
 
   @Override
@@ -57,8 +55,8 @@ public class ReporteHoraExtraPdf implements ReporteFile {
       tabla.setHorizontalAlignment(Element.ALIGN_CENTER);
 
       // Encabezados
-      tabla.addCell(ReporteUtil.celdaEncabezadoTabla("TEST", colorPrincipal));
-      tabla.addCell(ReporteUtil.celdaEncabezadoTabla("TEST", colorPrincipal));
+      tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Fecha", colorPrincipal));
+      tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Hora", colorPrincipal));
 
       // Cuerpo (zebra)
       boolean zebra = false;
@@ -66,7 +64,7 @@ public class ReporteHoraExtraPdf implements ReporteFile {
         for (DataHoraExtra dataHoraExtra : request.getDataHoraExtra()) {
           Color fondo = zebra ? colorZebra : Color.WHITE;
           tabla.addCell(
-              ReporteUtil.celdaDataCentro(String.valueOf(dataHoraExtra.getFecha()), fondo));
+              ReporteUtil.celdaDataCentro(ReporteUtil.formatearFechaConDia(dataHoraExtra.getFecha()), fondo));
           tabla.addCell(ReporteUtil.celdaDataCentro(dataHoraExtra.getHora(), fondo));
           zebra = !zebra;
         }
@@ -83,7 +81,7 @@ public class ReporteHoraExtraPdf implements ReporteFile {
       throw e;
     } catch (Exception e) {
       // 500 interno uniforme
-      throw new ReportBuildException("No se pudo generar ReporteGeneros.pdf", e);
+      throw new ReportBuildException("No se pudo generar ReporteHorasExtra.pdf", e);
     } finally {
       // 4) Ciclo de recursos garantizado
       if (document != null && document.isOpen()) {

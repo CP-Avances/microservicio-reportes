@@ -1,18 +1,29 @@
 package com.casapazmino.microservicio_reportes.service.horasextra;
 
 import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ReporteHorasExtraService implements ReporteServiceInterface {
+public class ReporteHorasExtraService implements ReporteHorasExtraUseCase {
 
-  private final ReporteFile reporteFile;
+  private final ReporteFile reportePdf;
+  private final ReporteFile reporteCsv;
 
-  public ReporteHorasExtraService(ReporteFile reporteFile) {
-    this.reporteFile = reporteFile;
+  public ReporteHorasExtraService(
+      @Qualifier("reporteHoraExtraPdf") ReporteFile reportePdf,
+      @Qualifier("reporteHoraExtraCsv") ReporteFile reporteCsv) {
+    this.reportePdf = reportePdf;
+    this.reporteCsv = reporteCsv;
   }
 
-  public byte[] generarReporte(ReporteHorasExtraRequest request) {
-    return reporteFile.generarReporteHorasExtra(request);
+  @Override
+  public byte[] generarPdf(ReporteHorasExtraRequest request) {
+    return reportePdf.generarReporteHorasExtra(request);
+  }
+
+  @Override
+  public byte[] generarCsv(ReporteHorasExtraRequest request) {
+    return reporteCsv.generarReporteHorasExtra(request);
   }
 }
