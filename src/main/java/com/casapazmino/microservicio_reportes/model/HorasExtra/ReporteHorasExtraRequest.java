@@ -12,10 +12,19 @@ import java.util.List;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteHorasExtraRequest {
+    private String fechaDesde;
+    private String fechaHasta;
+    private String ciudad;
+    private String parametro;
+    private List<Long> idsSeleccionados;
+
+    private DataResponse data;
+
+    private String formato;
     private String usuario;
     private String empresa;
     private String fraseMarcaAgua;
     private String logoBase64;
     private String colorPrincipal;
-    private List<DataHoraExtra> dataHoraExtra;
 }
+
