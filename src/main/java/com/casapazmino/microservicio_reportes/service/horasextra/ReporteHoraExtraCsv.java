@@ -1,6 +1,5 @@
 package com.casapazmino.microservicio_reportes.service.horasextra;
 
-import com.casapazmino.microservicio_reportes.model.HorasExtra.DataHoraExtra;
 import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
@@ -28,16 +27,7 @@ public class ReporteHoraExtraCsv implements ReporteFile {
             // Encabezados
             sb.append("fecha,hora,minutos,segundos").append(EOL);
 
-            if (request.getDataHoraExtra() != null) {
-                for (DataHoraExtra item : request.getDataHoraExtra()) {
-                    String fecha = ReporteUtil.formatearFechaConDia(item.getFecha());
-                    sb.append(UtilCsv.csvEscape(fecha)).append(",")
-                            .append(UtilCsv.csvEscape(item.getHora())).append(",")
-                            .append(UtilCsv.csvEscape(item.getMinutos())).append(",")
-                            .append(UtilCsv.csvEscape(item.getSegundos()))
-                            .append(EOL);
-                }
-            }
+
 
             return sb.toString().getBytes(StandardCharsets.UTF_8);
         } catch (IllegalArgumentException e) {
