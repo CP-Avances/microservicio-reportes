@@ -1,7 +1,8 @@
 package com.casapazmino.microservicio_reportes.controller;
 
 import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
-import com.casapazmino.microservicio_reportes.service.ReporteHorasExtraService;
+import com.casapazmino.microservicio_reportes.service.horasextra.ReporteHorasExtraService;
+import com.casapazmino.microservicio_reportes.service.horasextra.ReporteServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -10,21 +11,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+
 @RestController
 @RequestMapping("/api/reporte/horas-extra")
 public class ReporteHorasExtraController {
     @Autowired
-    private ReporteHorasExtraService reporteHorasExtraService;
+    private ReporteServiceInterface reporteHorasExtraService;
 
     @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<byte[]> generarReporteGeneros(@RequestBody ReporteHorasExtraRequest request) {
+    public ResponseEntity<byte[]> generarReporteHorasExtra(@RequestBody ReporteHorasExtraRequest request) {
         try {
-            byte[] bin = reporteHorasExtraService.generarReporteGenerosPDF(request);
+            byte[] bin = reporteHorasExtraService.generarReporte(request);
             if (bin == null)
                 return ResponseEntity.status(500).build();
 
