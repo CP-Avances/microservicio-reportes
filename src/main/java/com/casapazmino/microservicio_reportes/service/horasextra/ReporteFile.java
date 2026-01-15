@@ -4,6 +4,6 @@ import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtra
 
 public interface ReporteFile {
 
-    public byte[] generarReporteHorasExtra(ReporteHorasExtraRequest request);
+    byte[] generarReporteHorasExtra(ReporteHorasExtraRequest request);
 
 }

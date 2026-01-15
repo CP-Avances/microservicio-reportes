@@ -21,4 +21,19 @@ public class ReporteResumenGeneralController {
     return reporteResumenGeneralUseCase.generarPdf(request);
  }
 
+ @PostMapping(value = "/csv", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
+ public byte[] generarReporteResumenGeneralCsv(@RequestBody ResumenGeneral request) {
+    return reporteResumenGeneralUseCase.generarCsv(request);
+ }
+
+ @PostMapping(value = "/excel", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
+ public byte[] generarReporteResumenGeneralExcel(@RequestBody ResumenGeneral request) {
+    return reporteResumenGeneralUseCase.generarExcel(request);
+ }
+
+ @PostMapping(value = "/html", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
+ public byte[] generarReporteResumenGeneralHtml(@RequestBody ResumenGeneral request) {
+    return reporteResumenGeneralUseCase.generarHtml(request);
+ }
+
 }

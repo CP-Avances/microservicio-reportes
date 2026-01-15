@@ -4,4 +4,7 @@ import com.casapazmino.microservicio_reportes.model.ResumenGeneral.ResumenGenera
 
 public interface ReporteResumenGeneralUseCase {
     byte[] generarPdf(ResumenGeneral request);
+    byte[] generarCsv(ResumenGeneral request);
+    byte[] generarExcel(ResumenGeneral request);
+    byte[] generarHtml(ResumenGeneral request);
 }

@@ -9,12 +9,19 @@ public class ReporteHorasExtraService implements ReporteHorasExtraUseCase {
 
     private final ReporteFile reportePdf;
     private final ReporteFile reporteCsv;
+    private final ReporteFile reporteExcel;
+    private final ReporteFile reporteHtml;
 
     public ReporteHorasExtraService(
-            @Qualifier("reporteHoraExtraPdf") ReporteFile reportePdf,
-            @Qualifier("reporteHoraExtraCsv") ReporteFile reporteCsv) {
+            @Qualifier("reporteHorasExtraPdf") ReporteFile reportePdf,
+            @Qualifier("reporteHorasExtraCsv") ReporteFile reporteCsv,
+            @Qualifier("reporteHorasExtraExcel") ReporteFile reporteExcel,
+            @Qualifier("reporteHorasExtraHtml") ReporteFile reporteHtml
+    ) {
         this.reportePdf = reportePdf;
         this.reporteCsv = reporteCsv;
+        this.reporteExcel = reporteExcel;
+        this.reporteHtml = reporteHtml;
     }
 
     @Override
@@ -25,5 +32,15 @@ public class ReporteHorasExtraService implements ReporteHorasExtraUseCase {
     @Override
     public byte[] generarCsv(ReporteHorasExtraRequest request) {
         return reporteCsv.generarReporteHorasExtra(request);
+    }
+
+    @Override
+    public byte[] generarExcel(ReporteHorasExtraRequest request) {
+        return reporteExcel.generarReporteHorasExtra(request);
+    }
+
+    @Override
+    public byte[] generarHtml(ReporteHorasExtraRequest request) {
+        return reporteHtml.generarReporteHorasExtra(request);
     }
 }

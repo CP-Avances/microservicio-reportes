@@ -1,5 +1,6 @@
 package com.casapazmino.microservicio_reportes.model.ResumenGeneral;
 
+import com.casapazmino.microservicio_reportes.model.DataGenerico;
 import com.casapazmino.microservicio_reportes.model.HorasExtra.DataResponse;
 
 import java.util.List;
@@ -15,19 +16,12 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ResumenGeneral {
-    private String fechaDesde;
-    private String fechaHasta;
-    private String ciudad;
-    private String parametro;
+public class ResumenGeneral extends DataGenerico {
+
+
     private List<Long> idsSeleccionados;
 
     private DataResponse data;
 
-    private String formato;
-    private String usuario;
-    private String empresa;
-    private String fraseMarcaAgua;
-    private String logoBase64;
-    private String colorPrincipal;
+
 }

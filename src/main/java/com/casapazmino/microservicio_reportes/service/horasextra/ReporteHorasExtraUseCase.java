@@ -6,5 +6,9 @@ public interface ReporteHorasExtraUseCase {
     byte[] generarPdf(ReporteHorasExtraRequest request);
 
     byte[] generarCsv(ReporteHorasExtraRequest request);
+
+    byte[] generarExcel(ReporteHorasExtraRequest request);
+
+    byte[] generarHtml(ReporteHorasExtraRequest request);
 }
 

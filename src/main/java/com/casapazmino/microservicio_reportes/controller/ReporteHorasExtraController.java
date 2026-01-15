@@ -45,4 +45,36 @@ public class ReporteHorasExtraController {
         }
     }
 
+
+    @PostMapping(value = "/html", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
+    public ResponseEntity<byte[]> generarReporteHorasExtraHtml(@RequestBody ReporteHorasExtraRequest request) {
+        try {
+            byte[] bin = reporteHorasExtraService.generarHtml(request);
+            if (bin == null) return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv")).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.csv").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+
+    @PostMapping(value = "/csv", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
+    public ResponseEntity<byte[]> generarReporteHorasExtraExcel(@RequestBody ReporteHorasExtraRequest request) {
+        try {
+            byte[] bin = reporteHorasExtraService.generarExcel(request);
+            if (bin == null) return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv")).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.csv").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+
+
 }
