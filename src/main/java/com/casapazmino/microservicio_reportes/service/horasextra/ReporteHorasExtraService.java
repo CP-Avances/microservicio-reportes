@@ -15,8 +15,8 @@ public class ReporteHorasExtraService implements ReporteHorasExtraUseCase {
     private final ReporteFile reporteHtml;
 
     public ReporteHorasExtraService(
-            @Qualifier("reporteHorasExtraPdf") ReporteFile reportePdf,
-            @Qualifier("reporteHorasExtraCsv") ReporteFile reporteCsv,
+            @Qualifier("reporteHoraExtraPdf") ReporteFile reportePdf,
+            @Qualifier("reporteHoraExtraCsv") ReporteFile reporteCsv,
             @Qualifier("reporteHorasExtraExcel") ReporteFile reporteExcel,
             @Qualifier("reporteHorasExtraHtml") ReporteFile reporteHtml
     ) {

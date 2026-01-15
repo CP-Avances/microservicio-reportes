@@ -63,7 +63,7 @@ public class ReporteHorasExtraController {
     }
 
 
-    @PostMapping(value = "/csv", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
+    @PostMapping(value = "/excel", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
     public ResponseEntity<byte[]> generarReporteHorasExtraExcel(@RequestBody ReporteHorasExtraRequest request) {
         try {
             byte[] bin = reporteHorasExtraService.generarExcel(request);

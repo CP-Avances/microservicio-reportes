@@ -4,7 +4,7 @@ import com.casapazmino.microservicio_reportes.model.ResumenGeneral.ResumenGenera
 import com.casapazmino.microservicio_reportes.service.resumengeneral.interfaces.ReporteFileResumenGeneral;
 import org.springframework.stereotype.Component;
 
-@Component("reporteResumenExcel")
+@Component("reporteResumenGeneralExcel")
 public class ReporteResumenExcel implements ReporteFileResumenGeneral {
     @Override
     public byte[] generarReporteResumenGeneral(ResumenGeneral request) {
