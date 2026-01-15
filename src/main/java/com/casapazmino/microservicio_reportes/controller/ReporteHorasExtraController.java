@@ -1,8 +1,7 @@
 package com.casapazmino.microservicio_reportes.controller;
 
 import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
-import com.casapazmino.microservicio_reportes.service.horasextra.ReporteHorasExtraUseCase;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.casapazmino.microservicio_reportes.service.horasextra.interfaces.ReporteHorasExtraUseCase;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,8 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/reporte/horas-extra")
 public class ReporteHorasExtraController {
-    @Autowired
-    private ReporteHorasExtraUseCase reporteHorasExtraService;
+    private final ReporteHorasExtraUseCase reporteHorasExtraService;
+
+    public ReporteHorasExtraController(ReporteHorasExtraUseCase reporteHorasExtraService) {
+        this.reporteHorasExtraService = reporteHorasExtraService;
+    }
 
     @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generarReporteHorasExtra(@RequestBody ReporteHorasExtraRequest request) {

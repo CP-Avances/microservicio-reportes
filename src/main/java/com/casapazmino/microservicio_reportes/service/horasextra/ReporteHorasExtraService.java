@@ -1,6 +1,8 @@
 package com.casapazmino.microservicio_reportes.service.horasextra;
 
 import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
+import com.casapazmino.microservicio_reportes.service.horasextra.interfaces.ReporteFile;
+import com.casapazmino.microservicio_reportes.service.horasextra.interfaces.ReporteHorasExtraUseCase;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 

@@ -1,6 +1,8 @@
 package com.casapazmino.microservicio_reportes.service.resumengeneral;
 
 import com.casapazmino.microservicio_reportes.model.ResumenGeneral.ResumenGeneral;
+import com.casapazmino.microservicio_reportes.service.resumengeneral.interfaces.ReporteFileResumenGeneral;
+import com.casapazmino.microservicio_reportes.service.resumengeneral.interfaces.ReporteResumenGeneralUseCase;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 

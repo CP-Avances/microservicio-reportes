@@ -2,6 +2,7 @@ package com.casapazmino.microservicio_reportes.service.horasextra;
 
 import com.casapazmino.microservicio_reportes.model.HorasExtra.DataHoraExtraLista;
 import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
+import com.casapazmino.microservicio_reportes.service.horasextra.interfaces.ReporteFile;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;

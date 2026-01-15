@@ -1,6 +1,7 @@
 package com.casapazmino.microservicio_reportes.service.horasextra;
 
 import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
+import com.casapazmino.microservicio_reportes.service.horasextra.interfaces.ReporteFile;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 
 import java.nio.charset.StandardCharsets;
