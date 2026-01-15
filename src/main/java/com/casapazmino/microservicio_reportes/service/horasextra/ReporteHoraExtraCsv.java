@@ -1,9 +1,8 @@
 package com.casapazmino.microservicio_reportes.service.horasextra;
 
 import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
+import com.casapazmino.microservicio_reportes.service.horasextra.interfaces.ReporteFile;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
-import com.casapazmino.microservicio_reportes.util.ReporteUtil;
-import com.casapazmino.microservicio_reportes.util.UtilCsv;
 
 import java.nio.charset.StandardCharsets;
 
@@ -17,19 +16,19 @@ public class ReporteHoraExtraCsv implements ReporteFile {
         final String EOL = "\r\n";
 
         try {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder stringBuilder = new StringBuilder();
 
             // Metadata simple (comentarios CSV)
-            sb.append("# Empresa: ").append(request.getEmpresa() != null ? request.getEmpresa() : "").append(EOL);
-            sb.append("# Usuario: ").append(request.getUsuario() != null ? request.getUsuario() : "").append(EOL);
-            sb.append("# Reporte: Horas Extra").append(EOL);
+            stringBuilder.append("# Empresa: ").append(request.getEmpresa() != null ? request.getEmpresa() : "").append(EOL);
+            stringBuilder.append("# Usuario: ").append(request.getUsuario() != null ? request.getUsuario() : "").append(EOL);
+            stringBuilder.append("# Reporte: Horas Extra").append(EOL);
 
             // Encabezados
-            sb.append("fecha,hora,minutos,segundos").append(EOL);
+            stringBuilder.append("fecha,hora,minutos,segundos").append(EOL);
 
 
 
-            return sb.toString().getBytes(StandardCharsets.UTF_8);
+            return stringBuilder.toString().getBytes(StandardCharsets.UTF_8);
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {

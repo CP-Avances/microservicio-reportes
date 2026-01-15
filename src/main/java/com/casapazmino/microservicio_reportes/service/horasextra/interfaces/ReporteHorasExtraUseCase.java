@@ -1,4 +1,4 @@
-package com.casapazmino.microservicio_reportes.service.horasextra;
+package com.casapazmino.microservicio_reportes.service.horasextra.interfaces;
 
 import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
 
@@ -6,5 +6,9 @@ public interface ReporteHorasExtraUseCase {
     byte[] generarPdf(ReporteHorasExtraRequest request);
 
     byte[] generarCsv(ReporteHorasExtraRequest request);
+
+    byte[] generarExcel(ReporteHorasExtraRequest request);
+
+    byte[] generarHtml(ReporteHorasExtraRequest request);
 }
 

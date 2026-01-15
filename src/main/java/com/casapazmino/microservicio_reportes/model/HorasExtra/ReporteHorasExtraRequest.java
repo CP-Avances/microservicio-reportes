@@ -1,5 +1,6 @@
 package com.casapazmino.microservicio_reportes.model.HorasExtra;
 
+import com.casapazmino.microservicio_reportes.model.DataGenerico;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,20 +12,12 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ReporteHorasExtraRequest {
-    private String fechaDesde;
-    private String fechaHasta;
-    private String ciudad;
-    private String parametro;
+public class ReporteHorasExtraRequest extends DataGenerico {
+
     private List<Long> idsSeleccionados;
 
-        private DataResponse data;
+    private DataResponse data;
 
-    private String formato;
-    private String usuario;
-    private String empresa;
-    private String fraseMarcaAgua;
-    private String logoBase64;
-    private String colorPrincipal;
+
 }
 
