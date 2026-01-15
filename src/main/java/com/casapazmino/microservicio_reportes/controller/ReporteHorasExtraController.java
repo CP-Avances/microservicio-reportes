@@ -48,13 +48,13 @@ public class ReporteHorasExtraController {
     }
 
 
-    @PostMapping(value = "/html", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
+    @PostMapping(value = "/html", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/html")
     public ResponseEntity<byte[]> generarReporteHorasExtraHtml(@RequestBody ReporteHorasExtraRequest request) {
         try {
             byte[] bin = reporteHorasExtraService.generarHtml(request);
             if (bin == null) return ResponseEntity.status(500).build();
 
-            return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv")).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.csv").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
+            return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/html")).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.html").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
@@ -63,13 +63,13 @@ public class ReporteHorasExtraController {
     }
 
 
-    @PostMapping(value = "/excel", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
+    @PostMapping(value = "/excel", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> generarReporteHorasExtraExcel(@RequestBody ReporteHorasExtraRequest request) {
         try {
             byte[] bin = reporteHorasExtraService.generarExcel(request);
             if (bin == null) return ResponseEntity.status(500).build();
 
-            return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv")).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.csv").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
+            return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.xlsx").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
