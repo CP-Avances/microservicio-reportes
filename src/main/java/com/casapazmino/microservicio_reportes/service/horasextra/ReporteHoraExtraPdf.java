@@ -25,8 +25,9 @@ public class ReporteHoraExtraPdf implements ReporteFile {
 
     @Override
     public byte[] generarReporteHorasExtra(ReporteHorasExtraRequest request) {
-        System.out.println("La data que llega es  "+ request.getData().toString());
-        final float[] WIDTHS = {2f, 4f};
+
+
+        final float[] WIDTHS = {2.5f, 2f, 2f, 2f, 2f, 3f};
 
         Document document = null;
         PdfWriter writer = null;
@@ -36,43 +37,83 @@ public class ReporteHoraExtraPdf implements ReporteFile {
             baos = new ByteArrayOutputStream();
             document = new Document(PageSize.A4);
             writer = PdfWriter.getInstance(document, baos);
-            writer.setPageEvent(new ConfiguracionPaginaPDF(request.getUsuario(), request.getFraseMarcaAgua(), request.getColorPrincipal()));
+            writer.setPageEvent(new ConfiguracionPaginaPDF(
+                    request.getUsuario(),
+                    request.getFraseMarcaAgua(),
+                    request.getColorPrincipal()
+            ));
+
             document.open();
 
+            // ================= LOGO =================
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
             if (logo != null) {
                 document.add(logo);
             }
 
+            // ================= TÍTULOS =================
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-            document.add(ReporteUtil.crearTituloReporte("Horas Extra"));
+            document.add(ReporteUtil.crearTituloReporte("Reporte de Horas Extra"));
 
+            // ================= COLORES =================
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color colorZebra = ReporteUtil.colorZebraClaro();
-            PdfPTable tabla = new PdfPTable(2);
-            tabla.setWidthPercentage(40);
+
+            // ================= TABLA =================
+            PdfPTable tabla = new PdfPTable(6);
+            tabla.setWidthPercentage(100);
             tabla.setSpacingBefore(10f);
             tabla.setWidths(WIDTHS);
             tabla.setHorizontalAlignment(Element.ALIGN_CENTER);
 
+            // ---------- ENCABEZADOS ----------
             tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Fecha", colorPrincipal));
-            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Hora", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Entrada", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Salida", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Min. Extra", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Horas Extra", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Estado", colorPrincipal));
+
+            // ---------- FORMATEADORES ----------
+            DateTimeFormatter fechaFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            DateTimeFormatter horaFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
             boolean zebra = false;
-            if (request.getData() != null && request.getData().getData() != null) {
-                DateTimeFormatter fechaFormateada = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-                DateTimeFormatter horaFormateada = DateTimeFormatter.ofPattern("HH:mm:ss");
 
+            if (request.getData() != null && request.getData().getData() != null) {
                 for (DataHoraExtraLista dataHoraExtra : request.getData().getData()) {
+
                     Color fondo = zebra ? colorZebra : Color.WHITE;
 
-                    String fechaString = dataHoraExtra.getFecha().format(fechaFormateada);
+                    String fecha = ReporteUtil.formatearFechaConDia(
+                            dataHoraExtra.getFecha().format(fechaFormatter));
 
-                    tabla.addCell(ReporteUtil.celdaDataCentro(
-                            ReporteUtil.formatearFechaConDia(fechaString), fondo));
+                    String horaEntrada = dataHoraExtra.getHoraEntradaReal() != null
+                            ? dataHoraExtra.getHoraEntradaReal().format(horaFormatter)
+                            : "--";
 
-                    tabla.addCell(ReporteUtil.celdaDataCentro(
-                            dataHoraExtra.getHoraEntradaReal().format(horaFormateada), fondo));
+                    String horaSalida = dataHoraExtra.getHoraSalidaReal() != null
+                            ? dataHoraExtra.getHoraSalidaReal().format(horaFormatter)
+                            : "--";
+
+                    String minutosExtra = dataHoraExtra.getMinutosHorasExtra() != null
+                            ? String.valueOf(dataHoraExtra.getMinutosHorasExtra())
+                            : "0";
+
+                    String horasExtra = dataHoraExtra.getHorasHorasExtra() != null
+                            ? dataHoraExtra.getCodigoEmpleado()
+                            : "0.00";
+
+                    String estado = dataHoraExtra.getEstadoCalculoDesc() != null
+                            ? dataHoraExtra.getEstadoCalculoDesc()
+                            : "--";
+
+                    tabla.addCell(ReporteUtil.celdaDataCentro(fecha, fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(horaEntrada, fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(horaSalida, fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(minutosExtra, fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(horasExtra, fondo));
+                    tabla.addCell(ReporteUtil.celdaDataCentro(estado, fondo));
 
                     zebra = !zebra;
                 }
@@ -88,6 +129,7 @@ public class ReporteHoraExtraPdf implements ReporteFile {
         } catch (Exception e) {
             throw new ReportBuildException("No se pudo generar ReporteHorasExtra.pdf", e);
         } finally {
+
             if (document != null && document.isOpen()) {
                 try {
                     document.close();
@@ -108,4 +150,5 @@ public class ReporteHoraExtraPdf implements ReporteFile {
             }
         }
     }
+
 }
