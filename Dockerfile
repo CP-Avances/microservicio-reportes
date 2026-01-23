@@ -1,0 +1,44 @@
+# ============================
+# Fase 1: Dependencias
+# ============================
+FROM maven:3.9.6-eclipse-temurin-21 AS deps
+WORKDIR /app
+
+# Copiar solo el pom para cachear dependencias
+COPY pom.xml .
+
+# Descargar dependencias sin compilar
+RUN mvn dependency:go-offline -B
+
+
+# ============================
+# Fase 2: Build
+# ============================
+FROM maven:3.9.6-eclipse-temurin-21 AS build
+WORKDIR /app
+
+# Reutilizar repositorio Maven descargado
+COPY --from=deps /root/.m2 /root/.m2
+
+# Copiar código fuente
+COPY pom.xml .
+COPY src ./src
+
+# Compilar
+RUN mvn clean package -DskipTests
+
+
+# ============================
+# Fase 3: Runtime
+# ============================
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# Copiar el JAR generado
+COPY --from=build /app/target/*.jar app.jar
+
+# Exponer puerto (opcional, según tu app)
+EXPOSE 8080
+
+# Ejecutar aplicación
+ENTRYPOINT ["java", "-jar", "app.jar"]
