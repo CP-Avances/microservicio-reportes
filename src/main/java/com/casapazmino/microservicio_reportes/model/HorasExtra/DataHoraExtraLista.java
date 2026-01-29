@@ -34,4 +34,5 @@ public class DataHoraExtraLista {
     private BigDecimal horasHorasExtra;
     private BigDecimal totalAPagar;
     private String estadoCalculoDesc;
+    private String dia;
 }
