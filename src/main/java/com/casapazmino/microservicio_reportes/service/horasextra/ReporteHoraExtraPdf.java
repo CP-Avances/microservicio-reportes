@@ -10,6 +10,8 @@ import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
 
 import org.openpdf.text.Document;
 import org.openpdf.text.Element;
@@ -60,69 +62,39 @@ public class ReporteHoraExtraPdf implements ReporteFile {
             Color colorZebra = ReporteUtil.colorZebraClaro();
 
             // ================= TABLA =================
-            PdfPTable tabla = new PdfPTable(6);
+            PdfPTable tabla = new PdfPTable(8);
             tabla.setWidthPercentage(100);
             tabla.setSpacingBefore(10f);
             tabla.setWidths(WIDTHS);
             tabla.setHorizontalAlignment(Element.ALIGN_CENTER);
 
             // ---------- ENCABEZADOS ----------
-            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Fecha", colorPrincipal));
-            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Entrada", colorPrincipal));
-            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Salida", colorPrincipal));
-            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Min. Extra", colorPrincipal));
-            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Horas Extra", colorPrincipal));
-            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Estado", colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Nombre",colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Tipo Hora Extra",colorPrincipal));
+            //ESPEACIO EN BLANCO
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("", colorPrincipal));
+            //ESPEACIO EN BLANCO
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("", colorPrincipal));
+            //ESPEACIO EN BLANCO
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("", colorPrincipal));
+
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Dia",colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Timbre Entrada",colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaEncabezadoTabla("Timbre Salida",colorPrincipal));
 
             // ---------- FORMATEADORES ----------
             DateTimeFormatter fechaFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
             DateTimeFormatter horaFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
-            boolean zebra = false;
 
-            if (request.getData() != null && request.getData().getData() != null) {
-                for (DataHoraExtraLista dataHoraExtra : request.getData().getData()) {
-
-                    Color fondo = zebra ? colorZebra : Color.WHITE;
-
-                    String fecha = ReporteUtil.formatearFechaConDia(
-                            dataHoraExtra.getFecha().format(fechaFormatter));
-
-                    String horaEntrada = dataHoraExtra.getHoraEntradaReal() != null
-                            ? dataHoraExtra.getHoraEntradaReal().format(horaFormatter)
-                            : "--";
-
-                    String horaSalida = dataHoraExtra.getHoraSalidaReal() != null
-                            ? dataHoraExtra.getHoraSalidaReal().format(horaFormatter)
-                            : "--";
-
-                    String minutosExtra = dataHoraExtra.getMinutosHorasExtra() != null
-                            ? String.valueOf(dataHoraExtra.getMinutosHorasExtra())
-                            : "0";
-
-                    String horasExtra = dataHoraExtra.getHorasHorasExtra() != null
-                            ? dataHoraExtra.getCodigoEmpleado()
-                            : "0.00";
-
-                    String estado = dataHoraExtra.getEstadoCalculoDesc() != null
-                            ? dataHoraExtra.getEstadoCalculoDesc()
-                            : "--";
-
-                    tabla.addCell(ReporteUtil.celdaDataCentro(fecha, fondo));
-                    tabla.addCell(ReporteUtil.celdaDataCentro(horaEntrada, fondo));
-                    tabla.addCell(ReporteUtil.celdaDataCentro(horaSalida, fondo));
-                    tabla.addCell(ReporteUtil.celdaDataCentro(minutosExtra, fondo));
-                    tabla.addCell(ReporteUtil.celdaDataCentro(horasExtra, fondo));
-                    tabla.addCell(ReporteUtil.celdaDataCentro(estado, fondo));
-
-                    zebra = !zebra;
-                }
+            Optional<List<DataHoraExtraLista>> optionalDataHoraExtra = Optional.of(request.getData().getData());
+            if(optionalDataHoraExtra.isEmpty()){
+                throw new ReportBuildException("No se pudo generar ReporteHorasExtra.pdf");
             }
+            this.generarReporteHorasExtraPdf(document, tabla, request, colorPrincipal, colorZebra, fechaFormatter, horaFormatter);
 
-            document.add(tabla);
-
-            document.close();
             return baos.toByteArray();
+
 
         } catch (IllegalArgumentException e) {
             throw e;
@@ -148,6 +120,71 @@ public class ReporteHoraExtraPdf implements ReporteFile {
                 } catch (Exception ignore) {
                 }
             }
+        }
+    }
+
+    private void generarReporteHorasExtraPdf(
+            Document document,
+            PdfPTable tabla,
+            ReporteHorasExtraRequest request,
+            Color colorPrincipal,
+            Color colorZebra,
+            DateTimeFormatter fechaFormatter,
+            DateTimeFormatter horaFormatter
+    ) {
+
+        List<DataHoraExtraLista> dataList = request.getData().getData();
+
+        if (dataList == null || dataList.isEmpty()) {
+            throw new ReportBuildException("No existen datos para generar el reporte de horas extra");
+        }
+
+        boolean zebra = false;
+        int size = dataList.size();
+
+        for (int index = 0; index < size; index++) {
+
+            DataHoraExtraLista dataHoraExtra = dataList.get(index);
+            boolean esUltimo = (index == size - 1);
+            Color fondo = zebra ? colorZebra : Color.WHITE;
+
+            String fecha = dataHoraExtra.getFecha() != null
+                    ? ReporteUtil.formatearFechaConDia(dataHoraExtra.getFecha().format(fechaFormatter))
+                    : "--";
+
+            String horaEntrada = dataHoraExtra.getHoraEntradaReal() != null
+                    ? dataHoraExtra.getHoraEntradaReal().format(horaFormatter)
+                    : "--";
+
+            String horaSalida = dataHoraExtra.getHoraSalidaReal() != null
+                    ? dataHoraExtra.getHoraSalidaReal().format(horaFormatter)
+                    : "--";
+
+            String horasExtra = dataHoraExtra.getHorasHorasExtra() != null
+                    ? dataHoraExtra.getHorasHorasExtra().toString()
+                    : "0.00";
+
+            String estado = Optional.ofNullable(dataHoraExtra.getEstadoCalculoDesc()).orElse("--");
+            String nombreEmpleado = Optional.ofNullable(dataHoraExtra.getNombreCompleto()).orElse("--");
+            String dia = Optional.ofNullable(dataHoraExtra.getDia()).orElse("--");
+
+            // ========= CELDAS =========
+            tabla.addCell(ReporteUtil.celdaDataCentro(nombreEmpleado, colorPrincipal  ));
+            tabla.addCell(ReporteUtil.celdaDataCentro("Hora Extra", colorPrincipal)); // Tipo Hora Extra (si aplica lógica luego)
+            tabla.addCell(ReporteUtil.celdaDataCentro("", colorPrincipal)); // espacio
+            tabla.addCell(ReporteUtil.celdaDataCentro("", colorPrincipal)); // espacio
+            tabla.addCell(ReporteUtil.celdaDataCentro("", colorPrincipal)); // espacio
+            tabla.addCell(ReporteUtil.celdaDataCentro(dia, colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaDataCentro(horaEntrada, colorPrincipal));
+            tabla.addCell(ReporteUtil.celdaDataCentro(horaSalida, colorPrincipal));
+
+            zebra = !zebra;
+        }
+
+        try {
+            document.add(tabla);
+        } catch (Exception e) {
+            throw new ReportBuildException("Error al agregar tabla al documento PDF", e);
         }
     }
 
