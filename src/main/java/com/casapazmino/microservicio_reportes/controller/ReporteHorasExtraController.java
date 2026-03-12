@@ -1,0 +1,82 @@
+package com.casapazmino.microservicio_reportes.controller;
+
+import com.casapazmino.microservicio_reportes.model.HorasExtra.ReporteHorasExtraRequest;
+import com.casapazmino.microservicio_reportes.service.horasextra.interfaces.ReporteHorasExtraUseCase;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/reporte/horas-extra")
+public class ReporteHorasExtraController {
+    private final ReporteHorasExtraUseCase reporteHorasExtraService;
+
+    public ReporteHorasExtraController(ReporteHorasExtraUseCase reporteHorasExtraService) {
+        this.reporteHorasExtraService = reporteHorasExtraService;
+    }
+
+    @PostMapping(value = "/pdf", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> generarReporteHorasExtra(@RequestBody ReporteHorasExtraRequest request) {
+        try {
+            byte[] bin = reporteHorasExtraService.generarPdf(request);
+            if (bin == null) return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.pdf").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    @PostMapping(value = "/csv", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/csv")
+    public ResponseEntity<byte[]> generarReporteHorasExtraCsv(@RequestBody ReporteHorasExtraRequest request) {
+        try {
+            byte[] bin = reporteHorasExtraService.generarCsv(request);
+            if (bin == null) return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv")).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.csv").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+
+    @PostMapping(value = "/html", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "text/html")
+    public ResponseEntity<byte[]> generarReporteHorasExtraHtml(@RequestBody ReporteHorasExtraRequest request) {
+        try {
+            byte[] bin = reporteHorasExtraService.generarHtml(request);
+            if (bin == null) return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/html")).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.html").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+
+    @PostMapping(value = "/excel", consumes = MediaType.APPLICATION_JSON_VALUE, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> generarReporteHorasExtraExcel(@RequestBody ReporteHorasExtraRequest request) {
+        try {
+            byte[] bin = reporteHorasExtraService.generarExcel(request);
+            if (bin == null) return ResponseEntity.status(500).build();
+
+            return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=HorasExtra.xlsx").header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.PRAGMA, "no-cache").header(HttpHeaders.EXPIRES, "0").body(bin);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+
+
+}
