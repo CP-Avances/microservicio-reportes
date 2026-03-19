@@ -24,4 +24,18 @@ public class ReporteHorasExtraConsolidadoRequest {
     private Integer opcionBusqueda;
     private Map<String, Boolean> resumen;
     private List<GrupoHorasExtraConsolidadoDT> grupos;
+    private Boolean mostrarMonetizacion;
+
+    public Boolean getMostrarMonetizacion() {
+        return mostrarMonetizacion;
+    }
+
+    public void setMostrarMonetizacion(Boolean mostrarMonetizacion) {
+        this.mostrarMonetizacion = mostrarMonetizacion;
+    }
+
+    public boolean isMostrarMonetizacion() {
+        return Boolean.TRUE.equals(mostrarMonetizacion);
+    }
+
 }

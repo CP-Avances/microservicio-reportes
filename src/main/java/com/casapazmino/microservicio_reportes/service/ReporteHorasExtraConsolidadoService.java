@@ -34,10 +34,23 @@ public class ReporteHorasExtraConsolidadoService {
                                 1.8f, 2.0f, 2.0f
                 };
 
+                final float[] WIDTHS_22 = {
+                                0.7f, 1.6f,
+                                1.5f, 1.4f, 1.5f, 1.4f,
+                                1.5f, 1.4f, 1.5f, 1.4f,
+                                1.3f, 1.3f, 1.5f, 1.5f,
+                                1.8f,
+                                1.4f, 1.3f, 1.8f,
+                                1.8f, 2.0f, 2.0f,
+                                1.8f
+                };
+
                 final Color COLOR_FALTA_TIMBRE = new Color(0xEE4444);
                 final Color COLOR_ATRASO = new Color(0xEEE344);
                 final Color COLOR_SALIDA_ANTICIPADA = new Color(0x4499EE);
                 final Color COLOR_EXCESO_ALIMENTACION = new Color(0x55EE44);
+
+                boolean mostrarMonetizacion = request.isMostrarMonetizacion();
 
                 Document document = null;
                 PdfWriter writer = null;
@@ -68,6 +81,9 @@ public class ReporteHorasExtraConsolidadoService {
                         Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
                         Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
                         Color zebraColor = ReporteUtil.colorZebraClaro();
+
+                        int totalColumnasPdf = mostrarMonetizacion ? 22 : 21;
+                        float[] widthsPdf = mostrarMonetizacion ? WIDTHS_22 : WIDTHS_21;
 
                         AtomicInteger totalRegistros = new AtomicInteger();
                         if (request.getGrupos() != null) {
@@ -121,6 +137,7 @@ public class ReporteHorasExtraConsolidadoService {
                                         double totalAlimentacionAsignado = 0;
                                         double totalLaborado = 0;
                                         double totalHorasExtra = 0;
+                                        double totalMonetizado = 0;
 
                                         PdfPTable infoEmpleado = new PdfPTable(3);
                                         infoEmpleado.setWidthPercentage(100);
@@ -149,9 +166,9 @@ public class ReporteHorasExtraConsolidadoService {
                                         tablaContenedora.setSpacingAfter(5f);
                                         document.add(tablaContenedora);
 
-                                        PdfPTable encabezado = new PdfPTable(21);
+                                        PdfPTable encabezado = new PdfPTable(totalColumnasPdf);
                                         encabezado.setWidthPercentage(100);
-                                        encabezado.setWidths(WIDTHS_21);
+                                        encabezado.setWidths(widthsPdf);
 
                                         encabezado.addCell(ReporteUtil.crearCelda("N°",
                                                         ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
@@ -186,6 +203,10 @@ public class ReporteHorasExtraConsolidadoService {
                                                         ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
                                         encabezado.addCell(ReporteUtil.crearCelda("TIPO RECARGO",
                                                         ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                                        if (mostrarMonetizacion) {
+                                                encabezado.addCell(ReporteUtil.crearCelda("VALOR HE",
+                                                                ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                                        }
                                         encabezado.addCell(ReporteUtil.crearCelda("OBSERVACIONES",
                                                         ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
 
@@ -203,9 +224,9 @@ public class ReporteHorasExtraConsolidadoService {
                                         encabezado.setSpacingAfter(0f);
                                         document.add(encabezado);
 
-                                        PdfPTable tablaData = new PdfPTable(21);
+                                        PdfPTable tablaData = new PdfPTable(totalColumnasPdf);
                                         tablaData.setWidthPercentage(100);
-                                        tablaData.setWidths(WIDTHS_21);
+                                        tablaData.setWidths(widthsPdf);
 
                                         int contador = 1;
 
@@ -362,6 +383,13 @@ public class ReporteHorasExtraConsolidadoService {
                                                         tablaData.addCell(ReporteUtil.crearCelda(
                                                                         safe(detalle.getTipoRecargo()),
                                                                         ReporteUtil.fuenteTexto(), fondo));
+
+                                                        if (mostrarMonetizacion) {
+                                                                tablaData.addCell(ReporteUtil.crearCelda(
+                                                                                formatMoney(detalle.getTotalAPagar()),
+                                                                                ReporteUtil.fuenteTexto(), fondo));
+                                                        }
+
                                                         tablaData.addCell(ReporteUtil.crearCelda(
                                                                         "", ReporteUtil.fuenteTexto(), fondo));
 
@@ -371,7 +399,7 @@ public class ReporteHorasExtraConsolidadoService {
                                                         totalAlimentacionAsignado += nz(minAsignado);
                                                         totalLaborado += nz(reg.getMinLaborados());
                                                         totalHorasExtra += nz(detalle.getMinutosHorasExtra());
-
+                                                        totalMonetizado += nz(detalle.getTotalAPagar());
                                                         contador++;
                                                 }
                                         }
@@ -397,6 +425,13 @@ public class ReporteHorasExtraConsolidadoService {
                                                         Color.WHITE));
                                         tablaData.addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(),
                                                         Color.WHITE));
+
+                                        if (mostrarMonetizacion) {
+                                                tablaData.addCell(ReporteUtil.crearCelda(
+                                                                formatMoney(totalMonetizado),
+                                                                ReporteUtil.fuenteTexto(), Color.WHITE));
+                                        }
+
                                         tablaData.addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(),
                                                         Color.WHITE));
 
@@ -438,7 +473,9 @@ public class ReporteHorasExtraConsolidadoService {
                 final String NOMBRE_HOJA = "HorasExtra_Consolidado";
                 final int FILA_ENCABEZADO = 5;
 
-                final String[] HEADERS = {
+                final boolean mostrarMonetizacion = request.isMostrarMonetizacion();
+
+                final String[] HEADERS_28 = {
                                 "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "CIUDAD", "SUCURSAL", "RÉGIMEN",
                                 "DEPARTAMENTO", "CARGO", "FECHA",
                                 "HORARIO ENTRADA", "TIMBRE ENTRADA",
@@ -451,7 +488,23 @@ public class ReporteHorasExtraConsolidadoService {
                                 "HORAS EXTRA", "MINUTOS", "TIPO %", "PORCENTAJE", "TIPO RECARGO"
                 };
 
-                final int[] ANCHOS = {
+                final String[] HEADERS_29 = {
+                                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "CIUDAD", "SUCURSAL", "RÉGIMEN",
+                                "DEPARTAMENTO", "CARGO", "FECHA",
+                                "HORARIO ENTRADA", "TIMBRE ENTRADA",
+                                "HORARIO INICIO ALIMENTACIÓN", "TIMBRE INICIO ALIMENTACIÓN",
+                                "HORARIO FIN ALIMENTACIÓN", "TIMBRE FIN ALIMENTACIÓN",
+                                "HORARIO SALIDA", "TIMBRE SALIDA",
+                                "ATRASO", "SALIDA ANTICIPADA",
+                                "TIEMPO ALIMENTACIÓN ASIGNADO", "TIEMPO ALIMENTACIÓN",
+                                "TIEMPO LABORADO",
+                                "HORAS EXTRA", "MINUTOS", "TIPO %", "PORCENTAJE", "TIPO RECARGO",
+                                "VALOR HE"
+                };
+
+                final String[] HEADERS = mostrarMonetizacion ? HEADERS_29 : HEADERS_28;
+
+                final int[] ANCHOS_28 = {
                                 10, 18, 14, 24, 18, 18, 18,
                                 20, 18, 18,
                                 18, 18,
@@ -463,6 +516,22 @@ public class ReporteHorasExtraConsolidadoService {
                                 18,
                                 18, 14, 20, 16, 22
                 };
+
+                final int[] ANCHOS_29 = {
+                                10, 18, 14, 24, 18, 18, 18,
+                                20, 18, 18,
+                                18, 18,
+                                22, 22,
+                                22, 22,
+                                18, 18,
+                                16, 18,
+                                22, 22,
+                                18,
+                                18, 14, 20, 16, 22,
+                                18
+                };
+
+                final int[] ANCHOS = mostrarMonetizacion ? ANCHOS_29 : ANCHOS_28;
 
                 try (XSSFWorkbook libro = new XSSFWorkbook();
                                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -476,7 +545,7 @@ public class ReporteHorasExtraConsolidadoService {
                         }
 
                         for (int row = 0; row <= 4; row++) {
-                                UtilExcel.combinarCeldas(hoja, row, row, 1, 27);
+                                UtilExcel.combinarCeldas(hoja, row, row, 1, HEADERS.length - 1);
                         }
 
                         CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
@@ -648,6 +717,11 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         safe(detalle.getPorcentaje()), null);
                                                         UtilExcel.establecerTexto(r, col++,
                                                                         safe(detalle.getTipoRecargo()), null);
+                                                        if (mostrarMonetizacion) {
+                                                                UtilExcel.establecerTexto(r, col++,
+                                                                                formatMoney(detalle.getTotalAPagar()),
+                                                                                null);
+                                                        }
                                                 }
                                         }
                                 }
@@ -727,6 +801,13 @@ public class ReporteHorasExtraConsolidadoService {
                         return String.valueOf(value.intValue());
                 }
                 return String.valueOf(value);
+        }
+
+        private String formatMoney(Double value) {
+                if (value == null) {
+                        return "0.0000";
+                }
+                return String.format(java.util.Locale.US, "%.4f", value);
         }
 
         private String convertirMinutosATiempo(Double minutos) {

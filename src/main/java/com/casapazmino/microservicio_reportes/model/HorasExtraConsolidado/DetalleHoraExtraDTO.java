@@ -15,4 +15,6 @@ public class DetalleHoraExtraDTO {
     private String tipoPorcentaje;
     private String porcentaje;
     private String tipoRecargo;
+    private Double totalAPagar;
+
 }
