@@ -218,7 +218,7 @@ public class ReporteUtil {
 
     // METODO PARA FUENTE DE TABLA ENCABEZADO
     public static Font fuenteEncabezado() {
-        return FontFactory.getFont(FontFactory.HELVETICA, 8);
+        return FontFactory.getFont(FontFactory.HELVETICA, 7);
     }
 
     // METODO PARA FUENTE DE ENCABEZADO DE TABLA DATA (estándar)
@@ -315,6 +315,66 @@ public class ReporteUtil {
             celda.setBackgroundColor(fondo);
         }
         celda.setPadding(4f);
+        return celda;
+    }
+
+    //REPORTE GENERAL ASISTENCIA
+    public static Font fuenteEncabezadoCompacto() {
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 6f);
+    }
+
+    public static Font fuenteTextoCompacto() {
+        return FontFactory.getFont(FontFactory.HELVETICA, 6f);
+    }
+
+    // CELDA COMPACTA CENTRADA
+    public static PdfPCell crearCeldaCompacta(String texto, Font fuente, Color fondo) {
+        PdfPCell celda = new PdfPCell(new Phrase(texto != null ? texto : "", fuente));
+        celda.setBackgroundColor(fondo);
+        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celda.setPadding(2.5f);
+        return celda;
+    }
+
+    // CELDA COMPACTA CON ROWSPAN Y COLSPAN
+    public static PdfPCell crearCeldaCompacta(String texto, Font fuente, Color fondo, int rowspan, int colspan) {
+        PdfPCell celda = crearCeldaCompacta(texto, fuente, fondo);
+        celda.setRowspan(rowspan);
+        celda.setColspan(colspan);
+        return celda;
+    }
+
+    public static PdfPCell crearCeldaObservacionConEstado(String texto, Color fondo) {
+        Font fontEstado = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 5.5f);
+        Font fontTexto = FontFactory.getFont(FontFactory.HELVETICA, 5.5f);
+
+        Phrase contenido = new Phrase();
+
+        if (texto != null && !texto.trim().isEmpty()) {
+            String[] lineas = texto.split("\\r?\\n");
+
+            for (int i = 0; i < lineas.length; i++) {
+                String linea = lineas[i] != null ? lineas[i] : "";
+
+                if (linea.length() >= 3) {
+                    contenido.add(new Chunk(linea.substring(0, 3), fontEstado));
+                    contenido.add(new Chunk(linea.substring(3), fontTexto));
+                } else {
+                    contenido.add(new Chunk(linea, fontTexto));
+                }
+
+                if (i < lineas.length - 1) {
+                    contenido.add(Chunk.NEWLINE);
+                }
+            }
+        }
+
+        PdfPCell celda = new PdfPCell(contenido);
+        celda.setBackgroundColor(fondo);
+        celda.setHorizontalAlignment(Element.ALIGN_MIDDLE);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celda.setPadding(2.5f);
         return celda;
     }
 

@@ -25,4 +25,6 @@ public class RegistroAsistenciaDTO {
     private Double minAlimentacion;
     private Double minAtrasos;
     private Double minSalidasAnticipadas;
+
+    private String observaciones;
 }
