@@ -848,4 +848,5 @@ public class ReporteHorasExtraConsolidadoService {
                         return colorFT;
                 return porDefecto;
         }
+        
 }
