@@ -26,6 +26,7 @@ public class RegistroHorasExtraConsolidadoDTO {
     private Double minAlimentacion;
     private Double minAtrasos;
     private Double minSalidasAnticipadas;
+    private String observaciones;
 
     private String horasExtra;
     private Double minutosHorasExtra;

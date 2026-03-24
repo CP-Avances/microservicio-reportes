@@ -1,6 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
 import com.casapazmino.microservicio_reportes.model.HorasExtraConsolidado.*;
+import com.casapazmino.microservicio_reportes.model.ResumenAsistencia.MarcaDTO;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -24,31 +25,59 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ReporteHorasExtraConsolidadoService {
 
         public byte[] generarReportePDF(ReporteHorasExtraConsolidadoRequest request) {
-                final float[] WIDTHS_21 = {
-                                0.7f, 1.6f,
-                                1.5f, 1.4f, 1.5f, 1.4f,
-                                1.5f, 1.4f, 1.5f, 1.4f,
-                                1.3f, 1.3f, 1.5f, 1.5f,
-                                1.8f,
-                                1.4f, 1.3f, 1.8f,
-                                1.8f, 2.0f, 2.0f
+                final float[] WIDTHS_25 = {
+                                0.7f, 1.8f, // N°, FECHA
+
+                                1.3f, 1.3f, 0.9f, // ENTRADA: HORARIO, TIMBRE, EST
+                                1.3f, 1.3f, 0.9f, // INICIO ALIMENTACIÓN
+                                1.3f, 1.3f, 0.9f, // FIN ALIMENTACIÓN
+                                1.3f, 1.3f, 0.9f, // SALIDA
+
+                                1.3f, // ATRASO
+                                1.5f, // SALIDA ANTICIPADA
+
+                                1.3f, 1.3f, // T. ALIMENTACIÓN: ASIGNADO, TOMADO
+                                1.5f, // TIEMPO LABORADO
+
+                                1.4f, // HORAS EXTRA
+                                1.2f, // MINUTOS
+                                1.5f, // TIPO %
+                                1.4f, // PORCENTAJE
+                                1.8f, // TIPO RECARGO
+
+                                2.0f // OBSERVACIONES
                 };
 
-                final float[] WIDTHS_22 = {
-                                0.7f, 1.6f,
-                                1.5f, 1.4f, 1.5f, 1.4f,
-                                1.5f, 1.4f, 1.5f, 1.4f,
-                                1.3f, 1.3f, 1.5f, 1.5f,
-                                1.8f,
-                                1.4f, 1.3f, 1.8f,
-                                1.8f, 2.0f, 2.0f,
-                                1.8f
+                final float[] WIDTHS_26 = {
+                                0.7f, 1.8f, // N°, FECHA
+
+                                1.3f, 1.3f, 0.9f, // ENTRADA: HORARIO, TIMBRE, EST
+                                1.3f, 1.3f, 0.9f, // INICIO ALIMENTACIÓN
+                                1.3f, 1.3f, 0.9f, // FIN ALIMENTACIÓN
+                                1.3f, 1.3f, 0.9f, // SALIDA
+
+                                1.3f, // ATRASO
+                                1.5f, // SALIDA ANTICIPADA
+
+                                1.3f, 1.3f, // T. ALIMENTACIÓN: ASIGNADO, TOMADO
+                                1.5f, // TIEMPO LABORADO
+
+                                1.4f, // HORAS EXTRA
+                                1.2f, // MINUTOS
+                                1.5f, // TIPO %
+                                1.4f, // PORCENTAJE
+                                1.8f, // TIPO RECARGO
+
+                                1.5f, // VALOR HE
+                                2.0f // OBSERVACIONES
                 };
 
                 final Color COLOR_FALTA_TIMBRE = new Color(0xEE4444);
                 final Color COLOR_ATRASO = new Color(0xEEE344);
                 final Color COLOR_SALIDA_ANTICIPADA = new Color(0x4499EE);
                 final Color COLOR_EXCESO_ALIMENTACION = new Color(0x55EE44);
+                final Color COLOR_PERMISO = new Color(0xF6B26B);
+                final Color COLOR_VACACIONES = new Color(0xD9B8FF);
 
                 boolean mostrarMonetizacion = request.isMostrarMonetizacion();
 
@@ -75,6 +104,7 @@ public class ReporteHorasExtraConsolidadoService {
                         String titulo = "HORAS EXTRA - CONSOLIDADO - "
                                         + (request.getOpcionBusqueda() == 1 ? "ACTIVOS" : "INACTIVOS");
                         document.add(ReporteUtil.crearTituloReporte(titulo));
+
                         document.add(ReporteUtil.crearTituloPeriodo(
                                         "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin()));
 
@@ -82,8 +112,51 @@ public class ReporteHorasExtraConsolidadoService {
                         Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
                         Color zebraColor = ReporteUtil.colorZebraClaro();
 
-                        int totalColumnasPdf = mostrarMonetizacion ? 22 : 21;
-                        float[] widthsPdf = mostrarMonetizacion ? WIDTHS_22 : WIDTHS_21;
+                        PdfPTable tablaLeyenda = new PdfPTable(7);
+                        tablaLeyenda.setWidthPercentage(100);
+                        tablaLeyenda.setSpacingBefore(5f);
+                        tablaLeyenda.setSpacingAfter(8f);
+                        tablaLeyenda.setWidths(new float[] { 1.6f, 1.5f, 1.5f, 2.0f, 2.2f, 1.4f, 1.6f });
+
+                        tablaLeyenda.addCell(ReporteUtil.crearCeldaCompacta(
+                                        "CÓDIGO DE COLOR",
+                                        ReporteUtil.fuenteEncabezadoCompacto(),
+                                        colorSecundario));
+
+                        tablaLeyenda.addCell(ReporteUtil.crearCeldaCompacta(
+                                        "FALTA TIMBRE",
+                                        ReporteUtil.fuenteTextoCompacto(),
+                                        COLOR_FALTA_TIMBRE));
+
+                        tablaLeyenda.addCell(ReporteUtil.crearCeldaCompacta(
+                                        "ATRASO",
+                                        ReporteUtil.fuenteTextoCompacto(),
+                                        COLOR_ATRASO));
+
+                        tablaLeyenda.addCell(ReporteUtil.crearCeldaCompacta(
+                                        "SALIDA ANTICIPADA",
+                                        ReporteUtil.fuenteTextoCompacto(),
+                                        COLOR_SALIDA_ANTICIPADA));
+
+                        tablaLeyenda.addCell(ReporteUtil.crearCeldaCompacta(
+                                        "EXCESO DE ALIMENTACIÓN",
+                                        ReporteUtil.fuenteTextoCompacto(),
+                                        COLOR_EXCESO_ALIMENTACION));
+
+                        tablaLeyenda.addCell(ReporteUtil.crearCeldaCompacta(
+                                        "PERMISO",
+                                        ReporteUtil.fuenteTextoCompacto(),
+                                        COLOR_PERMISO));
+
+                        tablaLeyenda.addCell(ReporteUtil.crearCeldaCompacta(
+                                        "VACACIONES",
+                                        ReporteUtil.fuenteTextoCompacto(),
+                                        COLOR_VACACIONES));
+
+                        document.add(tablaLeyenda);
+
+                        int totalColumnasPdf = mostrarMonetizacion ? 26 : 25;
+                        float[] widthsPdf = mostrarMonetizacion ? WIDTHS_26 : WIDTHS_25;
 
                         AtomicInteger totalRegistros = new AtomicInteger();
                         if (request.getGrupos() != null) {
@@ -170,56 +243,85 @@ public class ReporteHorasExtraConsolidadoService {
                                         encabezado.setWidthPercentage(100);
                                         encabezado.setWidths(widthsPdf);
 
-                                        encabezado.addCell(ReporteUtil.crearCelda("N°",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                                        encabezado.addCell(ReporteUtil.crearCelda("FECHA",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("N°",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("FECHA",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
 
-                                        encabezado.addCell(ReporteUtil.crearCelda("ENTRADA",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
-                                        encabezado.addCell(ReporteUtil.crearCelda("INICIO ALIMENTACIÓN",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
-                                        encabezado.addCell(ReporteUtil.crearCelda("FIN ALIMENTACIÓN",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
-                                        encabezado.addCell(ReporteUtil.crearCelda("SALIDA",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("ENTRADA",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 1, 3));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("INICIO ALIMENTACIÓN",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 1, 3));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("FIN ALIMENTACIÓN",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 1, 3));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("SALIDA",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 1, 3));
 
-                                        encabezado.addCell(ReporteUtil.crearCelda("ATRASO",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                                        encabezado.addCell(ReporteUtil.crearCelda("SALIDA ANTICIPADA",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                                        encabezado.addCell(ReporteUtil.crearCelda("T. ALIMENTACIÓN",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
-                                        encabezado.addCell(ReporteUtil.crearCelda("TIEMPO LABORADO",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("ATRASO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("SALIDA ANTICIPADA",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("T. ALIMENTACIÓN",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 1, 2));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("TIEMPO LABORADO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
 
-                                        encabezado.addCell(ReporteUtil.crearCelda("HORAS EXTRA",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                                        encabezado.addCell(ReporteUtil.crearCelda("MINUTOS",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                                        encabezado.addCell(ReporteUtil.crearCelda("TIPO %",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                                        encabezado.addCell(ReporteUtil.crearCelda("PORCENTAJE",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                                        encabezado.addCell(ReporteUtil.crearCelda("TIPO RECARGO",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("HORAS EXTRA",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("MINUTOS",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("TIPO %",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("PORCENTAJE",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("TIPO RECARGO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
+
                                         if (mostrarMonetizacion) {
-                                                encabezado.addCell(ReporteUtil.crearCelda("VALOR HE",
-                                                                ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                                                encabezado.addCell(ReporteUtil.crearCeldaCompacta("VALOR HE $",
+                                                                ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal,
+                                                                2, 1));
                                         }
-                                        encabezado.addCell(ReporteUtil.crearCelda("OBSERVACIONES",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
 
-                                        for (int i = 0; i < 4; i++) {
-                                                encabezado.addCell(ReporteUtil.crearCelda("HORARIO",
-                                                                ReporteUtil.fuenteEncabezado(), colorPrincipal));
-                                                encabezado.addCell(ReporteUtil.crearCelda("TIMBRE",
-                                                                ReporteUtil.fuenteEncabezado(), colorSecundario));
-                                        }
-                                        encabezado.addCell(ReporteUtil.crearCelda("ASIGNADO",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal));
-                                        encabezado.addCell(ReporteUtil.crearCelda("TOMADO",
-                                                        ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("OBSERVACIONES",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
+
+                                        // Subencabezados ENTRADA
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("HORARIO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("TIMBRE",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorSecundario));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("EST",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
+
+                                        // Subencabezados INICIO ALIMENTACIÓN
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("HORARIO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("TIMBRE",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorSecundario));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("EST",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
+
+                                        // Subencabezados FIN ALIMENTACIÓN
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("HORARIO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("TIMBRE",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorSecundario));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("EST",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
+
+                                        // Subencabezados SALIDA
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("HORARIO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("TIMBRE",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorSecundario));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("EST",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
+
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("ASIGNADO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("TOMADO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
 
                                         encabezado.setSpacingAfter(0f);
                                         document.add(encabezado);
@@ -240,201 +342,304 @@ public class ReporteHorasExtraConsolidadoService {
                                                 }
 
                                                 for (DetalleHoraExtraDTO detalle : detalles) {
+                                                        //
                                                         Color fondo = (contador % 2 == 0) ? zebraColor : Color.WHITE;
+                                                        boolean esEAS = "EAS".equalsIgnoreCase(safe(reg.getTipo()));
 
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         String.valueOf(contador),
-                                                                        ReporteUtil.fuenteTexto(), fondo));
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                                        ReporteUtil.fuenteTextoCompacto(), fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         ReporteUtil.formatearFechaConDia(
                                                                                         safe(reg.getEntrada() != null
                                                                                                         ? reg.getEntrada()
                                                                                                                         .getFecha_horario()
                                                                                                         : "")),
-                                                                        ReporteUtil.fuenteTexto(), fondo));
+                                                                        ReporteUtil.fuenteTextoCompacto(), fondo));
 
+                                                        // =========================
+                                                        // ENTRADA
+                                                        // =========================
                                                         String entradaHorario = extraerHora(
                                                                         reg.getEntrada() != null ? reg.getEntrada()
                                                                                         .getFecha_hora_horario()
                                                                                         : null);
-                                                        String entradaTimbre = formatearTimbre(
-                                                                        reg.getEntrada() != null ? reg.getEntrada()
-                                                                                        .getFecha_hora_horario() : null,
-                                                                        reg.getEntrada() != null ? reg.getEntrada()
-                                                                                        .getFecha_hora_timbre() : null);
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        entradaHorario, ReporteUtil.fuenteTexto(),
-                                                                        fondo));
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        entradaTimbre, ReporteUtil.fuenteTexto(),
-                                                                        getColorTimbre(entradaTimbre, fondo,
-                                                                                        COLOR_FALTA_TIMBRE)));
+                                                        String entradaTimbre = obtenerTextoTimbre(reg.getEntrada());
+                                                        String entradaEstado = obtenerTextoEstado(reg.getEntrada(),
+                                                                        reg.getOrigen(), reg.getControl());
 
-                                                        String iaHorario = extraerHora(
-                                                                        reg.getInicioAlimentacion() != null ? reg
-                                                                                        .getInicioAlimentacion()
-                                                                                        .getFecha_hora_horario()
-                                                                                        : null);
-                                                        String iaTimbre = formatearTimbre(
-                                                                        reg.getInicioAlimentacion() != null ? reg
-                                                                                        .getInicioAlimentacion()
-                                                                                        .getFecha_hora_horario() : null,
-                                                                        reg.getInicioAlimentacion() != null ? reg
-                                                                                        .getInicioAlimentacion()
-                                                                                        .getFecha_hora_timbre() : null);
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        iaHorario, ReporteUtil.fuenteTexto(), fondo));
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        iaTimbre, ReporteUtil.fuenteTexto(),
-                                                                        getColorTimbre(iaTimbre, fondo,
-                                                                                        COLOR_FALTA_TIMBRE)));
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        entradaHorario,
+                                                                        ReporteUtil.fuenteTextoCompacto(), fondo));
 
-                                                        String faHorario = extraerHora(
-                                                                        reg.getFinAlimentacion() != null ? reg
-                                                                                        .getFinAlimentacion()
-                                                                                        .getFecha_hora_horario()
-                                                                                        : null);
-                                                        String faTimbre = formatearTimbre(
-                                                                        reg.getFinAlimentacion() != null ? reg
-                                                                                        .getFinAlimentacion()
-                                                                                        .getFecha_hora_horario() : null,
-                                                                        reg.getFinAlimentacion() != null ? reg
-                                                                                        .getFinAlimentacion()
-                                                                                        .getFecha_hora_timbre() : null);
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        faHorario, ReporteUtil.fuenteTexto(), fondo));
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        faTimbre, ReporteUtil.fuenteTexto(),
-                                                                        getColorTimbre(faTimbre, fondo,
-                                                                                        COLOR_FALTA_TIMBRE)));
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        entradaTimbre,
+                                                                        ReporteUtil.fuenteTextoCompacto(), fondo));
 
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        entradaEstado,
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        getColorEstado(entradaEstado, fondo,
+                                                                                        COLOR_FALTA_TIMBRE,
+                                                                                        COLOR_PERMISO,
+                                                                                        COLOR_VACACIONES)));
+
+                                                        // =========================
+                                                        // INICIO ALIMENTACIÓN
+                                                        // =========================
+                                                        String iaHorario = esEAS
+                                                                        ? extraerHora(reg
+                                                                                        .getInicioAlimentacion() != null
+                                                                                                        ? reg.getInicioAlimentacion()
+                                                                                                                        .getFecha_hora_horario()
+                                                                                                        : null)
+                                                                        : "";
+
+                                                        String iaTimbre = esEAS
+                                                                        ? obtenerTextoTimbre(
+                                                                                        reg.getInicioAlimentacion())
+                                                                        : "";
+
+                                                        String iaEstado = esEAS
+                                                                        ? obtenerTextoEstado(
+                                                                                        reg.getInicioAlimentacion(),
+                                                                                        reg.getOrigen(),
+                                                                                        reg.getControl())
+                                                                        : "";
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        iaHorario,
+                                                                        ReporteUtil.fuenteTextoCompacto(), fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        iaTimbre,
+                                                                        ReporteUtil.fuenteTextoCompacto(), fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        iaEstado,
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        getColorEstado(iaEstado, fondo,
+                                                                                        COLOR_FALTA_TIMBRE,
+                                                                                        COLOR_PERMISO,
+                                                                                        COLOR_VACACIONES)));
+
+                                                        // =========================
+                                                        // FIN ALIMENTACIÓN
+                                                        // =========================
+                                                        String faHorario = esEAS
+                                                                        ? extraerHora(reg.getFinAlimentacion() != null
+                                                                                        ? reg.getFinAlimentacion()
+                                                                                                        .getFecha_hora_horario()
+                                                                                        : null)
+                                                                        : "";
+
+                                                        String faTimbre = esEAS
+                                                                        ? obtenerTextoTimbre(reg.getFinAlimentacion())
+                                                                        : "";
+
+                                                        String faEstado = esEAS
+                                                                        ? obtenerTextoEstado(reg.getFinAlimentacion(),
+                                                                                        reg.getOrigen(),
+                                                                                        reg.getControl())
+                                                                        : "";
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        faHorario,
+                                                                        ReporteUtil.fuenteTextoCompacto(), fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        faTimbre,
+                                                                        ReporteUtil.fuenteTextoCompacto(), fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        faEstado,
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        getColorEstado(faEstado, fondo,
+                                                                                        COLOR_FALTA_TIMBRE,
+                                                                                        COLOR_PERMISO,
+                                                                                        COLOR_VACACIONES)));
+
+                                                        // =========================
+                                                        // SALIDA
+                                                        // =========================
                                                         String salidaHorario = extraerHora(
                                                                         reg.getSalida() != null ? reg.getSalida()
                                                                                         .getFecha_hora_horario()
                                                                                         : null);
-                                                        String salidaTimbre = formatearTimbre(
-                                                                        reg.getSalida() != null ? reg.getSalida()
-                                                                                        .getFecha_hora_horario() : null,
-                                                                        reg.getSalida() != null ? reg.getSalida()
-                                                                                        .getFecha_hora_timbre() : null);
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        salidaHorario, ReporteUtil.fuenteTexto(),
-                                                                        fondo));
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        salidaTimbre, ReporteUtil.fuenteTexto(),
-                                                                        getColorTimbre(salidaTimbre, fondo,
-                                                                                        COLOR_FALTA_TIMBRE)));
+                                                        String salidaTimbre = obtenerTextoTimbre(reg.getSalida());
+                                                        String salidaEstado = obtenerTextoEstado(reg.getSalida(),
+                                                                        reg.getOrigen(), reg.getControl());
 
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        salidaHorario,
+                                                                        ReporteUtil.fuenteTextoCompacto(), fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        salidaTimbre,
+                                                                        ReporteUtil.fuenteTextoCompacto(), fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        salidaEstado,
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        getColorEstado(salidaEstado, fondo,
+                                                                                        COLOR_FALTA_TIMBRE,
+                                                                                        COLOR_PERMISO,
+                                                                                        COLOR_VACACIONES)));
+                                                        //
+
+                                                        ///////
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         convertirMinutosATiempo(reg.getMinAtrasos()),
-                                                                        ReporteUtil.fuenteTexto(),
+                                                                        ReporteUtil.fuenteTextoCompacto(),
                                                                         reg.getMinAtrasos() != null
                                                                                         && reg.getMinAtrasos() > 0
                                                                                                         ? COLOR_ATRASO
                                                                                                         : fondo));
 
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         convertirMinutosATiempo(
                                                                                         reg.getMinSalidasAnticipadas()),
-                                                                        ReporteUtil.fuenteTexto(),
+                                                                        ReporteUtil.fuenteTextoCompacto(),
                                                                         reg.getMinSalidasAnticipadas() != null && reg
                                                                                         .getMinSalidasAnticipadas() > 0
                                                                                                         ? COLOR_SALIDA_ANTICIPADA
                                                                                                         : fondo));
 
                                                         Double minAsignado = 0d;
-                                                        if (reg.getInicioAlimentacion() != null && reg
-                                                                        .getInicioAlimentacion()
-                                                                        .getMinutos_alimentacion() != null) {
+                                                        if (esEAS && reg.getInicioAlimentacion() != null
+                                                                        && reg.getInicioAlimentacion()
+                                                                                        .getMinutos_alimentacion() != null) {
                                                                 minAsignado = reg.getInicioAlimentacion()
                                                                                 .getMinutos_alimentacion();
                                                         }
 
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        convertirMinutosATiempo(minAsignado),
-                                                                        ReporteUtil.fuenteTexto(), fondo));
+                                                        boolean alimentacionEsPermiso = "P".equalsIgnoreCase(iaEstado)
+                                                                        || "P".equalsIgnoreCase(faEstado);
 
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        convertirMinutosATiempo(
-                                                                                        reg.getMinAlimentacion()),
-                                                                        ReporteUtil.fuenteTexto(),
-                                                                        (minAsignado != null && reg
-                                                                                        .getMinAlimentacion() != null
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        esEAS ? convertirMinutosATiempo(minAsignado)
+                                                                                        : "",
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        esEAS ? convertirMinutosATiempo(
+                                                                                        reg.getMinAlimentacion()) : "",
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        (esEAS
+                                                                                        && !alimentacionEsPermiso
+                                                                                        && minAsignado != null
+                                                                                        && reg.getMinAlimentacion() != null
                                                                                         && reg.getMinAlimentacion() > minAsignado)
                                                                                                         ? COLOR_EXCESO_ALIMENTACION
                                                                                                         : fondo));
 
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         convertirMinutosATiempo(reg.getMinLaborados()),
-                                                                        ReporteUtil.fuenteTexto(), fondo));
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        fondo));
 
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         safe(detalle.getHorasExtra()),
-                                                                        ReporteUtil.fuenteTexto(), fondo));
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         formatDouble(detalle.getMinutosHorasExtra()),
-                                                                        ReporteUtil.fuenteTexto(), fondo));
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         safe(detalle.getTipoPorcentaje()),
-                                                                        ReporteUtil.fuenteTexto(), fondo));
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         safe(detalle.getPorcentaje()),
-                                                                        ReporteUtil.fuenteTexto(), fondo));
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         safe(detalle.getTipoRecargo()),
-                                                                        ReporteUtil.fuenteTexto(), fondo));
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        fondo));
 
                                                         if (mostrarMonetizacion) {
-                                                                tablaData.addCell(ReporteUtil.crearCelda(
+                                                                tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                                 formatMoney(detalle.getTotalAPagar()),
-                                                                                ReporteUtil.fuenteTexto(), fondo));
+                                                                                ReporteUtil.fuenteTextoCompacto(),
+                                                                                fondo));
                                                         }
 
-                                                        tablaData.addCell(ReporteUtil.crearCelda(
-                                                                        "", ReporteUtil.fuenteTexto(), fondo));
+                                                        tablaData.addCell(ReporteUtil.crearCeldaObservacionConEstado(
+                                                                        safe(reg.getObservaciones()),
+                                                                        fondo));
 
                                                         totalAtrasos += nz(reg.getMinAtrasos());
                                                         totalSalidasAnticipadas += nz(reg.getMinSalidasAnticipadas());
-                                                        totalAlimentacionTomado += nz(reg.getMinAlimentacion());
-                                                        totalAlimentacionAsignado += nz(minAsignado);
+                                                        totalAlimentacionTomado += esEAS ? nz(reg.getMinAlimentacion())
+                                                                        : 0d;
+                                                        totalAlimentacionAsignado += esEAS ? nz(minAsignado) : 0d;
                                                         totalLaborado += nz(reg.getMinLaborados());
                                                         totalHorasExtra += nz(detalle.getMinutosHorasExtra());
                                                         totalMonetizado += nz(detalle.getTotalAPagar());
                                                         contador++;
+
+                                                        //////
                                                 }
                                         }
 
-                                        for (int i = 0; i < 14; i++) {
-                                                PdfPCell vacia = ReporteUtil.crearCelda("",
-                                                                ReporteUtil.fuenteTexto(), Color.WHITE);
+                                        ///////////////////////
+                                        int columnasVaciasTotal = 19;
+
+                                        for (int i = 0; i < columnasVaciasTotal; i++) {
+                                                PdfPCell vacia = ReporteUtil.crearCeldaCompacta(
+                                                                "",
+                                                                ReporteUtil.fuenteTextoCompacto(),
+                                                                Color.WHITE);
                                                 vacia.setBorder(Rectangle.NO_BORDER);
                                                 tablaData.addCell(vacia);
                                         }
 
-                                        tablaData.addCell(ReporteUtil.crearCelda("TOTAL",
-                                                        ReporteUtil.fuenteTexto(), Color.WHITE));
-                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        "TOTAL",
+                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                        Color.WHITE));
+
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                         convertirMinutosATiempo(totalHorasExtra),
-                                                        ReporteUtil.fuenteTexto(), Color.WHITE));
-                                        tablaData.addCell(ReporteUtil.crearCelda(
+                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                        Color.WHITE));
+
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                         formatDouble(totalHorasExtra),
-                                                        ReporteUtil.fuenteTexto(), Color.WHITE));
-                                        tablaData.addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(),
+                                                        ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
-                                        tablaData.addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(),
+
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        "",
+                                                        ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
-                                        tablaData.addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(),
+
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        "",
+                                                        ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
 
                                         if (mostrarMonetizacion) {
-                                                tablaData.addCell(ReporteUtil.crearCelda(
+                                                tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                 formatMoney(totalMonetizado),
-                                                                ReporteUtil.fuenteTexto(), Color.WHITE));
+                                                                ReporteUtil.fuenteTextoCompacto(),
+                                                                Color.WHITE));
                                         }
 
-                                        tablaData.addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(),
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        "",
+                                                        ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
 
+                                        //// ///////
                                         tablaData.setSpacingAfter(10f);
                                         document.add(tablaData);
                                 }
@@ -475,63 +680,79 @@ public class ReporteHorasExtraConsolidadoService {
 
                 final boolean mostrarMonetizacion = request.isMostrarMonetizacion();
 
-                final String[] HEADERS_28 = {
+                final String[] HEADERS_33 = {
                                 "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "CIUDAD", "SUCURSAL", "RÉGIMEN",
                                 "DEPARTAMENTO", "CARGO", "FECHA",
-                                "HORARIO ENTRADA", "TIMBRE ENTRADA",
-                                "HORARIO INICIO ALIMENTACIÓN", "TIMBRE INICIO ALIMENTACIÓN",
-                                "HORARIO FIN ALIMENTACIÓN", "TIMBRE FIN ALIMENTACIÓN",
-                                "HORARIO SALIDA", "TIMBRE SALIDA",
-                                "ATRASO", "SALIDA ANTICIPADA",
-                                "TIEMPO ALIMENTACIÓN ASIGNADO", "TIEMPO ALIMENTACIÓN",
-                                "TIEMPO LABORADO",
-                                "HORAS EXTRA", "MINUTOS", "TIPO %", "PORCENTAJE", "TIPO RECARGO"
-                };
 
-                final String[] HEADERS_29 = {
-                                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "CIUDAD", "SUCURSAL", "RÉGIMEN",
-                                "DEPARTAMENTO", "CARGO", "FECHA",
-                                "HORARIO ENTRADA", "TIMBRE ENTRADA",
-                                "HORARIO INICIO ALIMENTACIÓN", "TIMBRE INICIO ALIMENTACIÓN",
-                                "HORARIO FIN ALIMENTACIÓN", "TIMBRE FIN ALIMENTACIÓN",
-                                "HORARIO SALIDA", "TIMBRE SALIDA",
+                                "HORARIO ENTRADA", "TIMBRE ENTRADA", "EST ENTRADA",
+                                "HORARIO INICIO ALIMENTACIÓN", "TIMBRE INICIO ALIMENTACIÓN", "EST INICIO ALIMENTACIÓN",
+                                "HORARIO FIN ALIMENTACIÓN", "TIMBRE FIN ALIMENTACIÓN", "EST FIN ALIMENTACIÓN",
+                                "HORARIO SALIDA", "TIMBRE SALIDA", "EST SALIDA",
+
                                 "ATRASO", "SALIDA ANTICIPADA",
                                 "TIEMPO ALIMENTACIÓN ASIGNADO", "TIEMPO ALIMENTACIÓN",
                                 "TIEMPO LABORADO",
+
                                 "HORAS EXTRA", "MINUTOS", "TIPO %", "PORCENTAJE", "TIPO RECARGO",
-                                "VALOR HE"
+                                "OBSERVACIONES"
                 };
 
-                final String[] HEADERS = mostrarMonetizacion ? HEADERS_29 : HEADERS_28;
+                final String[] HEADERS_34 = {
+                                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "CIUDAD", "SUCURSAL", "RÉGIMEN",
+                                "DEPARTAMENTO", "CARGO", "FECHA",
 
-                final int[] ANCHOS_28 = {
+                                "HORARIO ENTRADA", "TIMBRE ENTRADA", "EST ENTRADA",
+                                "HORARIO INICIO ALIMENTACIÓN", "TIMBRE INICIO ALIMENTACIÓN", "EST INICIO ALIMENTACIÓN",
+                                "HORARIO FIN ALIMENTACIÓN", "TIMBRE FIN ALIMENTACIÓN", "EST FIN ALIMENTACIÓN",
+                                "HORARIO SALIDA", "TIMBRE SALIDA", "EST SALIDA",
+
+                                "ATRASO", "SALIDA ANTICIPADA",
+                                "TIEMPO ALIMENTACIÓN ASIGNADO", "TIEMPO ALIMENTACIÓN",
+                                "TIEMPO LABORADO",
+
+                                "HORAS EXTRA", "MINUTOS", "TIPO %", "PORCENTAJE", "TIPO RECARGO",
+                                "VALOR HE",
+                                "OBSERVACIONES"
+                };
+
+                final String[] HEADERS = mostrarMonetizacion ? HEADERS_34 : HEADERS_33;
+
+                final int[] ANCHOS_33 = {
                                 10, 18, 14, 24, 18, 18, 18,
                                 20, 18, 18,
-                                18, 18,
-                                22, 22,
-                                22, 22,
-                                18, 18,
+
+                                18, 18, 12,
+                                22, 22, 12,
+                                22, 22, 12,
+                                18, 18, 12,
+
                                 16, 18,
                                 22, 22,
                                 18,
-                                18, 14, 20, 16, 22
-                };
 
-                final int[] ANCHOS_29 = {
-                                10, 18, 14, 24, 18, 18, 18,
-                                20, 18, 18,
-                                18, 18,
-                                22, 22,
-                                22, 22,
-                                18, 18,
-                                16, 18,
-                                22, 22,
-                                18,
                                 18, 14, 20, 16, 22,
-                                18
+                                28
                 };
 
-                final int[] ANCHOS = mostrarMonetizacion ? ANCHOS_29 : ANCHOS_28;
+                final int[] ANCHOS_34 = {
+                                10, 18, 14, 24, 18, 18, 18,
+                                20, 18, 18,
+
+                                18, 18, 12,
+                                22, 22, 12,
+                                22, 22, 12,
+                                18, 18, 12,
+
+                                16, 18,
+                                22, 22,
+                                18,
+
+                                18, 14, 20, 16, 22,
+                                18,
+                                28
+                };
+
+                final int[] ANCHOS = mostrarMonetizacion ? ANCHOS_34 : ANCHOS_33;
 
                 try (XSSFWorkbook libro = new XSSFWorkbook();
                                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -587,6 +808,73 @@ public class ReporteHorasExtraConsolidadoService {
                                                         Row r = UtilExcel.asegurarFila(hoja, filaAct++);
                                                         int col = 0;
 
+                                                        boolean esEAS = "EAS".equalsIgnoreCase(safe(reg.getTipo()));
+
+                                                        String entradaHorario = extraerHora(
+                                                                        reg.getEntrada() != null
+                                                                                        ? reg.getEntrada()
+                                                                                                        .getFecha_hora_horario()
+                                                                                        : null);
+                                                        String entradaTimbre = obtenerTextoTimbre(reg.getEntrada());
+                                                        String entradaEstado = obtenerTextoEstado(
+                                                                        reg.getEntrada(),
+                                                                        reg.getOrigen(),
+                                                                        reg.getControl());
+
+                                                        String iaHorario = esEAS
+                                                                        ? extraerHora(reg
+                                                                                        .getInicioAlimentacion() != null
+                                                                                                        ? reg.getInicioAlimentacion()
+                                                                                                                        .getFecha_hora_horario()
+                                                                                                        : null)
+                                                                        : "";
+                                                        String iaTimbre = esEAS
+                                                                        ? obtenerTextoTimbre(
+                                                                                        reg.getInicioAlimentacion())
+                                                                        : "";
+                                                        String iaEstado = esEAS
+                                                                        ? obtenerTextoEstado(
+                                                                                        reg.getInicioAlimentacion(),
+                                                                                        reg.getOrigen(),
+                                                                                        reg.getControl())
+                                                                        : "";
+
+                                                        String faHorario = esEAS
+                                                                        ? extraerHora(reg.getFinAlimentacion() != null
+                                                                                        ? reg.getFinAlimentacion()
+                                                                                                        .getFecha_hora_horario()
+                                                                                        : null)
+                                                                        : "";
+                                                        String faTimbre = esEAS
+                                                                        ? obtenerTextoTimbre(reg.getFinAlimentacion())
+                                                                        : "";
+                                                        String faEstado = esEAS
+                                                                        ? obtenerTextoEstado(
+                                                                                        reg.getFinAlimentacion(),
+                                                                                        reg.getOrigen(),
+                                                                                        reg.getControl())
+                                                                        : "";
+
+                                                        String salidaHorario = extraerHora(
+                                                                        reg.getSalida() != null
+                                                                                        ? reg.getSalida()
+                                                                                                        .getFecha_hora_horario()
+                                                                                        : null);
+                                                        String salidaTimbre = obtenerTextoTimbre(reg.getSalida());
+                                                        String salidaEstado = obtenerTextoEstado(
+                                                                        reg.getSalida(),
+                                                                        reg.getOrigen(),
+                                                                        reg.getControl());
+
+                                                        Double minAsignado = 0d;
+                                                        if (esEAS
+                                                                        && reg.getInicioAlimentacion() != null
+                                                                        && reg.getInicioAlimentacion()
+                                                                                        .getMinutos_alimentacion() != null) {
+                                                                minAsignado = reg.getInicioAlimentacion()
+                                                                                .getMinutos_alimentacion();
+                                                        }
+
                                                         UtilExcel.establecerValor(r, col++, item++, null);
                                                         UtilExcel.establecerTexto(r, col++,
                                                                         safe(emp.getIdentificacion()), null);
@@ -604,81 +892,27 @@ public class ReporteHorasExtraConsolidadoService {
                                                         UtilExcel.establecerTexto(r, col++, safe(emp.getCargo()), null);
 
                                                         UtilExcel.establecerTexto(r, col++,
-                                                                        safe(reg.getEntrada() != null ? reg.getEntrada()
-                                                                                        .getFecha_hora_horario() : ""),
+                                                                        safe(reg.getEntrada() != null
+                                                                                        ? reg.getEntrada()
+                                                                                                        .getFecha_horario()
+                                                                                        : ""),
                                                                         null);
 
-                                                        UtilExcel.establecerTexto(r, col++,
-                                                                        extraerHora(reg.getEntrada() != null ? reg
-                                                                                        .getEntrada()
-                                                                                        .getFecha_hora_horario()
-                                                                                        : null),
-                                                                        null);
-                                                        UtilExcel.establecerTexto(r, col++,
-                                                                        formatearTimbre(
-                                                                                        reg.getEntrada() != null ? reg
-                                                                                                        .getEntrada()
-                                                                                                        .getFecha_hora_horario()
-                                                                                                        : null,
-                                                                                        reg.getEntrada() != null ? reg
-                                                                                                        .getEntrada()
-                                                                                                        .getFecha_hora_timbre()
-                                                                                                        : null),
-                                                                        null);
+                                                        UtilExcel.establecerTexto(r, col++, entradaHorario, null);
+                                                        UtilExcel.establecerTexto(r, col++, entradaTimbre, null);
+                                                        UtilExcel.establecerTexto(r, col++, entradaEstado, null);
 
-                                                        UtilExcel.establecerTexto(r, col++,
-                                                                        extraerHora(reg.getInicioAlimentacion() != null
-                                                                                        ? reg.getInicioAlimentacion()
-                                                                                                        .getFecha_hora_horario()
-                                                                                        : null),
-                                                                        null);
-                                                        UtilExcel.establecerTexto(r, col++,
-                                                                        formatearTimbre(
-                                                                                        reg.getInicioAlimentacion() != null
-                                                                                                        ? reg.getInicioAlimentacion()
-                                                                                                                        .getFecha_hora_horario()
-                                                                                                        : null,
-                                                                                        reg.getInicioAlimentacion() != null
-                                                                                                        ? reg.getInicioAlimentacion()
-                                                                                                                        .getFecha_hora_timbre()
-                                                                                                        : null),
-                                                                        null);
+                                                        UtilExcel.establecerTexto(r, col++, iaHorario, null);
+                                                        UtilExcel.establecerTexto(r, col++, iaTimbre, null);
+                                                        UtilExcel.establecerTexto(r, col++, iaEstado, null);
 
-                                                        UtilExcel.establecerTexto(r, col++,
-                                                                        extraerHora(reg.getFinAlimentacion() != null
-                                                                                        ? reg.getFinAlimentacion()
-                                                                                                        .getFecha_hora_horario()
-                                                                                        : null),
-                                                                        null);
-                                                        UtilExcel.establecerTexto(r, col++,
-                                                                        formatearTimbre(
-                                                                                        reg.getFinAlimentacion() != null
-                                                                                                        ? reg.getFinAlimentacion()
-                                                                                                                        .getFecha_hora_horario()
-                                                                                                        : null,
-                                                                                        reg.getFinAlimentacion() != null
-                                                                                                        ? reg.getFinAlimentacion()
-                                                                                                                        .getFecha_hora_timbre()
-                                                                                                        : null),
-                                                                        null);
+                                                        UtilExcel.establecerTexto(r, col++, faHorario, null);
+                                                        UtilExcel.establecerTexto(r, col++, faTimbre, null);
+                                                        UtilExcel.establecerTexto(r, col++, faEstado, null);
 
-                                                        UtilExcel.establecerTexto(r, col++,
-                                                                        extraerHora(reg.getSalida() != null ? reg
-                                                                                        .getSalida()
-                                                                                        .getFecha_hora_horario()
-                                                                                        : null),
-                                                                        null);
-                                                        UtilExcel.establecerTexto(r, col++,
-                                                                        formatearTimbre(
-                                                                                        reg.getSalida() != null ? reg
-                                                                                                        .getSalida()
-                                                                                                        .getFecha_hora_horario()
-                                                                                                        : null,
-                                                                                        reg.getSalida() != null ? reg
-                                                                                                        .getSalida()
-                                                                                                        .getFecha_hora_timbre()
-                                                                                                        : null),
-                                                                        null);
+                                                        UtilExcel.establecerTexto(r, col++, salidaHorario, null);
+                                                        UtilExcel.establecerTexto(r, col++, salidaTimbre, null);
+                                                        UtilExcel.establecerTexto(r, col++, salidaEstado, null);
 
                                                         UtilExcel.establecerTexto(r, col++,
                                                                         convertirMinutosATiempo(reg.getMinAtrasos()),
@@ -688,20 +922,17 @@ public class ReporteHorasExtraConsolidadoService {
                                                                                         reg.getMinSalidasAnticipadas()),
                                                                         null);
 
-                                                        Double minAsignado = 0d;
-                                                        if (reg.getInicioAlimentacion() != null && reg
-                                                                        .getInicioAlimentacion()
-                                                                        .getMinutos_alimentacion() != null) {
-                                                                minAsignado = reg.getInicioAlimentacion()
-                                                                                .getMinutos_alimentacion();
-                                                        }
-
                                                         UtilExcel.establecerTexto(r, col++,
-                                                                        convertirMinutosATiempo(minAsignado), null);
-                                                        UtilExcel.establecerTexto(r, col++,
-                                                                        convertirMinutosATiempo(
-                                                                                        reg.getMinAlimentacion()),
+                                                                        esEAS ? convertirMinutosATiempo(minAsignado)
+                                                                                        : "",
                                                                         null);
+                                                        UtilExcel.establecerTexto(r, col++,
+                                                                        esEAS
+                                                                                        ? convertirMinutosATiempo(
+                                                                                                        reg.getMinAlimentacion())
+                                                                                        : "",
+                                                                        null);
+
                                                         UtilExcel.establecerTexto(r, col++,
                                                                         convertirMinutosATiempo(reg.getMinLaborados()),
                                                                         null);
@@ -712,16 +943,24 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         formatDouble(detalle.getMinutosHorasExtra()),
                                                                         null);
                                                         UtilExcel.establecerTexto(r, col++,
-                                                                        safe(detalle.getTipoPorcentaje()), null);
+                                                                        safe(detalle.getTipoPorcentaje()),
+                                                                        null);
                                                         UtilExcel.establecerTexto(r, col++,
-                                                                        safe(detalle.getPorcentaje()), null);
+                                                                        safe(detalle.getPorcentaje()),
+                                                                        null);
                                                         UtilExcel.establecerTexto(r, col++,
-                                                                        safe(detalle.getTipoRecargo()), null);
+                                                                        safe(detalle.getTipoRecargo()),
+                                                                        null);
+
                                                         if (mostrarMonetizacion) {
                                                                 UtilExcel.establecerTexto(r, col++,
                                                                                 formatMoney(detalle.getTotalAPagar()),
                                                                                 null);
                                                         }
+
+                                                        UtilExcel.establecerTexto(r, col++,
+                                                                        safe(reg.getObservaciones()),
+                                                                        null);
                                                 }
                                         }
                                 }
@@ -743,8 +982,9 @@ public class ReporteHorasExtraConsolidadoService {
                         }
 
                         boolean[] filtros = new boolean[HEADERS.length];
-                        for (int i = 0; i < filtros.length; i++)
+                        for (int i = 0; i < filtros.length; i++) {
                                 filtros[i] = true;
+                        }
                         filtros[0] = false;
 
                         if (ultimaFila >= filaDatosIni) {
@@ -843,10 +1083,53 @@ public class ReporteHorasExtraConsolidadoService {
                 return extraerHora(timbre);
         }
 
-        private Color getColorTimbre(String valor, Color porDefecto, Color colorFT) {
-                if ("FT".equals(valor))
+        private String obtenerTextoEstado(MarcaHorasExtraDTO marca, String origen, Boolean control) {
+                if (marca == null) {
+                        return "";
+                }
+
+                String estadoTimbre = safe(marca.getEstado_timbre());
+
+                if (!estadoTimbre.isEmpty()) {
+                        return estadoTimbre;
+                }
+
+                if ("L".equals(origen) || "FD".equals(origen) || "DHA".equals(origen)) {
+                        return origen;
+                }
+
+                return (control != null && control) ? "FT" : "SCA";
+        }
+
+        private Color getColorEstado(
+                        String valor,
+                        Color porDefecto,
+                        Color colorFT,
+                        Color colorPermiso,
+                        Color colorVacaciones) {
+
+                String estado = safe(valor);
+
+                if ("FT".equalsIgnoreCase(estado)) {
                         return colorFT;
+                }
+                if ("P".equalsIgnoreCase(estado)) {
+                        return colorPermiso;
+                }
+                if ("V".equalsIgnoreCase(estado)) {
+                        return colorVacaciones;
+                }
                 return porDefecto;
         }
-        
+
+        private String obtenerTextoTimbre(MarcaHorasExtraDTO marca) {
+                if (marca == null) {
+                        return "";
+                }
+                if (marca.getFecha_hora_timbre() != null && !marca.getFecha_hora_timbre().trim().isEmpty()) {
+                        return extraerHora(marca.getFecha_hora_timbre());
+                }
+                return "";
+        }
+
 }
