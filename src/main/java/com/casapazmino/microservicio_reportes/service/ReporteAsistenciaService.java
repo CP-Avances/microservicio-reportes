@@ -35,23 +35,23 @@ public class ReporteAsistenciaService {
     final float[] WIDTHS_7 = { 2.2f, 2.2f, 2.2f, 2.6f, 2.2f, 2.2f, 2.2f };
     final float[] WIDTHS_2 = { 8, 2 };
 
-    final float[] WIDTHS_20 = {
+    final float[] WIDTHS_22 = {
         0.6f, 1.4f,
-        1.35f, 1.35f, 0.55f,
-        1.35f, 1.35f, 0.55f,
-        1.35f, 1.35f, 0.55f,
-        1.35f, 1.35f, 0.55f,
+        1.30f, 1.30f, 0.65f,
+        1.30f, 1.30f, 0.65f,
+        1.30f, 1.30f, 0.65f,
+        1.30f, 1.30f, 0.65f,
         1.1f, 1.7f,
-        1.5f, 1.5f,
-        1.6f, 2.8f
+        1.35f, 1.35f, 1.35f,
+        1.7f, 1.5f, 2.8f
     };
 
-final Color COLOR_FALTA_TIMBRE = new Color(0xE05555);      // rojo ligeramente suavizado
-final Color COLOR_ATRASO = new Color(0xE6DA55);            // amarillo menos chillón
-final Color COLOR_SALIDA_ANTICIPADA = new Color(0x5AA3E6); // azul un poco más suave
-final Color COLOR_EXCESO_ALIMENTACION = new Color(0x66E055); // verde menos intenso
-final Color COLOR_PERMISO = new Color(0xD1A15A);           // naranja/café apenas suavizado
-final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos saturado
+    final Color COLOR_FALTA_TIMBRE = new Color(0xE05555); // rojo ligeramente suavizado
+    final Color COLOR_ATRASO = new Color(0xE6DA55); // amarillo menos chillón
+    final Color COLOR_SALIDA_ANTICIPADA = new Color(0x5AA3E6); // azul un poco más suave
+    final Color COLOR_EXCESO_ALIMENTACION = new Color(0x66E055); // verde menos intenso
+    final Color COLOR_PERMISO = new Color(0xD1A15A); // naranja/café apenas suavizado
+    final Color COLOR_VACACIONES = new Color(0xA995D1); // lila un poco menos saturado
     final Font fontHeaderCompacto = ReporteUtil.fuenteEncabezadoCompacto();
     final Font fontTextoCompacto = ReporteUtil.fuenteTextoCompacto();
 
@@ -143,6 +143,8 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
             double totalSalidasAnticipadas = 0;
             double totalAlimentacionTomado = 0;
             double totalAlimentacionAsignado = 0;
+            double totalExcesoAlimentacion = 0;
+            double totalPlanificado = 0;
             double totalLaborado = 0;
 
             PdfPTable infoEmpleado = new PdfPTable(3);
@@ -166,9 +168,9 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
             tablaContenedora.setSpacingAfter(5f);
             document.add(tablaContenedora);
 
-            PdfPTable encabezado = new PdfPTable(20);
+            PdfPTable encabezado = new PdfPTable(22);
             encabezado.setWidthPercentage(100);
-            encabezado.setWidths(WIDTHS_20);
+            encabezado.setWidths(WIDTHS_22);
 
             encabezado.addCell(ReporteUtil.crearCeldaCompacta("N°", fontHeaderCompacto, colorPrincipal, 2, 1));
             encabezado.addCell(ReporteUtil.crearCeldaCompacta("FECHA", fontHeaderCompacto, colorPrincipal, 2, 1));
@@ -183,9 +185,11 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
             encabezado.addCell(ReporteUtil.crearCeldaCompacta("ATRASO", fontHeaderCompacto, colorPrincipal, 2, 1));
             encabezado
                 .addCell(ReporteUtil.crearCeldaCompacta("SALIDA ANTICIPADA", fontHeaderCompacto, colorPrincipal, 2, 1));
-
             encabezado
-                .addCell(ReporteUtil.crearCeldaCompacta("T. ALIMENTACIÓN", fontHeaderCompacto, colorPrincipal, 1, 2));
+                .addCell(ReporteUtil.crearCeldaCompacta("T. ALIMENTACIÓN", fontHeaderCompacto, colorPrincipal, 1, 3));
+            encabezado
+                .addCell(
+                    ReporteUtil.crearCeldaCompacta("TIEMPO PLANIFICADO", fontHeaderCompacto, colorPrincipal, 2, 1));
             encabezado
                 .addCell(ReporteUtil.crearCeldaCompacta("TIEMPO LABORADO", fontHeaderCompacto, colorPrincipal, 2, 1));
             encabezado
@@ -199,12 +203,13 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
 
             encabezado.addCell(ReporteUtil.crearCeldaCompacta("ASIGNADO", fontHeaderCompacto, colorPrincipal));
             encabezado.addCell(ReporteUtil.crearCeldaCompacta("TOMADO", fontHeaderCompacto, colorPrincipal));
+            encabezado.addCell(ReporteUtil.crearCeldaCompacta("EXCESO", fontHeaderCompacto, colorPrincipal));
             encabezado.setSpacingAfter(0f);
             document.add(encabezado);
 
-            PdfPTable tablaData = new PdfPTable(20);
+            PdfPTable tablaData = new PdfPTable(22);
             tablaData.setWidthPercentage(100);
-            tablaData.setWidths(WIDTHS_20);
+            tablaData.setWidths(WIDTHS_22);
 
             int contador = 1;
             if (emp.getTLaborado() != null) {
@@ -246,12 +251,23 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
 
                 boolean alimentacionEsPermiso = "P".equals(inicioEstado) || "P".equals(finEstado);
 
-                Double minutosAsignadosAlim = inicioMarca != null ? inicioMarca.getMinutos_alimentacion() : null;
+                Double minutosAsignadosAlim = (inicioMarca != null && inicioMarca.getMinutos_alimentacion() != null)
+                    ? inicioMarca.getMinutos_alimentacion()
+                    : 0d;
+
                 Double minLaborados = reg.getMinLaborados() != null ? reg.getMinLaborados() : 0d;
+
+                Double minPlanificadosBase = reg.getMinPlanificados() != null ? reg.getMinPlanificados() : 0d;
+                Double minPlanificados = minPlanificadosBase - minutosAsignadosAlim;
+
+                if (minPlanificados < 0) {
+                  minPlanificados = 0d;
+                }
+
                 Double minAtrasos = reg.getMinAtrasos() != null ? reg.getMinAtrasos() : 0d;
                 Double minSalidas = reg.getMinSalidasAnticipadas() != null ? reg.getMinSalidasAnticipadas() : 0d;
                 Double minAlimentacion = reg.getMinAlimentacion() != null ? reg.getMinAlimentacion() : 0d;
-
+                Double minExcesoAlimentacion = calcularExcesoAlimentacion(minutosAsignadosAlim, minAlimentacion);
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(String.valueOf(contador), fontTextoCompacto, fondo));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
@@ -296,6 +312,10 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
                     fontTextoCompacto,
                     minSalidas > 0 ? COLOR_SALIDA_ANTICIPADA : fondo));
 
+                boolean tieneExcesoAlimentacion = !alimentacionEsPermiso
+                    && minutosAsignadosAlim != null
+                    && minAlimentacion > minutosAsignadosAlim;
+
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     convertirMinutosATiempo(minutosAsignadosAlim),
                     fontTextoCompacto,
@@ -304,11 +324,17 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     convertirMinutosATiempo(minAlimentacion),
                     fontTextoCompacto,
-                    (!alimentacionEsPermiso
-                        && minutosAsignadosAlim != null
-                        && minAlimentacion > minutosAsignadosAlim)
-                            ? COLOR_EXCESO_ALIMENTACION
-                            : fondo));
+                    tieneExcesoAlimentacion ? COLOR_EXCESO_ALIMENTACION : fondo));
+
+                tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                    convertirMinutosATiempo(minExcesoAlimentacion),
+                    fontTextoCompacto,
+                    tieneExcesoAlimentacion ? COLOR_EXCESO_ALIMENTACION : fondo));
+
+                tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                    convertirMinutosATiempo(minPlanificados),
+                    fontTextoCompacto,
+                    fondo));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     convertirMinutosATiempo(minLaborados),
@@ -316,12 +342,15 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
                     fondo));
 
                 tablaData.addCell(ReporteUtil.crearCeldaObservacionConEstado(
-                safe(reg.getObservaciones()),
-                fondo));
+                    safe(reg.getObservaciones()),
+                    fondo));
+
                 totalAtrasos += minAtrasos;
                 totalSalidasAnticipadas += minSalidas;
                 totalAlimentacionTomado += minAlimentacion;
                 totalAlimentacionAsignado += minutosAsignadosAlim != null ? minutosAsignadosAlim : 0;
+                totalExcesoAlimentacion += minExcesoAlimentacion != null ? minExcesoAlimentacion : 0;
+                totalPlanificado += minPlanificados;
                 totalLaborado += minLaborados;
 
                 contador++;
@@ -343,6 +372,10 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
                 fontTextoCompacto, Color.WHITE));
             tablaData.addCell(ReporteUtil.crearCeldaCompacta(convertirMinutosATiempo(totalAlimentacionTomado),
                 fontTextoCompacto, Color.WHITE));
+            tablaData.addCell(ReporteUtil.crearCeldaCompacta(convertirMinutosATiempo(totalExcesoAlimentacion),
+                fontTextoCompacto, Color.WHITE));
+            tablaData.addCell(ReporteUtil.crearCeldaCompacta(convertirMinutosATiempo(totalPlanificado),
+                fontTextoCompacto, Color.WHITE));
             tablaData.addCell(
                 ReporteUtil.crearCeldaCompacta(convertirMinutosATiempo(totalLaborado), fontTextoCompacto, Color.WHITE));
             tablaData.addCell(ReporteUtil.crearCeldaCompacta("", fontTextoCompacto, Color.WHITE));
@@ -357,8 +390,10 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
       return baos.toByteArray();
 
     } catch (IllegalArgumentException e) {
+      System.out.println("Error en solicitud: " + e.getMessage());
       throw e;
     } catch (Exception e) {
+      System.out.println("Error al generar ResumenAsistencia.pdf: " + e.getMessage());
       throw new ReportBuildException("No se pudo generar ResumenAsistencia.pdf", e);
     } finally {
       if (document != null && document.isOpen()) {
@@ -387,7 +422,7 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
     final int FILA_ENCABEZADO = 5;
 
     final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
-    final int MERGE_COL_INI = 1, MERGE_COL_FIN = 26;
+    final int MERGE_COL_INI = 1, MERGE_COL_FIN = 28;
 
     final String[] HEADERS = {
         "ITEM",
@@ -420,7 +455,9 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
         "ATRASO",
         "SALIDA ANTICIPADA",
         "TIEMPO ALIMENTACIÓN ASIGNADO",
-        "TIEMPO ALIMENTACIÓN HH:MM:SS",
+        "TIEMPO ALIMENTACIÓN TOMADO HH:MM:SS",
+        "TIEMPO ALIMENTACIÓN EXCESO HH:MM:SS",
+        "TIEMPO PLANIFICADO HH:MM:SS",
         "TIEMPO LABORADO HH:MM:SS",
         "OBSERVACIONES"
     };
@@ -431,7 +468,7 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
         18, 18, 12,
         18, 18, 12,
         14, 14, 12,
-        14, 18, 18, 18, 18,
+        14, 18, 18, 18, 18, 18, 18,
         45
     };
 
@@ -519,12 +556,23 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
               String salidaTimbre = obtenerTextoTimbre(salida);
               String salidaEstado = obtenerTextoEstado(salida, safe(t.getOrigen()), t.getControl());
 
-              boolean control = t.getControl() != null ? t.getControl() : false;
-              Double minsLaborados = control ? t.getMinLaborados() : t.getMinPlanificados();
-              Double asignMin = "EAS".equals(safe(t.getTipo())) && inicio != null
-                  ? inicio.getMinutos_alimentacion()
-                  : 0d;
+              Double minsLaborados = t.getMinLaborados() != null ? t.getMinLaborados() : 0d;
 
+              Double asignMin = ("EAS".equals(safe(t.getTipo()))
+                  && inicio != null
+                  && inicio.getMinutos_alimentacion() != null)
+                      ? inicio.getMinutos_alimentacion()
+                      : 0d;
+
+              Double minsPlanificadosBase = t.getMinPlanificados() != null ? t.getMinPlanificados() : 0d;
+              Double minsPlanificados = minsPlanificadosBase - asignMin;
+
+              if (minsPlanificados < 0) {
+                minsPlanificados = 0d;
+              }
+
+              Double minTomadoAlimentacion = t.getMinAlimentacion() != null ? t.getMinAlimentacion() : 0d;
+              Double minExcesoAlimentacion = calcularExcesoAlimentacion(asignMin, minTomadoAlimentacion);
               UtilExcel.establecerValor(r, col++, item++, null);
               UtilExcel.establecerTexto(r, col++, safe(usu.getIdentificacion()), null);
               UtilExcel.establecerTexto(r, col++, safe(usu.getCodigo()), null);
@@ -555,7 +603,9 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
               UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(t.getMinAtrasos()), null);
               UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(t.getMinSalidasAnticipadas()), null);
               UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(asignMin), null);
-              UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(t.getMinAlimentacion()), null);
+              UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(minTomadoAlimentacion), null);
+              UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(minExcesoAlimentacion), null);
+              UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(minsPlanificados), null);
               UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(minsLaborados), null);
               UtilExcel.establecerTexto(r, col++, safe(t.getObservaciones()), null);
             }
@@ -676,6 +726,17 @@ final Color COLOR_VACACIONES = new Color(0xA995D1);        // lila un poco menos
       return colorVacaciones;
     }
     return porDefecto;
+  }
+
+  private Double calcularExcesoAlimentacion(Double minutosAsignados, Double minutosTomados) {
+    double asignado = minutosAsignados != null ? minutosAsignados : 0d;
+    double tomado = minutosTomados != null ? minutosTomados : 0d;
+
+    if (tomado > asignado) {
+      return tomado - asignado;
+    }
+
+    return 0d;
   }
 
 }
