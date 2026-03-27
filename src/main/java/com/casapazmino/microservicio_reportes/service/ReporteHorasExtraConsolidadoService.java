@@ -1,7 +1,6 @@
 package com.casapazmino.microservicio_reportes.service;
 
 import com.casapazmino.microservicio_reportes.model.HorasExtraConsolidado.*;
-import com.casapazmino.microservicio_reportes.model.ResumenAsistencia.MarcaDTO;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
@@ -25,10 +24,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ReporteHorasExtraConsolidadoService {
 
         public byte[] generarReportePDF(ReporteHorasExtraConsolidadoRequest request) {
-                final float[] WIDTHS_25 = {
+                final float[] WIDTHS_27 = {
                                 0.7f, 1.8f, // N°, FECHA
 
-                                1.3f, 1.3f, 0.9f, // ENTRADA: HORARIO, TIMBRE, EST
+                                1.3f, 1.3f, 0.9f, // ENTRADA
                                 1.3f, 1.3f, 0.9f, // INICIO ALIMENTACIÓN
                                 1.3f, 1.3f, 0.9f, // FIN ALIMENTACIÓN
                                 1.3f, 1.3f, 0.9f, // SALIDA
@@ -36,7 +35,8 @@ public class ReporteHorasExtraConsolidadoService {
                                 1.3f, // ATRASO
                                 1.5f, // SALIDA ANTICIPADA
 
-                                1.3f, 1.3f, // T. ALIMENTACIÓN: ASIGNADO, TOMADO
+                                1.3f, 1.3f, 1.3f, // T. ALIMENTACIÓN: ASIGNADO, TOMADO, EXCESO
+                                1.5f, // TIEMPO PLANIFICADO
                                 1.5f, // TIEMPO LABORADO
 
                                 1.4f, // HORAS EXTRA
@@ -48,10 +48,10 @@ public class ReporteHorasExtraConsolidadoService {
                                 2.0f // OBSERVACIONES
                 };
 
-                final float[] WIDTHS_26 = {
+                final float[] WIDTHS_28 = {
                                 0.7f, 1.8f, // N°, FECHA
 
-                                1.3f, 1.3f, 0.9f, // ENTRADA: HORARIO, TIMBRE, EST
+                                1.3f, 1.3f, 0.9f, // ENTRADA
                                 1.3f, 1.3f, 0.9f, // INICIO ALIMENTACIÓN
                                 1.3f, 1.3f, 0.9f, // FIN ALIMENTACIÓN
                                 1.3f, 1.3f, 0.9f, // SALIDA
@@ -59,7 +59,8 @@ public class ReporteHorasExtraConsolidadoService {
                                 1.3f, // ATRASO
                                 1.5f, // SALIDA ANTICIPADA
 
-                                1.3f, 1.3f, // T. ALIMENTACIÓN: ASIGNADO, TOMADO
+                                1.3f, 1.3f, 1.3f, // T. ALIMENTACIÓN: ASIGNADO, TOMADO, EXCESO
+                                1.5f, // TIEMPO PLANIFICADO
                                 1.5f, // TIEMPO LABORADO
 
                                 1.4f, // HORAS EXTRA
@@ -155,8 +156,8 @@ public class ReporteHorasExtraConsolidadoService {
 
                         document.add(tablaLeyenda);
 
-                        int totalColumnasPdf = mostrarMonetizacion ? 26 : 25;
-                        float[] widthsPdf = mostrarMonetizacion ? WIDTHS_26 : WIDTHS_25;
+                        int totalColumnasPdf = mostrarMonetizacion ? 28 : 27;
+                        float[] widthsPdf = mostrarMonetizacion ? WIDTHS_28 : WIDTHS_27;
 
                         AtomicInteger totalRegistros = new AtomicInteger();
                         if (request.getGrupos() != null) {
@@ -208,6 +209,8 @@ public class ReporteHorasExtraConsolidadoService {
                                         double totalSalidasAnticipadas = 0;
                                         double totalAlimentacionTomado = 0;
                                         double totalAlimentacionAsignado = 0;
+                                        double totalExcesoAlimentacion = 0;
+                                        double totalPlanificado = 0;
                                         double totalLaborado = 0;
                                         double totalHorasExtra = 0;
                                         double totalMonetizado = 0;
@@ -262,7 +265,9 @@ public class ReporteHorasExtraConsolidadoService {
                                         encabezado.addCell(ReporteUtil.crearCeldaCompacta("SALIDA ANTICIPADA",
                                                         ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
                                         encabezado.addCell(ReporteUtil.crearCeldaCompacta("T. ALIMENTACIÓN",
-                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 1, 2));
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 1, 3));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("TIEMPO PLANIFICADO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
                                         encabezado.addCell(ReporteUtil.crearCeldaCompacta("TIEMPO LABORADO",
                                                         ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
 
@@ -321,6 +326,8 @@ public class ReporteHorasExtraConsolidadoService {
                                         encabezado.addCell(ReporteUtil.crearCeldaCompacta("ASIGNADO",
                                                         ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
                                         encabezado.addCell(ReporteUtil.crearCeldaCompacta("TOMADO",
+                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
+                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("EXCESO",
                                                         ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal));
 
                                         encabezado.setSpacingAfter(0f);
@@ -514,9 +521,26 @@ public class ReporteHorasExtraConsolidadoService {
                                                                                 .getMinutos_alimentacion();
                                                         }
 
+                                                        Double minAlimentacion = reg.getMinAlimentacion() != null
+                                                                        ? reg.getMinAlimentacion()
+                                                                        : 0d;
+
+                                                        Double minExcesoAlimentacion = calcularExcesoAlimentacion(
+                                                                        minAsignado, minAlimentacion);
+
+                                                        Double minPlanificadosBase = reg.getMinPlanificados() != null
+                                                                        ? reg.getMinPlanificados()
+                                                                        : 0d;
+                                                        Double minPlanificados = minPlanificadosBase
+                                                                        - (minAsignado != null ? minAsignado : 0d);
+
+                                                        if (minPlanificados < 0) {
+                                                                minPlanificados = 0d;
+                                                        }
+
                                                         boolean alimentacionEsPermiso = "P".equalsIgnoreCase(iaEstado)
                                                                         || "P".equalsIgnoreCase(faEstado);
-
+                                                        ///////////
                                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         esEAS ? convertirMinutosATiempo(minAsignado)
                                                                                         : "",
@@ -524,22 +548,38 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         fondo));
 
                                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
-                                                                        esEAS ? convertirMinutosATiempo(
-                                                                                        reg.getMinAlimentacion()) : "",
+                                                                        esEAS ? convertirMinutosATiempo(minAlimentacion)
+                                                                                        : "",
                                                                         ReporteUtil.fuenteTextoCompacto(),
                                                                         (esEAS
                                                                                         && !alimentacionEsPermiso
                                                                                         && minAsignado != null
-                                                                                        && reg.getMinAlimentacion() != null
-                                                                                        && reg.getMinAlimentacion() > minAsignado)
+                                                                                        && minAlimentacion != null
+                                                                                        && minAlimentacion > minAsignado)
                                                                                                         ? COLOR_EXCESO_ALIMENTACION
                                                                                                         : fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        esEAS ? convertirMinutosATiempo(
+                                                                                        minExcesoAlimentacion) : "",
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        (esEAS
+                                                                                        && !alimentacionEsPermiso
+                                                                                        && minExcesoAlimentacion != null
+                                                                                        && minExcesoAlimentacion > 0)
+                                                                                                        ? COLOR_EXCESO_ALIMENTACION
+                                                                                                        : fondo));
+
+                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                                        convertirMinutosATiempo(minPlanificados),
+                                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                                        fondo));
 
                                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         convertirMinutosATiempo(reg.getMinLaborados()),
                                                                         ReporteUtil.fuenteTextoCompacto(),
                                                                         fondo));
-
+                                                        /////////
                                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         safe(detalle.getHorasExtra()),
                                                                         ReporteUtil.fuenteTextoCompacto(),
@@ -578,9 +618,11 @@ public class ReporteHorasExtraConsolidadoService {
 
                                                         totalAtrasos += nz(reg.getMinAtrasos());
                                                         totalSalidasAnticipadas += nz(reg.getMinSalidasAnticipadas());
-                                                        totalAlimentacionTomado += esEAS ? nz(reg.getMinAlimentacion())
-                                                                        : 0d;
+                                                        totalAlimentacionTomado += esEAS ? nz(minAlimentacion) : 0d;
                                                         totalAlimentacionAsignado += esEAS ? nz(minAsignado) : 0d;
+                                                        totalExcesoAlimentacion += esEAS ? nz(minExcesoAlimentacion)
+                                                                        : 0d;
+                                                        totalPlanificado += nz(minPlanificados);
                                                         totalLaborado += nz(reg.getMinLaborados());
                                                         totalHorasExtra += nz(detalle.getMinutosHorasExtra());
                                                         totalMonetizado += nz(detalle.getTotalAPagar());
@@ -591,8 +633,13 @@ public class ReporteHorasExtraConsolidadoService {
                                         }
 
                                         ///////////////////////
-                                        int columnasVaciasTotal = 19;
+                                        int columnasVaciasTotal = 13;
 
+                                        // ===============================
+                                        // FILA 1 Y 2 CON CELDA TOTAL rowspan=2
+                                        // ===============================
+
+                                        // FILA 1: vacías antes de TOTAL
                                         for (int i = 0; i < columnasVaciasTotal; i++) {
                                                 PdfPCell vacia = ReporteUtil.crearCeldaCompacta(
                                                                 "",
@@ -602,43 +649,125 @@ public class ReporteHorasExtraConsolidadoService {
                                                 tablaData.addCell(vacia);
                                         }
 
-                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                        // Celda TOTAL ocupando 2 filas
+                                        PdfPCell celdaTotal = ReporteUtil.crearCeldaCompacta(
                                                         "TOTAL",
+                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                        Color.WHITE);
+                                        celdaTotal.setRowspan(2);
+                                        celdaTotal.setNoWrap(true);
+                                        celdaTotal.setHorizontalAlignment(Element.ALIGN_CENTER);
+                                        celdaTotal.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                                        tablaData.addCell(celdaTotal);
+
+                                        // Completar resto de la FILA 1 con vacías
+                                        int columnasDespuesDeTotal = mostrarMonetizacion ? 14 : 13;
+                                        for (int i = 0; i < columnasDespuesDeTotal; i++) {
+                                                PdfPCell vacia = ReporteUtil.crearCeldaCompacta(
+                                                                "",
+                                                                ReporteUtil.fuenteTextoCompacto(),
+                                                                Color.WHITE);
+                                                vacia.setBorder(Rectangle.NO_BORDER);
+                                                tablaData.addCell(vacia);
+                                        }
+
+                                        // ===============================
+                                        // FILA 2: vacías antes de ATRASO
+                                        // ===============================
+                                        for (int i = 0; i < columnasVaciasTotal; i++) {
+                                                PdfPCell vacia = ReporteUtil.crearCeldaCompacta(
+                                                                "",
+                                                                ReporteUtil.fuenteTextoCompacto(),
+                                                                Color.WHITE);
+                                                vacia.setBorder(Rectangle.NO_BORDER);
+                                                tablaData.addCell(vacia);
+                                        }
+
+                                        // ATRASO
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        convertirMinutosATiempo(totalAtrasos),
                                                         ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
 
+                                        // SALIDA ANTICIPADA
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        convertirMinutosATiempo(totalSalidasAnticipadas),
+                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                        Color.WHITE));
+
+                                        // ASIGNADO
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        convertirMinutosATiempo(totalAlimentacionAsignado),
+                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                        Color.WHITE));
+
+                                        // TOMADO
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        convertirMinutosATiempo(totalAlimentacionTomado),
+                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                        Color.WHITE));
+
+                                        // EXCESO
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        convertirMinutosATiempo(totalExcesoAlimentacion),
+                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                        Color.WHITE));
+
+                                        // TIEMPO PLANIFICADO
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        convertirMinutosATiempo(totalPlanificado),
+                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                        Color.WHITE));
+
+                                        // TIEMPO LABORADO
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        convertirMinutosATiempo(totalLaborado),
+                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                        Color.WHITE));
+
+                                        // HORAS EXTRA
                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                         convertirMinutosATiempo(totalHorasExtra),
                                                         ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
 
+                                        // MINUTOS
                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                         formatDouble(totalHorasExtra),
                                                         ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
 
+                                        // TIPO %
                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                         "",
                                                         ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
 
+                                        // PORCENTAJE
+                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
+                                                        "",
+                                                        ReporteUtil.fuenteTextoCompacto(),
+                                                        Color.WHITE));
+
+                                        // TIPO RECARGO
                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                         "",
                                                         ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
 
                                         if (mostrarMonetizacion) {
+                                                // VALOR HE
                                                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                 formatMoney(totalMonetizado),
                                                                 ReporteUtil.fuenteTextoCompacto(),
                                                                 Color.WHITE));
                                         }
 
+                                        // OBSERVACIONES
                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                         "",
                                                         ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
-
                                         //// ///////
                                         tablaData.setSpacingAfter(10f);
                                         document.add(tablaData);
@@ -680,7 +809,7 @@ public class ReporteHorasExtraConsolidadoService {
 
                 final boolean mostrarMonetizacion = request.isMostrarMonetizacion();
 
-                final String[] HEADERS_33 = {
+                final String[] HEADERS_35 = {
                                 "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "CIUDAD", "SUCURSAL", "RÉGIMEN",
                                 "DEPARTAMENTO", "CARGO", "FECHA",
 
@@ -691,13 +820,15 @@ public class ReporteHorasExtraConsolidadoService {
 
                                 "ATRASO", "SALIDA ANTICIPADA",
                                 "TIEMPO ALIMENTACIÓN ASIGNADO", "TIEMPO ALIMENTACIÓN",
+                                "TIEMPO ALIMENTACIÓN EXCESO",
+                                "TIEMPO PLANIFICADO",
                                 "TIEMPO LABORADO",
 
                                 "HORAS EXTRA", "MINUTOS", "TIPO %", "PORCENTAJE", "TIPO RECARGO",
                                 "OBSERVACIONES"
                 };
 
-                final String[] HEADERS_34 = {
+                final String[] HEADERS_36 = {
                                 "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "CIUDAD", "SUCURSAL", "RÉGIMEN",
                                 "DEPARTAMENTO", "CARGO", "FECHA",
 
@@ -708,6 +839,8 @@ public class ReporteHorasExtraConsolidadoService {
 
                                 "ATRASO", "SALIDA ANTICIPADA",
                                 "TIEMPO ALIMENTACIÓN ASIGNADO", "TIEMPO ALIMENTACIÓN",
+                                "TIEMPO ALIMENTACIÓN EXCESO",
+                                "TIEMPO PLANIFICADO",
                                 "TIEMPO LABORADO",
 
                                 "HORAS EXTRA", "MINUTOS", "TIPO %", "PORCENTAJE", "TIPO RECARGO",
@@ -715,9 +848,9 @@ public class ReporteHorasExtraConsolidadoService {
                                 "OBSERVACIONES"
                 };
 
-                final String[] HEADERS = mostrarMonetizacion ? HEADERS_34 : HEADERS_33;
+                final String[] HEADERS = mostrarMonetizacion ? HEADERS_36 : HEADERS_35;
 
-                final int[] ANCHOS_33 = {
+                final int[] ANCHOS_35 = {
                                 10, 18, 14, 24, 18, 18, 18,
                                 20, 18, 18,
 
@@ -727,14 +860,15 @@ public class ReporteHorasExtraConsolidadoService {
                                 18, 18, 12,
 
                                 16, 18,
-                                22, 22,
+                                22, 22, 22,
+                                18,
                                 18,
 
                                 18, 14, 20, 16, 22,
                                 28
                 };
 
-                final int[] ANCHOS_34 = {
+                final int[] ANCHOS_36 = {
                                 10, 18, 14, 24, 18, 18, 18,
                                 20, 18, 18,
 
@@ -744,7 +878,8 @@ public class ReporteHorasExtraConsolidadoService {
                                 18, 18, 12,
 
                                 16, 18,
-                                22, 22,
+                                22, 22, 22,
+                                18,
                                 18,
 
                                 18, 14, 20, 16, 22,
@@ -752,7 +887,7 @@ public class ReporteHorasExtraConsolidadoService {
                                 28
                 };
 
-                final int[] ANCHOS = mostrarMonetizacion ? ANCHOS_34 : ANCHOS_33;
+                final int[] ANCHOS = mostrarMonetizacion ? ANCHOS_36 : ANCHOS_35;
 
                 try (XSSFWorkbook libro = new XSSFWorkbook();
                                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -874,6 +1009,22 @@ public class ReporteHorasExtraConsolidadoService {
                                                                 minAsignado = reg.getInicioAlimentacion()
                                                                                 .getMinutos_alimentacion();
                                                         }
+                                                        Double minAlimentacion = reg.getMinAlimentacion() != null
+                                                                        ? reg.getMinAlimentacion()
+                                                                        : 0d;
+
+                                                        Double minExcesoAlimentacion = calcularExcesoAlimentacion(
+                                                                        minAsignado, minAlimentacion);
+
+                                                        Double minPlanificadosBase = reg.getMinPlanificados() != null
+                                                                        ? reg.getMinPlanificados()
+                                                                        : 0d;
+                                                        Double minPlanificados = minPlanificadosBase
+                                                                        - (minAsignado != null ? minAsignado : 0d);
+
+                                                        if (minPlanificados < 0) {
+                                                                minPlanificados = 0d;
+                                                        }
 
                                                         UtilExcel.establecerValor(r, col++, item++, null);
                                                         UtilExcel.establecerTexto(r, col++,
@@ -921,22 +1072,30 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         convertirMinutosATiempo(
                                                                                         reg.getMinSalidasAnticipadas()),
                                                                         null);
-
+                                                        //////
                                                         UtilExcel.establecerTexto(r, col++,
                                                                         esEAS ? convertirMinutosATiempo(minAsignado)
                                                                                         : "",
                                                                         null);
+
                                                         UtilExcel.establecerTexto(r, col++,
-                                                                        esEAS
-                                                                                        ? convertirMinutosATiempo(
-                                                                                                        reg.getMinAlimentacion())
+                                                                        esEAS ? convertirMinutosATiempo(minAlimentacion)
                                                                                         : "",
+                                                                        null);
+
+                                                        UtilExcel.establecerTexto(r, col++,
+                                                                        esEAS ? convertirMinutosATiempo(
+                                                                                        minExcesoAlimentacion) : "",
+                                                                        null);
+
+                                                        UtilExcel.establecerTexto(r, col++,
+                                                                        convertirMinutosATiempo(minPlanificados),
                                                                         null);
 
                                                         UtilExcel.establecerTexto(r, col++,
                                                                         convertirMinutosATiempo(reg.getMinLaborados()),
                                                                         null);
-
+                                                        ///////////
                                                         UtilExcel.establecerTexto(r, col++,
                                                                         safe(detalle.getHorasExtra()), null);
                                                         UtilExcel.establecerTexto(r, col++,
@@ -1130,6 +1289,17 @@ public class ReporteHorasExtraConsolidadoService {
                         return extraerHora(marca.getFecha_hora_timbre());
                 }
                 return "";
+        }
+
+        private Double calcularExcesoAlimentacion(Double minutosAsignados, Double minutosTomados) {
+                double asignado = minutosAsignados != null ? minutosAsignados : 0d;
+                double tomado = minutosTomados != null ? minutosTomados : 0d;
+
+                if (tomado > asignado) {
+                        return tomado - asignado;
+                }
+
+                return 0d;
         }
 
 }
