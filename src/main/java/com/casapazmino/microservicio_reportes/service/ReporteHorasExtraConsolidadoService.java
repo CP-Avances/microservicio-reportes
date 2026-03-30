@@ -79,6 +79,7 @@ public class ReporteHorasExtraConsolidadoService {
                 final Color COLOR_EXCESO_ALIMENTACION = new Color(0x55EE44);
                 final Color COLOR_PERMISO = new Color(0xF6B26B);
                 final Color COLOR_VACACIONES = new Color(0xD9B8FF);
+                final Color COLOR_JUSTIFICACION_HORAS_EXTRAS = new Color(0x4DB6AC);
 
                 boolean mostrarMonetizacion = request.isMostrarMonetizacion();
 
@@ -373,8 +374,13 @@ public class ReporteHorasExtraConsolidadoService {
                                                                                         .getFecha_hora_horario()
                                                                                         : null);
                                                         String entradaTimbre = obtenerTextoTimbre(reg.getEntrada());
-                                                        String entradaEstado = obtenerTextoEstado(reg.getEntrada(),
-                                                                        reg.getOrigen(), reg.getControl());
+                                                        String entradaEstado = safe(detalle.getEstadoEntradaReporte())
+                                                                        .isEmpty()
+                                                                                        ? obtenerTextoEstado(reg
+                                                                                                        .getEntrada(),
+                                                                                                        reg.getOrigen(),
+                                                                                                        reg.getControl())
+                                                                                        : safe(detalle.getEstadoEntradaReporte());
 
                                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         entradaHorario,
@@ -390,7 +396,8 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         getColorEstado(entradaEstado, fondo,
                                                                                         COLOR_FALTA_TIMBRE,
                                                                                         COLOR_PERMISO,
-                                                                                        COLOR_VACACIONES)));
+                                                                                        COLOR_VACACIONES,
+                                                                                        COLOR_JUSTIFICACION_HORAS_EXTRAS)));
 
                                                         // =========================
                                                         // INICIO ALIMENTACIÓN
@@ -429,7 +436,8 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         getColorEstado(iaEstado, fondo,
                                                                                         COLOR_FALTA_TIMBRE,
                                                                                         COLOR_PERMISO,
-                                                                                        COLOR_VACACIONES)));
+                                                                                        COLOR_VACACIONES,
+                                                                                        COLOR_JUSTIFICACION_HORAS_EXTRAS)));
 
                                                         // =========================
                                                         // FIN ALIMENTACIÓN
@@ -445,10 +453,25 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         ? obtenerTextoTimbre(reg.getFinAlimentacion())
                                                                         : "";
 
+                                                        System.out.println("DEBUG DETALLE PDF >>> " +
+                                                                        "fecha="
+                                                                        + (reg.getEntrada() != null ? reg.getEntrada()
+                                                                                        .getFecha_horario() : "")
+                                                                        +
+                                                                        ", tipoRecargo=" + detalle.getTipoRecargo() +
+                                                                        ", estadoEntradaReporte="
+                                                                        + detalle.getEstadoEntradaReporte() +
+                                                                        ", estadoFinAlimentacionReporte="
+                                                                        + detalle.getEstadoFinAlimentacionReporte());
+
                                                         String faEstado = esEAS
-                                                                        ? obtenerTextoEstado(reg.getFinAlimentacion(),
-                                                                                        reg.getOrigen(),
-                                                                                        reg.getControl())
+                                                                        ? (safe(detalle.getEstadoFinAlimentacionReporte())
+                                                                                        .isEmpty()
+                                                                                                        ? obtenerTextoEstado(
+                                                                                                                        reg.getFinAlimentacion(),
+                                                                                                                        reg.getOrigen(),
+                                                                                                                        reg.getControl())
+                                                                                                        : safe(detalle.getEstadoFinAlimentacionReporte()))
                                                                         : "";
 
                                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
@@ -465,7 +488,8 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         getColorEstado(faEstado, fondo,
                                                                                         COLOR_FALTA_TIMBRE,
                                                                                         COLOR_PERMISO,
-                                                                                        COLOR_VACACIONES)));
+                                                                                        COLOR_VACACIONES,
+                                                                                        COLOR_JUSTIFICACION_HORAS_EXTRAS)));
 
                                                         // =========================
                                                         // SALIDA
@@ -492,15 +516,19 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         getColorEstado(salidaEstado, fondo,
                                                                                         COLOR_FALTA_TIMBRE,
                                                                                         COLOR_PERMISO,
-                                                                                        COLOR_VACACIONES)));
+                                                                                        COLOR_VACACIONES,
+                                                                                        COLOR_JUSTIFICACION_HORAS_EXTRAS)));
                                                         //
 
                                                         ///////
+                                                        boolean atrasoEsJHE = "JHE".equalsIgnoreCase(entradaEstado);
+
                                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         convertirMinutosATiempo(reg.getMinAtrasos()),
                                                                         ReporteUtil.fuenteTextoCompacto(),
                                                                         reg.getMinAtrasos() != null
                                                                                         && reg.getMinAtrasos() > 0
+                                                                                        && !atrasoEsJHE
                                                                                                         ? COLOR_ATRASO
                                                                                                         : fondo));
 
@@ -540,6 +568,7 @@ public class ReporteHorasExtraConsolidadoService {
 
                                                         boolean alimentacionEsPermiso = "P".equalsIgnoreCase(iaEstado)
                                                                         || "P".equalsIgnoreCase(faEstado);
+                                                        boolean alimentacionEsJHE = "JHE".equalsIgnoreCase(faEstado);
                                                         ///////////
                                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         esEAS ? convertirMinutosATiempo(minAsignado)
@@ -554,6 +583,7 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         (esEAS
                                                                                         && !alimentacionEsPermiso
                                                                                         && minAsignado != null
+                                                                                        && !alimentacionEsJHE
                                                                                         && minAlimentacion != null
                                                                                         && minAlimentacion > minAsignado)
                                                                                                         ? COLOR_EXCESO_ALIMENTACION
@@ -565,6 +595,7 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         ReporteUtil.fuenteTextoCompacto(),
                                                                         (esEAS
                                                                                         && !alimentacionEsPermiso
+                                                                                        && !alimentacionEsJHE
                                                                                         && minExcesoAlimentacion != null
                                                                                         && minExcesoAlimentacion > 0)
                                                                                                         ? COLOR_EXCESO_ALIMENTACION
@@ -616,11 +647,13 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         safe(reg.getObservaciones()),
                                                                         fondo));
 
-                                                        totalAtrasos += nz(reg.getMinAtrasos());
+                                                
+                                                       totalAtrasos += atrasoEsJHE ? 0d : nz(reg.getMinAtrasos());
                                                         totalSalidasAnticipadas += nz(reg.getMinSalidasAnticipadas());
                                                         totalAlimentacionTomado += esEAS ? nz(minAlimentacion) : 0d;
                                                         totalAlimentacionAsignado += esEAS ? nz(minAsignado) : 0d;
-                                                        totalExcesoAlimentacion += esEAS ? nz(minExcesoAlimentacion)
+                                                        totalExcesoAlimentacion += (esEAS && !alimentacionEsJHE)
+                                                                        ? nz(minExcesoAlimentacion)
                                                                         : 0d;
                                                         totalPlanificado += nz(minPlanificados);
                                                         totalLaborado += nz(reg.getMinLaborados());
@@ -951,10 +984,13 @@ public class ReporteHorasExtraConsolidadoService {
                                                                                                         .getFecha_hora_horario()
                                                                                         : null);
                                                         String entradaTimbre = obtenerTextoTimbre(reg.getEntrada());
-                                                        String entradaEstado = obtenerTextoEstado(
-                                                                        reg.getEntrada(),
-                                                                        reg.getOrigen(),
-                                                                        reg.getControl());
+                                                        String entradaEstado = safe(detalle.getEstadoEntradaReporte())
+                                                                        .isEmpty()
+                                                                                        ? obtenerTextoEstado(reg
+                                                                                                        .getEntrada(),
+                                                                                                        reg.getOrigen(),
+                                                                                                        reg.getControl())
+                                                                                        : safe(detalle.getEstadoEntradaReporte());
 
                                                         String iaHorario = esEAS
                                                                         ? extraerHora(reg
@@ -984,10 +1020,13 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         ? obtenerTextoTimbre(reg.getFinAlimentacion())
                                                                         : "";
                                                         String faEstado = esEAS
-                                                                        ? obtenerTextoEstado(
-                                                                                        reg.getFinAlimentacion(),
-                                                                                        reg.getOrigen(),
-                                                                                        reg.getControl())
+                                                                        ? (safe(detalle.getEstadoFinAlimentacionReporte())
+                                                                                        .isEmpty()
+                                                                                                        ? obtenerTextoEstado(
+                                                                                                                        reg.getFinAlimentacion(),
+                                                                                                                        reg.getOrigen(),
+                                                                                                                        reg.getControl())
+                                                                                                        : safe(detalle.getEstadoFinAlimentacionReporte()))
                                                                         : "";
 
                                                         String salidaHorario = extraerHora(
@@ -1265,7 +1304,8 @@ public class ReporteHorasExtraConsolidadoService {
                         Color porDefecto,
                         Color colorFT,
                         Color colorPermiso,
-                        Color colorVacaciones) {
+                        Color colorVacaciones,
+                        Color colorJHE) {
 
                 String estado = safe(valor);
 
@@ -1277,6 +1317,9 @@ public class ReporteHorasExtraConsolidadoService {
                 }
                 if ("V".equalsIgnoreCase(estado)) {
                         return colorVacaciones;
+                }
+                if ("JHE".equalsIgnoreCase(estado)) {
+                        return colorJHE;
                 }
                 return porDefecto;
         }

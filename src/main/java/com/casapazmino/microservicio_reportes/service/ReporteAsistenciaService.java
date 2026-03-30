@@ -52,6 +52,7 @@ public class ReporteAsistenciaService {
     final Color COLOR_EXCESO_ALIMENTACION = new Color(0x66E055); // verde menos intenso
     final Color COLOR_PERMISO = new Color(0xD1A15A); // naranja/café apenas suavizado
     final Color COLOR_VACACIONES = new Color(0xA995D1); // lila un poco menos saturado
+    final Color COLOR_JUSTIFICACION_HORAS_EXTRAS = new Color(0x4DB6AC);
     final Font fontHeaderCompacto = ReporteUtil.fuenteEncabezadoCompacto();
     final Font fontTextoCompacto = ReporteUtil.fuenteTextoCompacto();
 
@@ -249,7 +250,10 @@ public class ReporteAsistenciaService {
                 String salidaTimbre = obtenerTextoTimbre(salidaMarca);
                 String salidaEstado = obtenerTextoEstado(salidaMarca, reg.getOrigen(), reg.getControl());
 
+                /////////////////
                 boolean alimentacionEsPermiso = "P".equals(inicioEstado) || "P".equals(finEstado);
+                boolean alimentacionEsJHE = "JHE".equalsIgnoreCase(finEstado);
+                boolean atrasoEsJHE = "JHE".equalsIgnoreCase(entradaEstado);
 
                 Double minutosAsignadosAlim = (inicioMarca != null && inicioMarca.getMinutos_alimentacion() != null)
                     ? inicioMarca.getMinutos_alimentacion()
@@ -268,6 +272,9 @@ public class ReporteAsistenciaService {
                 Double minSalidas = reg.getMinSalidasAnticipadas() != null ? reg.getMinSalidasAnticipadas() : 0d;
                 Double minAlimentacion = reg.getMinAlimentacion() != null ? reg.getMinAlimentacion() : 0d;
                 Double minExcesoAlimentacion = calcularExcesoAlimentacion(minutosAsignadosAlim, minAlimentacion);
+
+                //////
+
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(String.valueOf(contador), fontTextoCompacto, fondo));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
@@ -279,33 +286,57 @@ public class ReporteAsistenciaService {
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     entradaEstado,
                     fontTextoCompacto,
-                    getColorEstado(entradaEstado, fondo, COLOR_FALTA_TIMBRE, COLOR_PERMISO, COLOR_VACACIONES)));
+                    getColorEstado(
+                        entradaEstado,
+                        fondo,
+                        COLOR_FALTA_TIMBRE,
+                        COLOR_PERMISO,
+                        COLOR_VACACIONES,
+                        COLOR_JUSTIFICACION_HORAS_EXTRAS)));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(inicioHorario, fontTextoCompacto, fondo));
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(inicioTimbre, fontTextoCompacto, fondo));
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     inicioEstado,
                     fontTextoCompacto,
-                    getColorEstado(inicioEstado, fondo, COLOR_FALTA_TIMBRE, COLOR_PERMISO, COLOR_VACACIONES)));
+                    getColorEstado(
+                        inicioEstado,
+                        fondo,
+                        COLOR_FALTA_TIMBRE,
+                        COLOR_PERMISO,
+                        COLOR_VACACIONES,
+                        COLOR_JUSTIFICACION_HORAS_EXTRAS)));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(finHorario, fontTextoCompacto, fondo));
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(finTimbre, fontTextoCompacto, fondo));
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     finEstado,
                     fontTextoCompacto,
-                    getColorEstado(finEstado, fondo, COLOR_FALTA_TIMBRE, COLOR_PERMISO, COLOR_VACACIONES)));
+                    getColorEstado(
+                        finEstado,
+                        fondo,
+                        COLOR_FALTA_TIMBRE,
+                        COLOR_PERMISO,
+                        COLOR_VACACIONES,
+                        COLOR_JUSTIFICACION_HORAS_EXTRAS)));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(salidaHorario, fontTextoCompacto, fondo));
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(salidaTimbre, fontTextoCompacto, fondo));
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     salidaEstado,
                     fontTextoCompacto,
-                    getColorEstado(salidaEstado, fondo, COLOR_FALTA_TIMBRE, COLOR_PERMISO, COLOR_VACACIONES)));
+                    getColorEstado(
+                        salidaEstado,
+                        fondo,
+                        COLOR_FALTA_TIMBRE,
+                        COLOR_PERMISO,
+                        COLOR_VACACIONES,
+                        COLOR_JUSTIFICACION_HORAS_EXTRAS)));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     convertirMinutosATiempo(minAtrasos),
                     fontTextoCompacto,
-                    minAtrasos > 0 ? COLOR_ATRASO : fondo));
+                    minAtrasos > 0 && !atrasoEsJHE ? COLOR_ATRASO : fondo));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     convertirMinutosATiempo(minSalidas),
@@ -313,6 +344,7 @@ public class ReporteAsistenciaService {
                     minSalidas > 0 ? COLOR_SALIDA_ANTICIPADA : fondo));
 
                 boolean tieneExcesoAlimentacion = !alimentacionEsPermiso
+                    && !alimentacionEsJHE
                     && minutosAsignadosAlim != null
                     && minAlimentacion > minutosAsignadosAlim;
 
@@ -345,11 +377,25 @@ public class ReporteAsistenciaService {
                     safe(reg.getObservaciones()),
                     fondo));
 
-                totalAtrasos += minAtrasos;
+                /*
+                 * totalAtrasos += minAtrasos;
+                 * totalSalidasAnticipadas += minSalidas;
+                 * totalAlimentacionTomado += minAlimentacion;
+                 * totalAlimentacionAsignado += minutosAsignadosAlim != null ?
+                 * minutosAsignadosAlim : 0;
+                 * totalExcesoAlimentacion += minExcesoAlimentacion != null ?
+                 * minExcesoAlimentacion : 0;
+                 * totalPlanificado += minPlanificados;
+                 * totalLaborado += minLaborados;
+                 */
+
+                totalAtrasos += atrasoEsJHE ? 0d : minAtrasos;
                 totalSalidasAnticipadas += minSalidas;
-                totalAlimentacionTomado += minAlimentacion;
+                totalAlimentacionTomado += tieneExcesoAlimentacion ? minAlimentacion : 0d;
                 totalAlimentacionAsignado += minutosAsignadosAlim != null ? minutosAsignadosAlim : 0;
-                totalExcesoAlimentacion += minExcesoAlimentacion != null ? minExcesoAlimentacion : 0;
+                totalExcesoAlimentacion += tieneExcesoAlimentacion && minExcesoAlimentacion != null
+                    ? minExcesoAlimentacion
+                    : 0d;
                 totalPlanificado += minPlanificados;
                 totalLaborado += minLaborados;
 
@@ -712,7 +758,8 @@ public class ReporteAsistenciaService {
       Color porDefecto,
       Color colorFT,
       Color colorPermiso,
-      Color colorVacaciones) {
+      Color colorVacaciones,
+      Color colorJHE) {
 
     String estado = safe(valor);
 
@@ -724,6 +771,9 @@ public class ReporteAsistenciaService {
     }
     if ("V".equalsIgnoreCase(estado)) {
       return colorVacaciones;
+    }
+    if ("JHE".equalsIgnoreCase(estado)) {
+      return colorJHE;
     }
     return porDefecto;
   }
