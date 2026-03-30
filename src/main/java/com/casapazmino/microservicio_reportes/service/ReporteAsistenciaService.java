@@ -724,6 +724,7 @@ public class ReporteAsistenciaService {
     String[] partes = fechaHora.split(" ");
     return partes.length > 1 ? partes[1] : "";
   }
+  
 
   private String obtenerTextoTimbre(MarcaDTO marca) {
     if (marca == null) {
