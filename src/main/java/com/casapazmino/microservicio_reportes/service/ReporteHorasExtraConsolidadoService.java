@@ -79,7 +79,7 @@ public class ReporteHorasExtraConsolidadoService {
                 final Color COLOR_EXCESO_ALIMENTACION = new Color(0x55EE44);
                 final Color COLOR_PERMISO = new Color(0xF6B26B);
                 final Color COLOR_VACACIONES = new Color(0xD9B8FF);
-                final Color COLOR_JUSTIFICACION_HORAS_EXTRAS = new Color(0x4DB6AC);
+                final Color COLOR_JUSTIFICACION_HORAS_EXTRAS = new Color(0x09BDEB);
 
                 boolean mostrarMonetizacion = request.isMostrarMonetizacion();
 
@@ -114,11 +114,11 @@ public class ReporteHorasExtraConsolidadoService {
                         Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
                         Color zebraColor = ReporteUtil.colorZebraClaro();
 
-                        PdfPTable tablaLeyenda = new PdfPTable(7);
+                        PdfPTable tablaLeyenda = new PdfPTable(8);
                         tablaLeyenda.setWidthPercentage(100);
                         tablaLeyenda.setSpacingBefore(5f);
                         tablaLeyenda.setSpacingAfter(8f);
-                        tablaLeyenda.setWidths(new float[] { 1.6f, 1.5f, 1.5f, 2.0f, 2.2f, 1.4f, 1.6f });
+                        tablaLeyenda.setWidths(new float[] { 1.6f, 1.5f, 1.5f, 2.0f, 2.2f, 1.4f, 1.6f, 2.3f });
 
                         tablaLeyenda.addCell(ReporteUtil.crearCeldaCompacta(
                                         "CÓDIGO DE COLOR",
@@ -154,6 +154,11 @@ public class ReporteHorasExtraConsolidadoService {
                                         "VACACIONES",
                                         ReporteUtil.fuenteTextoCompacto(),
                                         COLOR_VACACIONES));
+
+                        tablaLeyenda.addCell(ReporteUtil.crearCeldaCompacta(
+                                        "JUSTIFICACIÓN HORA EXTRA",
+                                        ReporteUtil.fuenteTextoCompacto(),
+                                        COLOR_JUSTIFICACION_HORAS_EXTRAS));
 
                         document.add(tablaLeyenda);
 
@@ -453,17 +458,6 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         ? obtenerTextoTimbre(reg.getFinAlimentacion())
                                                                         : "";
 
-                                                        System.out.println("DEBUG DETALLE PDF >>> " +
-                                                                        "fecha="
-                                                                        + (reg.getEntrada() != null ? reg.getEntrada()
-                                                                                        .getFecha_horario() : "")
-                                                                        +
-                                                                        ", tipoRecargo=" + detalle.getTipoRecargo() +
-                                                                        ", estadoEntradaReporte="
-                                                                        + detalle.getEstadoEntradaReporte() +
-                                                                        ", estadoFinAlimentacionReporte="
-                                                                        + detalle.getEstadoFinAlimentacionReporte());
-
                                                         String faEstado = esEAS
                                                                         ? (safe(detalle.getEstadoFinAlimentacionReporte())
                                                                                         .isEmpty()
@@ -647,8 +641,7 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         safe(reg.getObservaciones()),
                                                                         fondo));
 
-                                                
-                                                       totalAtrasos += atrasoEsJHE ? 0d : nz(reg.getMinAtrasos());
+                                                        totalAtrasos += atrasoEsJHE ? 0d : nz(reg.getMinAtrasos());
                                                         totalSalidasAnticipadas += nz(reg.getMinSalidasAnticipadas());
                                                         totalAlimentacionTomado += esEAS ? nz(minAlimentacion) : 0d;
                                                         totalAlimentacionAsignado += esEAS ? nz(minAsignado) : 0d;
