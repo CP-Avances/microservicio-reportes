@@ -16,7 +16,9 @@ public class CorsConfig {
                         .allowedOrigins(
                                 "http://localhost:61585",
                                 "http://localhost:4200",
-                                "http://192.168.0.145:4200" // ejemplo: agrega el segundo puerto aquí
+                                "http://192.168.0.145:4200", // ejemplo: agrega el segundo puerto aquí
+                                "https://nuevofulltime.fulltime.com.ec"
+
                 )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
