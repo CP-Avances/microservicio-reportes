@@ -32,7 +32,7 @@ public class ReporteAsistenciaService {
 
   public byte[] generarReporteResumenAsistenciaPDF(ReporteAsistenciaRequest request) {
 
-    final float[] WIDTHS_7 = { 2.2f, 2.2f, 2.2f, 2.6f, 2.2f, 2.2f, 2.2f };
+    final float[] WIDTHS_8 = { 2.2f, 2.2f, 2.2f, 2.6f, 2.2f, 2.2f, 2.2f, 2.8f };
     final float[] WIDTHS_2 = { 8, 2 };
 
     final float[] WIDTHS_22 = {
@@ -52,7 +52,7 @@ public class ReporteAsistenciaService {
     final Color COLOR_EXCESO_ALIMENTACION = new Color(0x66E055); // verde menos intenso
     final Color COLOR_PERMISO = new Color(0xD1A15A); // naranja/café apenas suavizado
     final Color COLOR_VACACIONES = new Color(0xA995D1); // lila un poco menos saturado
-    final Color COLOR_JUSTIFICACION_HORAS_EXTRAS = new Color(0x4DB6AC);
+    final Color COLOR_JUSTIFICACION_HORAS_EXTRAS = new Color(0x09BDEB);
     final Font fontHeaderCompacto = ReporteUtil.fuenteEncabezadoCompacto();
     final Font fontTextoCompacto = ReporteUtil.fuenteTextoCompacto();
 
@@ -86,9 +86,9 @@ public class ReporteAsistenciaService {
       Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
       Color zebraColor = ReporteUtil.colorZebraClaro();
 
-      PdfPTable colores = new PdfPTable(7);
+      PdfPTable colores = new PdfPTable(8);
       colores.setWidthPercentage(100);
-      colores.setWidths(WIDTHS_7);
+      colores.setWidths(WIDTHS_8);
       colores.addCell(ReporteUtil.celdaEncabezado("CÓDIGO DE COLOR", Color.WHITE));
       colores.addCell(ReporteUtil.celdaEncabezado("FALTA TIMBRE", COLOR_FALTA_TIMBRE));
       colores.addCell(ReporteUtil.celdaEncabezado("ATRASO", COLOR_ATRASO));
@@ -96,6 +96,7 @@ public class ReporteAsistenciaService {
       colores.addCell(ReporteUtil.celdaEncabezado("EXCESO DE ALIMENTACIÓN", COLOR_EXCESO_ALIMENTACION));
       colores.addCell(ReporteUtil.celdaEncabezado("PERMISO", COLOR_PERMISO));
       colores.addCell(ReporteUtil.celdaEncabezado("VACACIONES", COLOR_VACACIONES));
+      colores.addCell(ReporteUtil.celdaEncabezado("JUSTIFICACIÓN HORA EXTRA", COLOR_JUSTIFICACION_HORAS_EXTRAS));
       colores.setSpacingAfter(10f);
       document.add(colores);
 
@@ -724,7 +725,6 @@ public class ReporteAsistenciaService {
     String[] partes = fechaHora.split(" ");
     return partes.length > 1 ? partes[1] : "";
   }
-  
 
   private String obtenerTextoTimbre(MarcaDTO marca) {
     if (marca == null) {
