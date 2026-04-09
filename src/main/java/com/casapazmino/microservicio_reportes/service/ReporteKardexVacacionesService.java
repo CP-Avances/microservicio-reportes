@@ -583,6 +583,21 @@ public class ReporteKardexVacacionesService {
 
       int row = 0;
 
+      CellStyle stHeadWeekend = libro.createCellStyle();
+      stHeadWeekend.cloneStyleFrom(stHeadBlue);
+      stHeadWeekend.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+      stHeadWeekend.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+
+      CellStyle stSubWeekend = libro.createCellStyle();
+      stSubWeekend.cloneStyleFrom(stSubBlue);
+      stSubWeekend.setFillForegroundColor(IndexedColors.LEMON_CHIFFON.getIndex());
+      stSubWeekend.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+
+      CellStyle stCellWeekend = libro.createCellStyle();
+      stCellWeekend.cloneStyleFrom(stCellC);
+      stCellWeekend.setFillForegroundColor(IndexedColors.LEMON_CHIFFON.getIndex());
+      stCellWeekend.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+
       // Títulos
       mergeSafeNoBorder(shRep, row, row, C0, C_LAST, stTitulo);
       UtilExcel.establecerTexto(shRep, row++, C0, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())), stTitulo);
@@ -759,7 +774,10 @@ public class ReporteKardexVacacionesService {
                 stPendTit,
                 stHeadBlue,
                 stSubBlue,
-                stCellC
+                stCellC,
+                stHeadWeekend,
+                stSubWeekend,
+                stCellWeekend
             );
             
             row++;
@@ -1258,34 +1276,42 @@ public class ReporteKardexVacacionesService {
 
     String[] dias = { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" };
 
-    for (String dia : dias) {
-      tabla.addCell(hCell(dia, azulHeader, 3, 1));
+    Color colorFinSemanaHeader = new Color(255, 231, 163);
+    Color colorFinSemanaSub = new Color(255, 243, 205);
+    Color colorFinSemanaData = new Color(255, 249, 230);
+
+    for (int i = 0; i < dias.length; i++) {
+      boolean finSemana = i >= 5; // sábado y domingo
+      tabla.addCell(hCell(dias[i], finSemana ? colorFinSemanaHeader : azulHeader, 3, 1));
     }
 
     for (int i = 0; i < 7; i++) {
-      tabla.addCell(hCell("Días", azulSub));
-      tabla.addCell(hCell("Hor", azulSub));
-      tabla.addCell(hCell("Min", azulSub));
+      boolean finSemana = i >= 5;
+      Color fondoSub = finSemana ? colorFinSemanaSub : azulSub;
+
+      tabla.addCell(hCell("Días", fondoSub));
+      tabla.addCell(hCell("Hor", fondoSub));
+      tabla.addCell(hCell("Min", fondoSub));
     }
 
     SemanaDHMDTO total = sumarSemanaPeriodo(per);
 
-    addDhmCellsPDF(tabla, total != null ? total.getLunes() : null);
-    addDhmCellsPDF(tabla, total != null ? total.getMartes() : null);
-    addDhmCellsPDF(tabla, total != null ? total.getMiercoles() : null);
-    addDhmCellsPDF(tabla, total != null ? total.getJueves() : null);
-    addDhmCellsPDF(tabla, total != null ? total.getViernes() : null);
-    addDhmCellsPDF(tabla, total != null ? total.getSabado() : null);
-    addDhmCellsPDF(tabla, total != null ? total.getDomingo() : null);
+    addDhmCellsPDF(tabla, total != null ? total.getLunes() : null, Color.WHITE);
+    addDhmCellsPDF(tabla, total != null ? total.getMartes() : null, Color.WHITE);
+    addDhmCellsPDF(tabla, total != null ? total.getMiercoles() : null, Color.WHITE);
+    addDhmCellsPDF(tabla, total != null ? total.getJueves() : null, Color.WHITE);
+    addDhmCellsPDF(tabla, total != null ? total.getViernes() : null, Color.WHITE);
+    addDhmCellsPDF(tabla, total != null ? total.getSabado() : null, colorFinSemanaData);
+    addDhmCellsPDF(tabla, total != null ? total.getDomingo() : null, colorFinSemanaData);
 
     tabla.setSpacingAfter(10f);
     return tabla;
   }
     
-  private void addDhmCellsPDF(PdfPTable tabla, DHMDTO dhm) {
-    tabla.addCell(cellCenter(String.valueOf(int0(dhm != null ? dhm.getDias() : 0)), Color.WHITE));
-    tabla.addCell(cellCenter(String.valueOf(int0(dhm != null ? dhm.getHoras() : 0)), Color.WHITE));
-    tabla.addCell(cellCenter(String.valueOf(int0(dhm != null ? dhm.getMinutos() : 0)), Color.WHITE));
+  private void addDhmCellsPDF(PdfPTable tabla, DHMDTO dhm, Color fondo) {
+    tabla.addCell(cellCenter(String.valueOf(int0(dhm != null ? dhm.getDias() : 0)), fondo));
+    tabla.addCell(cellCenter(String.valueOf(int0(dhm != null ? dhm.getHoras() : 0)), fondo));
+    tabla.addCell(cellCenter(String.valueOf(int0(dhm != null ? dhm.getMinutos() : 0)), fondo));
   }
 
   private SemanaDHMDTO sumarSemanaPeriodo(KardexPeriodoDTO per) {
@@ -1347,35 +1373,40 @@ public class ReporteKardexVacacionesService {
       CellStyle stTitulo,
       CellStyle stHeadBlue,
       CellStyle stSubBlue,
-      CellStyle stCellC) {
+      CellStyle stCellC,
+      CellStyle stHeadWeekend,
+      CellStyle stSubWeekend,
+      CellStyle stCellWeekend) {
 
     final int DIST_START = 12; // M
 
     SemanaDHMDTO total = sumarSemanaPeriodo(per);
 
-    // fila 1: título (misma altura que fila período)
     mergeSafe(sh, rowInicioPeriodo - 1, rowInicioPeriodo - 1, DIST_START, DIST_START + 20, stTitulo);
     UtilExcel.establecerTexto(sh, rowInicioPeriodo - 1, DIST_START, "Distribución de días", stTitulo);
 
-    // fila 2: días de la semana (misma altura que Desde/Hasta/Descuento/Saldo)
     String[] dias = { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" };
     int col = DIST_START;
-    for (String dia : dias) {
-      mergeSafe(sh, rowInicioPeriodo, rowInicioPeriodo, col, col + 2, stHeadBlue);
-      UtilExcel.establecerTexto(sh, rowInicioPeriodo, col, dia, stHeadBlue);
+    for (int i = 0; i < dias.length; i++) {
+      boolean finSemana = i >= 5;
+      CellStyle styleHead = finSemana ? stHeadWeekend : stHeadBlue;
+
+      mergeSafe(sh, rowInicioPeriodo, rowInicioPeriodo, col, col + 2, styleHead);
+      UtilExcel.establecerTexto(sh, rowInicioPeriodo, col, dias[i], styleHead);
       col += 3;
     }
 
-    // fila 3: subcabeceras (misma altura que Fecha/Hora/Días/Hor/Min)
     Row sub = UtilExcel.asegurarFila(sh, rowInicioPeriodo + 1);
     col = DIST_START;
     for (int i = 0; i < 7; i++) {
-      UtilExcel.establecerTexto(sub, col++, "Días", stSubBlue);
-      UtilExcel.establecerTexto(sub, col++, "Hor", stSubBlue);
-      UtilExcel.establecerTexto(sub, col++, "Min", stSubBlue);
+      boolean finSemana = i >= 5;
+      CellStyle styleSub = finSemana ? stSubWeekend : stSubBlue;
+
+      UtilExcel.establecerTexto(sub, col++, "Días", styleSub);
+      UtilExcel.establecerTexto(sub, col++, "Hor", styleSub);
+      UtilExcel.establecerTexto(sub, col++, "Min", styleSub);
     }
 
-    // fila 4: valores
     Row data = UtilExcel.asegurarFila(sh, rowInicioPeriodo + 2);
     col = DIST_START;
     col = escribirDhmExcel(data, col, total != null ? total.getLunes() : null, stCellC);
@@ -1383,10 +1414,11 @@ public class ReporteKardexVacacionesService {
     col = escribirDhmExcel(data, col, total != null ? total.getMiercoles() : null, stCellC);
     col = escribirDhmExcel(data, col, total != null ? total.getJueves() : null, stCellC);
     col = escribirDhmExcel(data, col, total != null ? total.getViernes() : null, stCellC);
-    col = escribirDhmExcel(data, col, total != null ? total.getSabado() : null, stCellC);
-    col = escribirDhmExcel(data, col, total != null ? total.getDomingo() : null, stCellC);
+    col = escribirDhmExcel(data, col, total != null ? total.getSabado() : null, stCellWeekend);
+    col = escribirDhmExcel(data, col, total != null ? total.getDomingo() : null, stCellWeekend);
   }
     
+  
   private int escribirDhmExcel(Row row, int col, DHMDTO dhm, CellStyle style) {
     UtilExcel.establecerValor(row, col++, int0(dhm != null ? dhm.getDias() : 0), style);
     UtilExcel.establecerValor(row, col++, int0(dhm != null ? dhm.getHoras() : 0), style);
