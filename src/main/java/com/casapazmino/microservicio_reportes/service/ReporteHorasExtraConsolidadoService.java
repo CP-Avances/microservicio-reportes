@@ -41,7 +41,6 @@ public class ReporteHorasExtraConsolidadoService {
 
                                 1.4f, // HORAS EXTRA
                                 1.2f, // MINUTOS
-                                1.5f, // TIPO %
                                 1.4f, // PORCENTAJE
                                 1.8f, // TIPO RECARGO
 
@@ -65,7 +64,6 @@ public class ReporteHorasExtraConsolidadoService {
 
                                 1.4f, // HORAS EXTRA
                                 1.2f, // MINUTOS
-                                1.5f, // TIPO %
                                 1.4f, // PORCENTAJE
                                 1.8f, // TIPO RECARGO
 
@@ -162,7 +160,7 @@ public class ReporteHorasExtraConsolidadoService {
 
                         document.add(tablaLeyenda);
 
-                        int totalColumnasPdf = mostrarMonetizacion ? 28 : 27;
+                        int totalColumnasPdf = mostrarMonetizacion ? 27 : 26;
                         float[] widthsPdf = mostrarMonetizacion ? WIDTHS_28 : WIDTHS_27;
 
                         AtomicInteger totalRegistros = new AtomicInteger();
@@ -280,8 +278,6 @@ public class ReporteHorasExtraConsolidadoService {
                                         encabezado.addCell(ReporteUtil.crearCeldaCompacta("HORAS EXTRA",
                                                         ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
                                         encabezado.addCell(ReporteUtil.crearCeldaCompacta("MINUTOS",
-                                                        ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
-                                        encabezado.addCell(ReporteUtil.crearCeldaCompacta("TIPO %",
                                                         ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
                                         encabezado.addCell(ReporteUtil.crearCeldaCompacta("PORCENTAJE",
                                                         ReporteUtil.fuenteEncabezadoCompacto(), colorPrincipal, 2, 1));
@@ -616,11 +612,6 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         fondo));
 
                                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
-                                                                        safe(detalle.getTipoPorcentaje()),
-                                                                        ReporteUtil.fuenteTextoCompacto(),
-                                                                        fondo));
-
-                                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                                         safe(detalle.getPorcentaje()),
                                                                         ReporteUtil.fuenteTextoCompacto(),
                                                                         fondo));
@@ -687,7 +678,7 @@ public class ReporteHorasExtraConsolidadoService {
                                         tablaData.addCell(celdaTotal);
 
                                         // Completar resto de la FILA 1 con vacías
-                                        int columnasDespuesDeTotal = mostrarMonetizacion ? 14 : 13;
+                                        int columnasDespuesDeTotal = mostrarMonetizacion ? 13 : 12;
                                         for (int i = 0; i < columnasDespuesDeTotal; i++) {
                                                 PdfPCell vacia = ReporteUtil.crearCeldaCompacta(
                                                                 "",
@@ -760,12 +751,6 @@ public class ReporteHorasExtraConsolidadoService {
                                         // MINUTOS
                                         tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                                                         formatDouble(totalHorasExtra),
-                                                        ReporteUtil.fuenteTextoCompacto(),
-                                                        Color.WHITE));
-
-                                        // TIPO %
-                                        tablaData.addCell(ReporteUtil.crearCeldaCompacta(
-                                                        "",
                                                         ReporteUtil.fuenteTextoCompacto(),
                                                         Color.WHITE));
 
@@ -850,7 +835,7 @@ public class ReporteHorasExtraConsolidadoService {
                                 "TIEMPO PLANIFICADO",
                                 "TIEMPO LABORADO",
 
-                                "HORAS EXTRA", "MINUTOS", "TIPO %", "PORCENTAJE", "TIPO RECARGO",
+                                "HORAS EXTRA", "MINUTOS", "PORCENTAJE", "TIPO RECARGO",
                                 "OBSERVACIONES"
                 };
 
@@ -869,7 +854,7 @@ public class ReporteHorasExtraConsolidadoService {
                                 "TIEMPO PLANIFICADO",
                                 "TIEMPO LABORADO",
 
-                                "HORAS EXTRA", "MINUTOS", "TIPO %", "PORCENTAJE", "TIPO RECARGO",
+                                "HORAS EXTRA", "MINUTOS", "PORCENTAJE", "TIPO RECARGO",
                                 "VALOR HE",
                                 "OBSERVACIONES"
                 };
@@ -890,7 +875,7 @@ public class ReporteHorasExtraConsolidadoService {
                                 18,
                                 18,
 
-                                18, 14, 20, 16, 22,
+                                18, 14, 16, 22,
                                 28
                 };
 
@@ -908,7 +893,7 @@ public class ReporteHorasExtraConsolidadoService {
                                 18,
                                 18,
 
-                                18, 14, 20, 16, 22,
+                                18, 14, 16, 22,
                                 18,
                                 28
                 };
@@ -1132,9 +1117,6 @@ public class ReporteHorasExtraConsolidadoService {
                                                                         safe(detalle.getHorasExtra()), null);
                                                         UtilExcel.establecerTexto(r, col++,
                                                                         formatDouble(detalle.getMinutosHorasExtra()),
-                                                                        null);
-                                                        UtilExcel.establecerTexto(r, col++,
-                                                                        safe(detalle.getTipoPorcentaje()),
                                                                         null);
                                                         UtilExcel.establecerTexto(r, col++,
                                                                         safe(detalle.getPorcentaje()),
