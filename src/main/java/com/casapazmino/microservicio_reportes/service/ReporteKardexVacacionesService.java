@@ -147,34 +147,41 @@ public class ReporteKardexVacacionesService {
             document.add(tFr);
           }
 
-          // ---- Cabecera empleado (SOLO: CIUDAD / CC / COD + EMPLEADO) ----
-          PdfPTable infoEmp = new PdfPTable(3);
-          infoEmp.setWidthPercentage(100);
-          infoEmp.setWidths(W_EMP_INFO);
+          List<KardexPeriodoDTO> periodosOrdenados = ordenarPeriodos(emp.getPeriodos());
 
-          infoEmp.addCell(celdaInfoMixtaLocal("CIUDAD:", safe(emp.getCiudad()), zebra));
-          infoEmp.addCell(celdaInfoMixtaLocal("C.C.:", safe(emp.getIdentificacion()), zebra));
-          infoEmp.addCell(celdaInfoMixtaLocal("COD:", safe(emp.getCodigo()), zebra));
-          String nombreCompleto = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
-
-          PdfPCell cNombre = celdaInfoMixtaLocal("EMPLEADO:", nombreCompleto, zebra);
-          cNombre.setColspan(3);
-          cNombre.setPaddingBottom(4f);
-          infoEmp.addCell(cNombre);
-
-          PdfPTable contInfoEmp = new PdfPTable(1);
-          contInfoEmp.setWidthPercentage(100);
-          PdfPCell wrap = new PdfPCell(infoEmp);
-          wrap.setBorder(Rectangle.BOX);
-          wrap.setPadding(0);
-          contInfoEmp.addCell(wrap);
-          contInfoEmp.setSpacingBefore(4f);
-          contInfoEmp.setSpacingAfter(8f);
-          noSpace(contInfoEmp);
-
-          for (KardexPeriodoDTO per : emp.getPeriodos()) {
+          for (KardexPeriodoDTO per : periodosOrdenados) {
             if (per == null)
               continue;
+
+            // ---- Cabecera empleado (SOLO: CIUDAD / CC / COD + EMPLEADO) ----
+            Color colorCabeceraEmpleado = esPeriodoActivo(per) ? colorPrincipal : zebra;
+            Color colorHeadMov = esPeriodoActivo(per) ? colorPrincipal : zebra;
+            Color colorSubHeadMov = esPeriodoActivo(per) ? colorPrincipal : zebra;
+
+            PdfPTable infoEmp = new PdfPTable(3);
+            infoEmp.setWidthPercentage(100);
+            infoEmp.setWidths(W_EMP_INFO);
+
+            infoEmp.addCell(celdaInfoMixtaLocal("CIUDAD:", safe(emp.getCiudad()), colorCabeceraEmpleado));
+            infoEmp.addCell(celdaInfoMixtaLocal("C.C.:", safe(emp.getIdentificacion()), colorCabeceraEmpleado));
+            infoEmp.addCell(celdaInfoMixtaLocal("COD:", safe(emp.getCodigo()), colorCabeceraEmpleado));
+
+            String nombreCompleto = (safe(emp.getApellido()) + " " + safe(emp.getNombre())).trim();
+
+            PdfPCell cNombre = celdaInfoMixtaLocal("EMPLEADO:", nombreCompleto, colorCabeceraEmpleado);
+            cNombre.setColspan(3);
+            cNombre.setPaddingBottom(4f);
+            infoEmp.addCell(cNombre);
+
+            PdfPTable contInfoEmp = new PdfPTable(1);
+            contInfoEmp.setWidthPercentage(100);
+            PdfPCell wrap = new PdfPCell(infoEmp);
+            wrap.setBorder(Rectangle.BOX);
+            wrap.setPadding(0);
+            contInfoEmp.addCell(wrap);
+            contInfoEmp.setSpacingBefore(4f);
+            contInfoEmp.setSpacingAfter(8f);
+            noSpace(contInfoEmp);
 
             // ==========================
             // FILA ENCERRADA (periodo)
@@ -217,22 +224,22 @@ public class ReporteKardexVacacionesService {
             mov.setWidthPercentage(100);
             mov.setWidths(W_MOV);
 
-            mov.addCell(hCell("Detalle", colorPrincipal, 1, 2));
-            mov.addCell(hCell("Desde", colorPrincipal, 2, 1));
-            mov.addCell(hCell("Hasta", colorPrincipal, 2, 1));
-            mov.addCell(hCell("Descuento", colorPrincipal, 3, 1));
-            mov.addCell(hCell("Saldo", colorPrincipal, 3, 1));
+            mov.addCell(hCell("Detalle", colorHeadMov, 1, 2));
+            mov.addCell(hCell("Desde", colorHeadMov, 2, 1));
+            mov.addCell(hCell("Hasta", colorHeadMov, 2, 1));
+            mov.addCell(hCell("Descuento", colorHeadMov, 3, 1));
+            mov.addCell(hCell("Saldo", colorHeadMov, 3, 1));
 
-            mov.addCell(hCell("Fecha", colorPrincipal));
-            mov.addCell(hCell("Hora", colorPrincipal));
-            mov.addCell(hCell("Fecha", colorPrincipal));
-            mov.addCell(hCell("Hora", colorPrincipal));
-            mov.addCell(hCell("Días", colorPrincipal));
-            mov.addCell(hCell("Hor", colorPrincipal));
-            mov.addCell(hCell("Min", colorPrincipal));
-            mov.addCell(hCell("Días", colorPrincipal));
-            mov.addCell(hCell("Hor", colorPrincipal));
-            mov.addCell(hCell("Min", colorPrincipal));
+            mov.addCell(hCell("Fecha", colorSubHeadMov));
+            mov.addCell(hCell("Hora", colorSubHeadMov));
+            mov.addCell(hCell("Fecha", colorSubHeadMov));
+            mov.addCell(hCell("Hora", colorSubHeadMov));
+            mov.addCell(hCell("Días", colorSubHeadMov));
+            mov.addCell(hCell("Hor", colorSubHeadMov));
+            mov.addCell(hCell("Min", colorSubHeadMov));
+            mov.addCell(hCell("Días", colorSubHeadMov));
+            mov.addCell(hCell("Hor", colorSubHeadMov));
+            mov.addCell(hCell("Min", colorSubHeadMov));
 
             List<KardexMovimientoDTO> movimientos = per.getMovimientos();
             if (movimientos == null || movimientos.isEmpty()) {
@@ -571,9 +578,16 @@ public class ReporteKardexVacacionesService {
       CellStyle stTitulo = estiloTitulo;
       CellStyle stFranja = ConfiguracionExcel.crearEstiloFranjaVerde(libro);
       CellStyle stCabGray = ConfiguracionExcel.crearEstiloCabeceraGris(libro);
+      CellStyle stCabActivo = crearEstiloCabeceraEmpleadoActivo(libro, request.getColorPrincipal());
       CellStyle stPeriodo = ConfiguracionExcel.crearEstiloPeriodo(libro);
       CellStyle stHeadBlue = ConfiguracionExcel.crearEstiloHeaderAzul(libro);
       CellStyle stSubBlue = ConfiguracionExcel.crearEstiloSubHeaderAzul(libro);
+      CellStyle stHeadGray = libro.createCellStyle();
+      stHeadGray.cloneStyleFrom(stCabGray);
+
+      CellStyle stSubGray = libro.createCellStyle();
+      stSubGray.cloneStyleFrom(stCabGray);
+
       CellStyle stCellC = estiloCentroBorde;
       CellStyle stCellL = estiloIzqBorde;
       CellStyle stBoxTitle = ConfiguracionExcel.crearEstiloCajaTitulo(libro);
@@ -627,33 +641,34 @@ public class ReporteKardexVacacionesService {
             UtilExcel.establecerTexto(shRep, row++, C0, franja, stFranja);
           }
 
-          int rCabIni = row;
+          List<KardexPeriodoDTO> periodosOrdenados = ordenarPeriodos(emp.getPeriodos());
 
-          // fila 1 gris (CIUDAD / CC / COD)
-          mergeSafeNoBorder(shRep, row, row, 0, 3, stCabGray);
-          mergeSafeNoBorder(shRep, row, row, 4, 7, stCabGray);
-          mergeSafeNoBorder(shRep, row, row, 8, 10, stCabGray);
-
-          UtilExcel.establecerTexto(shRep, row, 0, "CIUDAD: " + safe(emp.getCiudad()), stCabGray);
-          UtilExcel.establecerTexto(shRep, row, 4, "C.C.: " + safe(emp.getIdentificacion()), stCabGray);
-          UtilExcel.establecerTexto(shRep, row, 8, "COD: " + safe(emp.getCodigo()), stCabGray);
-          row++;
-
-          // fila 2 gris (EMPLEADO)
-          mergeSafeNoBorder(shRep, row, row, C0, C_LAST, stCabGray);
-          UtilExcel.establecerTexto(shRep, row, C0, "EMPLEADO: " + empNom, stCabGray);
-          row++;
-
-          int rCabFin = row - 1;
-
-          // ✅ 1) quitar bordes internos (2 filas x 0..8)
-          limpiarBordesEnRegion(shRep, rCabIni, rCabFin, 0, 10);
-          CellRangeAddress regionCab = new CellRangeAddress(rCabIni, rCabFin, 0, 10);
-          bordeExternoGrueso(shRep, regionCab);
-
-          for (KardexPeriodoDTO per : emp.getPeriodos()) {
+          for (KardexPeriodoDTO per : periodosOrdenados) {
             if (per == null)
               continue;
+
+            CellStyle stCabPeriodo = esPeriodoActivo(per) ? stCabActivo : stCabGray;
+            int rCabIni = row;
+
+            mergeSafeNoBorder(shRep, row, row, 0, 3, stCabPeriodo);
+            mergeSafeNoBorder(shRep, row, row, 4, 7, stCabPeriodo);
+            mergeSafeNoBorder(shRep, row, row, 8, 10, stCabPeriodo);
+
+            UtilExcel.establecerTexto(shRep, row, 0, "CIUDAD: " + safe(emp.getCiudad()), stCabPeriodo);
+            UtilExcel.establecerTexto(shRep, row, 4, "C.C.: " + safe(emp.getIdentificacion()), stCabPeriodo);
+            UtilExcel.establecerTexto(shRep, row, 8, "COD: " + safe(emp.getCodigo()), stCabPeriodo);
+            row++;
+
+            mergeSafeNoBorder(shRep, row, row, C0, C_LAST, stCabPeriodo);
+            UtilExcel.establecerTexto(shRep, row, C0, "EMPLEADO: " + empNom, stCabPeriodo);
+            row++;
+
+            int rCabFin = row - 1;
+
+            limpiarBordesEnRegion(shRep, rCabIni, rCabFin, 0, 10);
+            CellRangeAddress regionCab = new CellRangeAddress(rCabIni, rCabFin, 0, 10);
+            bordeExternoGrueso(shRep, regionCab);
+
 
             String est = "ACTIVO".equalsIgnoreCase(safe(per.getEstado_periodo())) ? "Activo" : "Inactivo";
 
@@ -1425,5 +1440,39 @@ public class ReporteKardexVacacionesService {
     UtilExcel.establecerValor(row, col++, int0(dhm != null ? dhm.getMinutos() : 0), style);
     return col;
   }
+
+  private List<KardexPeriodoDTO> ordenarPeriodos(List<KardexPeriodoDTO> periodos) {
+    if (periodos == null || periodos.isEmpty()) {
+      return new ArrayList<>();
+    }
+
+    return periodos.stream()
+        .filter(Objects::nonNull)
+        .sorted(Comparator.comparing(
+            (KardexPeriodoDTO p) -> !"ACTIVO".equalsIgnoreCase(safe(p.getEstado_periodo()))
+        ))
+        .collect(Collectors.toList());
+  }
+
+  private boolean esPeriodoActivo(KardexPeriodoDTO per) {
+    return per != null && "ACTIVO".equalsIgnoreCase(safe(per.getEstado_periodo()));
+  }
+
+  private CellStyle crearEstiloCabeceraEmpleadoActivo(XSSFWorkbook libro, String colorHex) {
+    CellStyle estilo = libro.createCellStyle();
+    estilo.cloneStyleFrom(ConfiguracionExcel.crearEstiloCabeceraGris(libro));
+
+    org.apache.poi.xssf.usermodel.XSSFColor color =
+        new org.apache.poi.xssf.usermodel.XSSFColor(
+            ReporteUtil.convertirHexAColor(colorHex),
+            null
+        );
+
+    ((org.apache.poi.xssf.usermodel.XSSFCellStyle) estilo).setFillForegroundColor(color);
+    estilo.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+
+    return estilo;
+  }
+
 
 }
