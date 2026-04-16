@@ -55,6 +55,7 @@ public class ReporteAsistenciaService {
     final Color COLOR_JUSTIFICACION_HORAS_EXTRAS = new Color(0x09BDEB);
     final Font fontHeaderCompacto = ReporteUtil.fuenteEncabezadoCompacto();
     final Font fontTextoCompacto = ReporteUtil.fuenteTextoCompacto();
+    
 
     Document document = null;
     PdfWriter writer = null;
