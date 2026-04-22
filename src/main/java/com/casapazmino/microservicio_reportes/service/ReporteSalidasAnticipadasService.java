@@ -31,7 +31,20 @@ public class ReporteSalidasAnticipadasService {
         // ➊ DRY: constantes locales (no cambia look & feel)
         final float[] WIDTHS_TITULO_TABLA = { 8f, 2f };
         final float[] WIDTHS_INFO_EMPLEADO = { 4f, 4f, 4f };
-        final float[] WIDTHS_SALIDAS = { 1f, 1.8f, 2f, 2f, 2f, 2.5f, 2f, 2f, 1.5f, 1.5f, 2f, 2f };
+        final float[] WIDTHS_SALIDAS = {
+                1f, // N°
+                1.8f, // Horario fecha
+                2f, // Horario hora
+                2f, // Timbre fecha
+                2f, // Timbre hora
+                2.5f, // Tipo permiso
+                1.5f, // Desde
+                1.5f, // Hasta
+                1.4f, // Permiso tiempo
+                1.2f, // Permiso decimal
+                1.8f, // Salida anticipada tiempo
+                1.4f // Salida anticipada decimal
+        };
         final int WIDTH_PERCENT_100 = 100;
         final float SPACING_AFTER_TITULO_TABLA = 10f;
         final float SPACING_BEFORE_SALIDAS = 5f;
@@ -176,14 +189,17 @@ public class ReporteSalidasAnticipadasService {
                                 ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
                         tablaSalidas.addCell(
                                 ReporteUtil.crearCelda("HORA", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
-                        tablaSalidas
-                                .addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
-                        tablaSalidas
-                                .addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
-                        tablaSalidas
-                                .addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
-                        tablaSalidas
-                                .addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
+                        // PERMISO
+                        tablaSalidas.addCell(
+                                ReporteUtil.crearCelda("TIEMPO", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
+                        tablaSalidas.addCell(
+                                ReporteUtil.crearCelda("DECIMAL", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
+
+                        // SALIDA ANTICIPADA
+                        tablaSalidas.addCell(
+                                ReporteUtil.crearCelda("TIEMPO", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
+                        tablaSalidas.addCell(
+                                ReporteUtil.crearCelda("DECIMAL", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
 
                         long totalSegundos = 0;
                         double totalMinutos = 0d;
@@ -219,29 +235,32 @@ public class ReporteSalidasAnticipadasService {
                                 tablaSalidas.addCell(ReporteUtil.crearCelda(
                                         horaTimbre.length > 1 ? horaTimbre[1] : "", ReporteUtil.fuenteTexto(), fondo));
 
+                                ///
                                 tablaSalidas.addCell(
-                                        ReporteUtil.crearCelda(s.getTipo_permiso(), ReporteUtil.fuenteTexto(), fondo));
+                                        ReporteUtil.crearCelda(safe(s.getTipo_permiso()), ReporteUtil.fuenteTexto(),
+                                                fondo));
                                 tablaSalidas.addCell(
-                                        ReporteUtil.crearCelda(s.getDesde(), ReporteUtil.fuenteTexto(), fondo));
+                                        ReporteUtil.crearCelda(safe(s.getDesde()), ReporteUtil.fuenteTexto(), fondo));
                                 tablaSalidas.addCell(
-                                        ReporteUtil.crearCelda(s.getHasta(), ReporteUtil.fuenteTexto(), fondo));
+                                        ReporteUtil.crearCelda(safe(s.getHasta()), ReporteUtil.fuenteTexto(), fondo));
 
-                                // "Permiso" vacío (2 celdas), mantiene estructura original
-                                tablaSalidas.addCell(ReporteUtil.crearCelda(" ", ReporteUtil.fuenteTexto(), fondo));
-                                tablaSalidas.addCell(ReporteUtil.crearCelda(" ", ReporteUtil.fuenteTexto(), fondo));
+                                // PERMISO
+                                tablaSalidas.addCell(
+                                        ReporteUtil.crearCelda(safe(s.getPermiso_tiempo()), ReporteUtil.fuenteTexto(),
+                                                fondo));
+                                tablaSalidas.addCell(
+                                        ReporteUtil.crearCelda(safe(s.getPermiso_decimal()), ReporteUtil.fuenteTexto(),
+                                                fondo));
 
-                                // Salida anticipada hh:mm:ss y minutos
+                                // SALIDA ANTICIPADA
                                 tablaSalidas.addCell(
                                         ReporteUtil.crearCelda(tiempoFormateado, ReporteUtil.fuenteTexto(), fondo));
-                                tablaSalidas
-                                        .addCell(
-                                                ReporteUtil
-                                                        .crearCelda(
-                                                                String.format("%.2f",
-                                                                        (s.getDiferencia() != null ? s.getDiferencia()
-                                                                                : 0d) / 60.0),
-                                                                ReporteUtil.fuenteTexto(), fondo));
-
+                                tablaSalidas.addCell(
+                                        ReporteUtil.crearCelda(
+                                                String.format("%.2f",
+                                                        (s.getDiferencia() != null ? s.getDiferencia() : 0d) / 60.0),
+                                                ReporteUtil.fuenteTexto(), fondo));
+                                //
                                 contador++;
                                 totalSegundos += segundos;
                                 totalMinutos += (s.getDiferencia() != null ? s.getDiferencia() : 0d) / 60.0;
@@ -255,7 +274,6 @@ public class ReporteSalidasAnticipadasService {
                             celdaVacia.setBorder(Rectangle.NO_BORDER);
                             tablaSalidas.addCell(celdaVacia);
                         }
-                        // "TOTAL"
                         tablaSalidas.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), Color.WHITE));
 
                         // Tiempo total HH:mm:ss
@@ -263,10 +281,10 @@ public class ReporteSalidasAnticipadasService {
                         long minutosT = (totalSegundos % 3600) / 60;
                         long segRest = totalSegundos % 60;
                         String tiempoTotal = String.format("%02d:%02d:%02d", horasT, minutosT, segRest);
-                        tablaSalidas
-                                .addCell(ReporteUtil.crearCelda(tiempoTotal, ReporteUtil.fuenteTexto(), Color.WHITE));
 
                         // Total en minutos
+                        tablaSalidas
+                                .addCell(ReporteUtil.crearCelda(tiempoTotal, ReporteUtil.fuenteTexto(), Color.WHITE));
                         tablaSalidas.addCell(ReporteUtil.crearCelda(String.format("%.2f", totalMinutos),
                                 ReporteUtil.fuenteTexto(), Color.WHITE));
 
@@ -319,18 +337,28 @@ public class ReporteSalidasAnticipadasService {
         final String NOMBRE_HOJA = "Salidas_Anticipadas"; // ≤ 31 chars
         final int FILA_ENCABEZADO = 5; // fila 6 (idx 5)
 
-        // MERGES exactos (B1:O5) → (row 0..4, col 1..14)
+        // MERGES exactos (B1:T5) → (row 0..4, col 1..19)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
-        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 14;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 19;
 
         final String[] HEADERS = {
                 "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
                 "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
                 "FECHA HORARIO", "HORA HORARIO",
                 "FECHA TIMBRE", "HORA TIMBRE",
+                "TIPO PERMISO", "DESDE", "HASTA",
+                "PERMISO TIEMPO", "PERMISO DECIMAL",
                 "SALIDA ANTICIPADA HH:MM:SS", "SALIDA ANTICIPADA MINUTOS"
         };
-        final int[] ANCHOS = { 10, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 25, 25 };
+        final int[] ANCHOS = {
+                10, 20, 20, 20,
+                20, 20, 20, 20, 20,
+                20, 20,
+                20, 20,
+                25, 15, 15,
+                18, 18,
+                25, 25
+        };
 
         // Filtros: ITEM sin filtro; resto con filtro
         final boolean[] FILTROS = new boolean[] {
@@ -419,8 +447,17 @@ public class ReporteSalidasAnticipadasService {
                             UtilExcel.establecerTexto(r, col++, horaHorario, null); // HORA HORARIO
                             UtilExcel.establecerTexto(r, col++, pt[0], null); // FECHA TIMBRE
                             UtilExcel.establecerTexto(r, col++, horaTimbre, null); // HORA TIMBRE
-                            UtilExcel.establecerTexto(r, col++, tiempo, null); // HH:MM:SS
-                            UtilExcel.establecerTexto(r, col++, String.format("%.2f", minutos), null); // MINUTOS
+
+                            UtilExcel.establecerTexto(r, col++, safe(sal.getTipo_permiso()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(sal.getDesde()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(sal.getHasta()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(sal.getPermiso_tiempo()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(sal.getPermiso_decimal()), null);
+
+                            UtilExcel.establecerTexto(r, col++, tiempo, null); // SALIDA ANTICIPADA HH:MM:SS
+                            UtilExcel.establecerTexto(r, col++, String.format("%.2f", minutos), null); // SALIDA
+                                                                                                       // ANTICIPADA
+                                                                                                       // MINUTOS
                         }
                     }
                 }

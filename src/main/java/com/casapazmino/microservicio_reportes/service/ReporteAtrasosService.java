@@ -26,17 +26,22 @@ public class ReporteAtrasosService {
 
         // DRY: anchos y colores usados varias veces
         final float[] WIDTHS_TITULO = { 8, 2 };
-        final float[] WIDTHS_ENCAB_11 = {
+        final float[] WIDTHS_ENCAB_13 = {
                 0.5f, 1.2f,
                 1.2f, 1.2f, 1.2f, 1.3f,
-                1.0f, 1.0f, 1.4f, 1.8f,
-                2.6f
+                1.0f, 1.0f,
+                1.0f, 0.9f,
+                1.0f,
+                1.0f, 0.9f
         };
+
         final float[] WIDTHS_DATA_13 = {
                 0.5f, 1.2f,
                 1.2f, 1.2f, 1.2f, 1.3f,
-                1.0f, 1.0f, 0.7f, 0.7f, 1.8f,
-                1.3f, 1.3f
+                1.0f, 1.0f,
+                1.0f, 0.9f,
+                1.0f,
+                1.0f, 0.9f
         };
 
         Document document = null;
@@ -123,9 +128,10 @@ public class ReporteAtrasosService {
                     document.add(contenedora);
 
                     // Encabezado (11 columnas)
-                    PdfPTable encabezado = new PdfPTable(11);
+                    // Encabezado (13 columnas)
+                    PdfPTable encabezado = new PdfPTable(13);
                     encabezado.setWidthPercentage(100);
-                    encabezado.setWidths(WIDTHS_ENCAB_11);
+                    encabezado.setWidths(WIDTHS_ENCAB_13);
 
                     encabezado.addCell(
                             ReporteUtil.crearCelda("N°", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
@@ -133,25 +139,38 @@ public class ReporteAtrasosService {
                             ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
                     encabezado.addCell(
                             ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
-                    encabezado.addCell(ReporteUtil.crearCelda("TIPO PERMISO", ReporteUtil.fuenteEncabezado(),
-                            colorPrincipal, 2, 1));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("TIPO PERMISO", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2,
+                                    1));
                     encabezado.addCell(
                             ReporteUtil.crearCelda("DESDE", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
                     encabezado.addCell(
                             ReporteUtil.crearCelda("HASTA", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("PERMISO", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                            ReporteUtil.crearCelda("PERMISO", ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
                     encabezado.addCell(
                             ReporteUtil.crearCelda("TOLERANCIA", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("ATRASO", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
+                            ReporteUtil.crearCelda("ATRASO", ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
 
-                    for (int i = 0; i < 2; i++) {
-                        encabezado.addCell(
-                                ReporteUtil.crearCelda("HORARIO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
-                        encabezado.addCell(
-                                ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(), colorSecundario));
-                    }
+                    // segunda fila
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("HORARIO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(), colorSecundario));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("HORARIO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(), colorSecundario));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("TIEMPO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("DECIMAL", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("TIEMPO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda("DECIMAL", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+
                     encabezado.setSpacingAfter(0f);
                     document.add(encabezado);
 
@@ -181,15 +200,14 @@ public class ReporteAtrasosService {
                                 ReporteUtil.crearCelda(atraso.getHoraTimbre(), ReporteUtil.fuenteTexto(), fondo));
                         tablaData.addCell(
                                 ReporteUtil.crearCelda(atraso.getTipo_permiso(), ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getDesde(), ReporteUtil.fuenteTexto(), fondo));
-                        tablaData.addCell(ReporteUtil.crearCelda(atraso.getHasta(), ReporteUtil.fuenteTexto(), fondo));
-                        tablaData
-                                .addCell(ReporteUtil.crearCelda(atraso.getPermiso(), ReporteUtil.fuenteTexto(), fondo));
-                        tablaData
-                                .addCell(ReporteUtil.crearCelda(atraso.getPermiso(), ReporteUtil.fuenteTexto(), fondo)); // (duplicado
-                                                                                                                         // en
-                                                                                                                         // tu
-                                                                                                                         // diseño)
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(atraso.getDesde(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(atraso.getHasta(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(atraso.getPermiso_tiempo(), ReporteUtil.fuenteTexto(), fondo));
+                        tablaData.addCell(
+                                ReporteUtil.crearCelda(atraso.getPermiso_decimal(), ReporteUtil.fuenteTexto(), fondo));
                         tablaData.addCell(
                                 ReporteUtil.crearCelda(atraso.getTolerancia(), ReporteUtil.fuenteTexto(), fondo));
                         tablaData.addCell(
@@ -205,16 +223,18 @@ public class ReporteAtrasosService {
                     // Totales al final
                     Color fondoTotal = new Color(230, 240, 255);
 
-                    // Vacías hasta la columna 10 (para que TOTAL quede alineado)
-                    for (int i = 0; i < 10; i++) {
+                    // Vacías hasta la columna 9
+                    for (int i = 0; i < 9; i++) {
                         PdfPCell vacia = ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(), Color.WHITE);
                         vacia.setBorder(Rectangle.NO_BORDER);
                         tablaData.addCell(vacia);
                     }
 
-
-                    // "TOTAL"
+                    // "TOTAL" en columna 10
                     tablaData.addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), fondoTotal));
+
+                    // TOLERANCIA vacía en columna 11
+                    tablaData.addCell(ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(), fondoTotal));
 
                     // Tiempo total formateado
                     long h = totalSegs / 3600;
@@ -222,7 +242,7 @@ public class ReporteAtrasosService {
                     long s = totalSegs % 60;
                     String totalFormateado = String.format("%02d:%02d:%02d", h, m, s);
 
-                    // Tiempo y minutos
+                    // Totales en ATRASO
                     tablaData.addCell(ReporteUtil.crearCelda(totalFormateado, ReporteUtil.fuenteTexto(), fondoTotal));
                     tablaData.addCell(ReporteUtil.crearCelda(
                             String.format("%.2f", totalMins).replace(",", "."),
@@ -273,15 +293,17 @@ public class ReporteAtrasosService {
         final String NOMBRE_HOJA = "Atrasos";
         final int FILA_ENCABEZADO = 5;
 
-        // Merges B1:P5 (B=1 .. P=15 en 0-based)
+        // Merges B1:U5 (B=1 .. U=20 en 0-based)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
-        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 15;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 20;
 
         final String[] HEADERS = {
                 "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
                 "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
                 "FECHA HORARIO", "HORA HORARIO",
                 "FECHA TIMBRE", "HORA TIMBRE",
+                "TIPO PERMISO", "DESDE", "HASTA",
+                "PERMISO TIEMPO", "PERMISO DECIMAL",
                 "TOLERANCIA", "ATRASO", "ATRASO MINUTOS"
         };
         final int[] ANCHOS = {
@@ -289,6 +311,8 @@ public class ReporteAtrasosService {
                 20, 20, 20, 20, 20,
                 20, 20,
                 20, 20,
+                25, 15, 15,
+                18, 18,
                 20, 20, 20
         };
 
@@ -389,6 +413,12 @@ public class ReporteAtrasosService {
                             UtilExcel.establecerTexto(r, col++, fechaTim, null);
                             UtilExcel.establecerTexto(r, col++, horaTim, null);
 
+                            UtilExcel.establecerTexto(r, col++, safe(reg.getTipo_permiso()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(reg.getDesde()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(reg.getHasta()), null);
+                            UtilExcel.establecerTexto(r, col++, safe(reg.getPermiso_tiempo()), null);
+                            UtilExcel.establecerTexto(r, col++, normalize2(safe(reg.getPermiso_decimal())), null);
+
                             UtilExcel.establecerTexto(r, col++, toler, null);
                             UtilExcel.establecerTexto(r, col++, atrasoFmt, null);
                             UtilExcel.establecerTexto(r, col++, atrasoMin, null);
@@ -417,7 +447,7 @@ public class ReporteAtrasosService {
                 // Resto centrado
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 2, estiloCentroBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 4, 6, estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 10, 15, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 10, 20, estiloCentroBorde, true);
 
                 // 2.7 Tabla con filtros (ITEM sin filtro)
                 boolean[] filtros = new boolean[HEADERS.length];

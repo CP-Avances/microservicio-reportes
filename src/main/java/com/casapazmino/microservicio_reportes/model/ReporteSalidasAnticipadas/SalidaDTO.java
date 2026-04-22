@@ -16,4 +16,6 @@ public class SalidaDTO {
     private String tipo_permiso;
     private String desde;
     private String hasta;
+    private String permiso_tiempo;
+    private String permiso_decimal;
 }

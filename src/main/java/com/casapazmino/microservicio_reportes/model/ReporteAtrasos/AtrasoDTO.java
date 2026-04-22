@@ -17,7 +17,8 @@ public class AtrasoDTO {
     private String tipo_permiso;
     private String desde;
     private String hasta;
-    private String permiso;
+    private String permiso_tiempo;
+    private String permiso_decimal;
     private String descripcion_permiso;
     private String tolerancia;
     private String tiempoAtraso;
