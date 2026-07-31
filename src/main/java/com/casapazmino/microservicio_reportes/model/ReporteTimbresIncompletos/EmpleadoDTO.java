@@ -15,9 +15,11 @@ public class EmpleadoDTO {
     private String nombre;
     private String apellido;
     private String codigo;
+    private String correo;
     private String regimen;
     private String departamento;
     private String cargo;
+    private String rol;
     private String ciudad;
     private String sucursal;
     private List<TimbreDTO> timbres;

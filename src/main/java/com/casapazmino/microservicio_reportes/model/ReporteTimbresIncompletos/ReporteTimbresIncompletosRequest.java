@@ -11,7 +11,6 @@ import java.util.List;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteTimbresIncompletosRequest {
-
     private String usuario;
     private String empresa;
     private String fraseMarcaAgua;
@@ -19,6 +18,7 @@ public class ReporteTimbresIncompletosRequest {
     private String colorPrincipal;
     private String colorSecundario;
     private Integer opcionBusqueda;
+    private String filtroJustificacion;
     private PeriodoDTO periodo;
     private FiltrosAplicadosDTO filtrosAplicados;
     private List<TimbresSucursalDTO> data_pdf;

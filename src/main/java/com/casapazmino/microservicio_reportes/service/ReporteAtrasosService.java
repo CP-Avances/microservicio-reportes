@@ -51,7 +51,7 @@ public class ReporteAtrasosService {
         try {
             // 1) Inicialización
             baos = new ByteArrayOutputStream();
-            document = new Document(PageSize.A4, 40, 40, 30, 50);
+            document = new Document(PageSize.A4.rotate(), 30, 30, 30, 50);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
@@ -64,8 +64,11 @@ public class ReporteAtrasosService {
             if (logo != null)
                 document.add(logo);
 
-            document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
-            String titulo = "REPORTE DE ATRASOS - " + request.getOpcionBusqueda();
+           document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
+            String usuarios = Integer.valueOf(1).equals(request.getOpcionBusqueda())
+                    ? "ACTIVOS"
+                    : "INACTIVOS";
+            String titulo = "REPORTE DE ATRASOS - USUARIOS " + usuarios;
             document.add(ReporteUtil.crearTituloReporte(titulo));
             document.add(ReporteUtil.crearTituloPeriodo(
                     "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin()));
@@ -85,14 +88,14 @@ public class ReporteAtrasosService {
             tituloTabla.setWidths(WIDTHS_TITULO);
             tituloTabla.setSpacingAfter(10f);
 
-            PdfPCell celdaTitulo = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezado()));
+            PdfPCell celdaTitulo = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezadoTablaData()));
             celdaTitulo.setBackgroundColor(colorSecundario);
             celdaTitulo.setPadding(5f);
             celdaTitulo.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
             tituloTabla.addCell(celdaTitulo);
 
             PdfPCell celdaContador = new PdfPCell(
-                    new Phrase("N° Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezado()));
+                    new Phrase("N° Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezadoTablaData()));
             celdaContador.setBackgroundColor(colorSecundario);
             celdaContador.setHorizontalAlignment(Element.ALIGN_RIGHT);
             celdaContador.setVerticalAlignment(Element.ALIGN_MIDDLE);
@@ -127,49 +130,165 @@ public class ReporteAtrasosService {
                     contenedora.addCell(cont);
                     document.add(contenedora);
 
-                    // Encabezado (11 columnas)
-                    // Encabezado (13 columnas)
                     PdfPTable encabezado = new PdfPTable(13);
                     encabezado.setWidthPercentage(100);
                     encabezado.setWidths(WIDTHS_ENCAB_13);
 
+                    // PRIMERA FILA
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("N°", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                    encabezado.addCell(
-                            ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
-                    encabezado.addCell(
-                            ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
-                    encabezado.addCell(
-                            ReporteUtil.crearCelda("TIPO PERMISO", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2,
-                                    1));
-                    encabezado.addCell(
-                            ReporteUtil.crearCelda("DESDE", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                    encabezado.addCell(
-                            ReporteUtil.crearCelda("HASTA", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                    encabezado.addCell(
-                            ReporteUtil.crearCelda("PERMISO", ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
-                    encabezado.addCell(
-                            ReporteUtil.crearCelda("TOLERANCIA", ReporteUtil.fuenteEncabezado(), colorPrincipal, 2, 1));
-                    encabezado.addCell(
-                            ReporteUtil.crearCelda("ATRASO", ReporteUtil.fuenteEncabezado(), colorPrincipal, 1, 2));
+                            ReporteUtil.crearCelda(
+                                    "N°",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal,
+                                    2,
+                                    1
+                            )
+                    );
 
-                    // segunda fila
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("HORARIO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                            ReporteUtil.crearCelda(
+                                    "HORARIO",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal,
+                                    1,
+                                    2
+                            )
+                    );
+
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(), colorSecundario));
+                            ReporteUtil.crearCelda(
+                                    "TIMBRE",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorSecundario,
+                                    1,
+                                    2
+                            )
+                    );
+
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("HORARIO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                            ReporteUtil.crearCelda(
+                                    "TIPO JUSTIFICACIÓN",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal,
+                                    2,
+                                    1
+                            )
+                    );
+
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(), colorSecundario));
+                            ReporteUtil.crearCelda(
+                                    "DESDE",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal,
+                                    2,
+                                    1
+                            )
+                    );
+
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("TIEMPO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                            ReporteUtil.crearCelda(
+                                    "HASTA",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal,
+                                    2,
+                                    1
+                            )
+                    );
+
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("DECIMAL", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                            ReporteUtil.crearCelda(
+                                    "JUSTIFICACIÓN",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal,
+                                    1,
+                                    2
+                            )
+                    );
+
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("TIEMPO", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                            ReporteUtil.crearCelda(
+                                    "TOLERANCIA",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal,
+                                    2,
+                                    1
+                            )
+                    );
+
                     encabezado.addCell(
-                            ReporteUtil.crearCelda("DECIMAL", ReporteUtil.fuenteEncabezado(), colorPrincipal));
+                            ReporteUtil.crearCelda(
+                                    "ATRASO",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal,
+                                    1,
+                                    2
+                            )
+                    );
+
+                    // SEGUNDA FILA
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda(
+                                    "FECHA",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal
+                            )
+                    );
+
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda(
+                                    "HORA",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal
+                            )
+                    );
+
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda(
+                                    "FECHA",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorSecundario
+                            )
+                    );
+
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda(
+                                    "HORA",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorSecundario
+                            )
+                    );
+
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda(
+                                    "TIEMPO",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal
+                            )
+                    );
+
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda(
+                                    "DECIMAL",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal
+                            )
+                    );
+
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda(
+                                    "TIEMPO",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal
+                            )
+                    );
+
+                    encabezado.addCell(
+                            ReporteUtil.crearCelda(
+                                    "DECIMAL",
+                                    ReporteUtil.fuenteEncabezadoTablaData(),
+                                    colorPrincipal
+                            )
+                    );
 
                     encabezado.setSpacingAfter(0f);
                     document.add(encabezado);
@@ -184,40 +303,139 @@ public class ReporteAtrasosService {
                     double totalMins = 0.0;
 
                     for (AtrasoDTO atraso : emp.getAtrasos()) {
-                        Color fondo = (contador % 2 == 0) ? zebraColor : Color.WHITE;
+                        Color fondo = contador % 2 == 0
+                                ? zebraColor
+                                : Color.WHITE;
 
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(String.valueOf(contador), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        String.valueOf(contador),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(ReporteUtil.formatearFechaConDia(atraso.getFechaHorario()),
-                                        ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        ReporteUtil.formatearFechaConDia(
+                                                safe(atraso.getFechaHorario())
+                                        ),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(atraso.getHoraHorario(), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        safe(atraso.getHoraHorario()),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(ReporteUtil.formatearFechaConDia(atraso.getFechaTimbre()),
-                                        ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        ReporteUtil.formatearFechaConDia(
+                                                safe(atraso.getFechaTimbre())
+                                        ),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(atraso.getHoraTimbre(), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        safe(atraso.getHoraTimbre()),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
+
+                        // TIPO DE JUSTIFICACIÓN:
+                        // - Nombre del permiso
+                        // - HORAS EXTRA
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(atraso.getTipo_permiso(), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        obtenerTipoJustificacion(atraso),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
+                        // DESDE:
+                        // Solo aplica para permisos
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(atraso.getDesde(), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        obtenerDesdeJustificacion(atraso),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
+                        // HASTA:
+                        // Solo aplica para permisos
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(atraso.getHasta(), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        obtenerHastaJustificacion(atraso),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
+                        // TIEMPO REALMENTE JUSTIFICADO
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(atraso.getPermiso_tiempo(), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        obtenerTiempoJustificacion(atraso),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
+                        // MINUTOS DECIMALES REALMENTE JUSTIFICADOS
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(atraso.getPermiso_decimal(), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        obtenerDecimalJustificacion(atraso),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
+
+
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(atraso.getTolerancia(), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        safe(atraso.getTolerancia()),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(atraso.getTiempoAtraso(), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        safe(atraso.getTiempoAtraso()),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
+
                         tablaData.addCell(
-                                ReporteUtil.crearCelda(atraso.getMinutosAtraso(), ReporteUtil.fuenteTexto(), fondo));
+                                ReporteUtil.crearCelda(
+                                        normalize2(atraso.getMinutosAtraso()),
+                                        ReporteUtil.fuenteTablaData(),
+                                        fondo
+                                )
+                        );
 
                         contador++;
-                        totalSegs += convertirTiempoAtrasoASegundos(atraso.getTiempoAtraso());
-                        totalMins += convertirMinutos(atraso.getMinutosAtraso());
+
+                        totalSegs += convertirTiempoAtrasoASegundos(
+                                atraso.getTiempoAtraso()
+                        );
+
+                        totalMins += convertirMinutos(
+                                atraso.getMinutosAtraso()
+                        );
                     }
 
                     // Totales al final
@@ -298,22 +516,51 @@ public class ReporteAtrasosService {
         final int MERGE_COL_INI = 1, MERGE_COL_FIN = 20;
 
         final String[] HEADERS = {
-                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
-                "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
-                "FECHA HORARIO", "HORA HORARIO",
-                "FECHA TIMBRE", "HORA TIMBRE",
-                "TIPO PERMISO", "DESDE", "HASTA",
-                "PERMISO TIEMPO", "PERMISO DECIMAL",
-                "TOLERANCIA", "ATRASO", "ATRASO MINUTOS"
+                "ITEM",
+                "IDENTIFICACIÓN",
+                "CÓDIGO",
+                "APELLIDO NOMBRE",
+                "CIUDAD",
+                "SUCURSAL",
+                "RÉGIMEN",
+                "DEPARTAMENTO",
+                "CARGO",
+                "FECHA HORARIO",
+                "HORA HORARIO",
+                "FECHA TIMBRE",
+                "HORA TIMBRE",
+                "TIPO JUSTIFICACIÓN",
+                "DESDE",
+                "HASTA",
+                "JUSTIFICACIÓN TIEMPO",
+                "JUSTIFICACIÓN DECIMAL",
+                "TOLERANCIA",
+                "ATRASO",
+                "ATRASO MINUTOS"
         };
+
         final int[] ANCHOS = {
-                10, 20, 20, 28,
-                20, 20, 20, 20, 20,
-                20, 20,
-                20, 20,
-                25, 15, 15,
-                18, 18,
-                20, 20, 20
+                10,
+                20,
+                20,
+                28,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                30,
+                22,
+                22,
+                22,
+                22,
+                20,
+                20,
+                20
         };
 
         // ===========================================================
@@ -345,10 +592,11 @@ public class ReporteAtrasosService {
             UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())),
                     estiloTitulo);
 
-            String activosInactivos = ("1".equals(safe(request.getOpcionBusqueda())) ||
-                    "1".equals(String.valueOf(request.getOpcionBusqueda())))
+            String activosInactivos =
+                    Integer.valueOf(1).equals(request.getOpcionBusqueda())
                             ? "ACTIVOS"
                             : "INACTIVOS";
+
             UtilExcel.establecerTexto(hoja, 1, 1, "LISTA DE ATRASOS - " + activosInactivos, estiloTitulo);
 
             String periodo = "PERIODO DEL REPORTE: " + safe(request.getFechaInicio()) + " AL "
@@ -391,10 +639,27 @@ public class ReporteAtrasosService {
                             String horaHor = safe(reg.getHoraHorario());
                             String fechaTim = safe(reg.getFechaTimbre());
                             String horaTim = safe(reg.getHoraTimbre());
-                            String toler = safe(reg.getTolerancia()); // "HH:mm:ss" o "00:00:00"
-                            String atrasoFmt = safe(reg.getTiempoAtraso()); // "HH:mm:ss"
-                            String atrasoMin = normalize2(safe(reg.getMinutosAtraso())); // "xx.yy"
 
+                            String tipoJustificacion =
+                                obtenerTipoJustificacion(reg);
+
+                            String desdeJustificacion =
+                                obtenerDesdeJustificacion(reg);
+
+                            String hastaJustificacion =
+                                obtenerHastaJustificacion(reg);
+
+                            String justificacionTiempo =
+                                obtenerTiempoJustificacion(reg);
+
+                            String justificacionDecimal =
+                                obtenerDecimalJustificacion(reg);
+
+                            String tolerancia = safe(reg.getTolerancia());
+                            String atrasoFormato = safe(reg.getTiempoAtraso());
+                            String atrasoMinutos = normalize2(
+                                    reg.getMinutosAtraso()
+                            );
                             Row r = UtilExcel.asegurarFila(hoja, filaAct++);
                             int col = 0;
 
@@ -413,15 +678,44 @@ public class ReporteAtrasosService {
                             UtilExcel.establecerTexto(r, col++, fechaTim, null);
                             UtilExcel.establecerTexto(r, col++, horaTim, null);
 
-                            UtilExcel.establecerTexto(r, col++, safe(reg.getTipo_permiso()), null);
-                            UtilExcel.establecerTexto(r, col++, safe(reg.getDesde()), null);
-                            UtilExcel.establecerTexto(r, col++, safe(reg.getHasta()), null);
-                            UtilExcel.establecerTexto(r, col++, safe(reg.getPermiso_tiempo()), null);
-                            UtilExcel.establecerTexto(r, col++, normalize2(safe(reg.getPermiso_decimal())), null);
+                                UtilExcel.establecerTexto(
+                                        r,
+                                        col++,
+                                        tipoJustificacion,
+                                        null
+                                );
 
-                            UtilExcel.establecerTexto(r, col++, toler, null);
-                            UtilExcel.establecerTexto(r, col++, atrasoFmt, null);
-                            UtilExcel.establecerTexto(r, col++, atrasoMin, null);
+                                UtilExcel.establecerTexto(
+                                        r,
+                                        col++,
+                                        desdeJustificacion,
+                                        null
+                                );
+
+                                UtilExcel.establecerTexto(
+                                        r,
+                                        col++,
+                                        hastaJustificacion,
+                                        null
+                                );
+
+                                UtilExcel.establecerTexto(
+                                        r,
+                                        col++,
+                                        justificacionTiempo,
+                                        null
+                                );
+
+                                UtilExcel.establecerTexto(
+                                        r,
+                                        col++,
+                                        justificacionDecimal,
+                                        null
+                                );
+
+                            UtilExcel.establecerTexto(r, col++, tolerancia, null);
+                            UtilExcel.establecerTexto(r, col++, atrasoFormato, null);
+                            UtilExcel.establecerTexto(r, col++, atrasoMinutos, null);
                         }
                     }
                 }
@@ -443,11 +737,11 @@ public class ReporteAtrasosService {
                 // Texto largo a la izquierda
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 3, 3, estiloIzqBorde, true); // APELLIDO
                                                                                                             // NOMBRE
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 7, 9, estiloIzqBorde, true); // DEPTO/CARGO
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 7, 8, estiloIzqBorde, true); // DEPTO/CARGO
                 // Resto centrado
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 2, estiloCentroBorde, true);
                 UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 4, 6, estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 10, 20, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 9, 20, estiloCentroBorde, true);
 
                 // 2.7 Tabla con filtros (ITEM sin filtro)
                 boolean[] filtros = new boolean[HEADERS.length];
@@ -499,6 +793,227 @@ public class ReporteAtrasosService {
         } catch (Exception e) {
             return s;
         }
+    }
+
+    /**
+         * Determina si el atraso fue justificado mediante horas extra.
+         *
+         * Se soportan tres formas:
+         * 1. Bandera enviada por el frontend.
+         * 2. Código HORA_EXTRA.
+         * 3. Estado JHE de la asistencia.
+         */
+        private boolean esJustificacionHoraExtra(AtrasoDTO atraso) {
+        if (atraso == null) {
+                return false;
+        }
+
+        if (Boolean.TRUE.equals(
+                atraso.getEs_justificacion_hora_extra())) {
+                return true;
+        }
+
+        String tipoJustificacion = safe(
+                atraso.getTipo_justificacion()
+        );
+
+        if ("HORA_EXTRA".equalsIgnoreCase(tipoJustificacion)) {
+                return true;
+        }
+
+        String estadoTimbre = safe(
+                atraso.getEstado_timbre()
+        );
+
+        return "JHE".equalsIgnoreCase(estadoTimbre);
+        }
+
+        /**
+         * Determina si la justificación proviene de un permiso.
+         */
+        private boolean esJustificacionPermiso(AtrasoDTO atraso) {
+        if (atraso == null) {
+                return false;
+        }
+
+        if (Boolean.TRUE.equals(
+                atraso.getEs_justificacion_permiso())) {
+                return true;
+        }
+
+        String tipoJustificacion = safe(
+                atraso.getTipo_justificacion()
+        );
+
+        if ("PERMISO".equalsIgnoreCase(tipoJustificacion)) {
+                return true;
+        }
+
+        /*
+        * Compatibilidad con el payload anterior:
+        * si existe permiso aplicado y nombre de permiso,
+        * se considera justificación por permiso.
+        */
+        Long permisoAplicado = atraso.getPermiso_aplicado();
+
+        return permisoAplicado != null
+                && permisoAplicado > 0
+                && !safe(atraso.getTipo_permiso()).isBlank();
+        }
+
+        /**
+         * Devuelve el texto que se mostrará en la columna
+         * TIPO JUSTIFICACIÓN.
+         */
+        private String obtenerTipoJustificacion(AtrasoDTO atraso) {
+        if (atraso == null) {
+                return "";
+        }
+
+        /*
+        * El frontend ya puede enviar el texto preparado:
+        * - HORAS EXTRA
+        * - PERMISO MÉDICO
+        */
+        String texto = safe(
+                atraso.getTipo_justificacion_texto()
+        );
+
+        if (!texto.isBlank()) {
+                return texto;
+        }
+
+        if (esJustificacionHoraExtra(atraso)) {
+                return "HORAS EXTRA";
+        }
+
+        if (esJustificacionPermiso(atraso)) {
+                String tipoPermiso = safe(
+                        atraso.getTipo_permiso()
+                );
+
+                if (!tipoPermiso.isBlank()) {
+                return tipoPermiso;
+                }
+
+                String descripcion = safe(
+                        atraso.getDescripcion_justificacion()
+                );
+
+                return descripcion.isBlank()
+                        ? "PERMISO"
+                        : descripcion;
+        }
+
+        /*
+        * Respaldo para solicitudes con el formato anterior.
+        */
+        return safe(atraso.getTipo_permiso());
+        }
+
+        /**
+         * Desde y hasta solamente existen para permisos.
+         * En compensación por HE se muestra un guion.
+         */
+        private String obtenerDesdeJustificacion(AtrasoDTO atraso) {
+        if (atraso == null) {
+                return "";
+        }
+
+        if (esJustificacionHoraExtra(atraso)) {
+                return "-";
+        }
+
+        return safe(atraso.getDesde());
+        }
+
+        private String obtenerHastaJustificacion(AtrasoDTO atraso) {
+        if (atraso == null) {
+                return "";
+        }
+
+        if (esJustificacionHoraExtra(atraso)) {
+                return "-";
+        }
+
+        return safe(atraso.getHasta());
+        }
+
+        /**
+         * Tiempo realmente aplicado a la novedad.
+         *
+         * Prioridad:
+         * 1. Nuevo campo general de justificación.
+         * 2. Tiempo del permiso aplicado.
+         * 3. Duración antigua del permiso.
+         */
+        private String obtenerTiempoJustificacion(AtrasoDTO atraso) {
+        if (atraso == null) {
+                return "";
+        }
+
+        String tiempoJustificacion = safe(
+                atraso.getJustificacion_tiempo()
+        );
+
+        if (!tiempoJustificacion.isBlank()) {
+                return tiempoJustificacion;
+        }
+
+        String permisoAplicadoTiempo = safe(
+                atraso.getPermiso_aplicado_tiempo()
+        );
+
+        if (!permisoAplicadoTiempo.isBlank()) {
+                return permisoAplicadoTiempo;
+        }
+
+        return safe(
+                atraso.getPermiso_tiempo()
+        );
+        }
+
+        /**
+         * Minutos decimales realmente aplicados a la novedad.
+         */
+        private String obtenerDecimalJustificacion(AtrasoDTO atraso) {
+        if (atraso == null) {
+                return "";
+        }
+
+        String decimalJustificacion = safe(
+                atraso.getJustificacion_decimal()
+        );
+
+        if (!decimalJustificacion.isBlank()) {
+                return normalize2Opcional(
+                        decimalJustificacion
+                );
+        }
+
+        String permisoAplicadoDecimal = safe(
+                atraso.getPermiso_aplicado_decimal()
+        );
+
+        if (!permisoAplicadoDecimal.isBlank()) {
+                return normalize2Opcional(
+                        permisoAplicadoDecimal
+                );
+        }
+
+        return normalize2Opcional(
+                atraso.getPermiso_decimal()
+        );
+        }
+
+    private String normalize2Opcional(String valor) {
+        String texto = safe(valor);
+
+        if (texto.isBlank()) {
+            return "";
+        }
+
+        return normalize2(texto);
     }
 
     public static long convertirTiempoAtrasoASegundos(String tiempo) {

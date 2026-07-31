@@ -7,8 +7,14 @@ import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
 
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.DefaultIndexedColorMap;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.openpdf.text.Document;
@@ -51,7 +57,7 @@ public class ReporteAsistenciaService {
     final Color COLOR_SALIDA_ANTICIPADA = new Color(0x5AA3E6); // azul un poco más suave
     final Color COLOR_EXCESO_ALIMENTACION = new Color(0x66E055); // verde menos intenso
     final Color COLOR_PERMISO = new Color(0xD1A15A); // naranja/café apenas suavizado
-    final Color COLOR_VACACIONES = new Color(0xA995D1); // lila un poco menos saturado
+    final Color COLOR_VACACIONES = new Color(0xFF8800);
     final Color COLOR_JUSTIFICACION_HORAS_EXTRAS = new Color(0x09BDEB);
     final Font fontHeaderCompacto = ReporteUtil.fuenteEncabezadoCompacto();
     final Font fontTextoCompacto = ReporteUtil.fuenteTextoCompacto();
@@ -254,14 +260,16 @@ public class ReporteAsistenciaService {
 
                 /////////////////
                 boolean alimentacionEsPermiso = "P".equals(inicioEstado) || "P".equals(finEstado);
-                boolean alimentacionEsJHE = "JHE".equalsIgnoreCase(finEstado);
+                boolean alimentacionEsJHE =
+                "JHE".equalsIgnoreCase(inicioEstado)
+                    || "JHE".equalsIgnoreCase(finEstado);
                 boolean atrasoEsJHE = "JHE".equalsIgnoreCase(entradaEstado);
 
                 Double minutosAsignadosAlim = (inicioMarca != null && inicioMarca.getMinutos_alimentacion() != null)
                     ? inicioMarca.getMinutos_alimentacion()
                     : 0d;
 
-                Double minLaborados = reg.getMinLaborados() != null ? reg.getMinLaborados() : 0d;
+                Double minLaborados = obtenerMinutosLaboradosRegistro(reg);
 
                 Double minPlanificadosBase = reg.getMinPlanificados() != null ? reg.getMinPlanificados() : 0d;
                 Double minPlanificados = minPlanificadosBase - minutosAsignadosAlim;
@@ -270,12 +278,55 @@ public class ReporteAsistenciaService {
                   minPlanificados = 0d;
                 }
 
-                Double minAtrasos = reg.getMinAtrasos() != null ? reg.getMinAtrasos() : 0d;
-                Double minSalidas = reg.getMinSalidasAnticipadas() != null ? reg.getMinSalidasAnticipadas() : 0d;
-                Double minAlimentacion = reg.getMinAlimentacion() != null ? reg.getMinAlimentacion() : 0d;
-                Double minExcesoAlimentacion = calcularExcesoAlimentacion(minutosAsignadosAlim, minAlimentacion);
+                Double minAtrasos =
+                    reg.getMinAtrasos() != null
+                        ? reg.getMinAtrasos()
+                        : 0d;
 
-                //////
+                Double minSalidas =
+                    reg.getMinSalidasAnticipadas() != null
+                        ? reg.getMinSalidasAnticipadas()
+                        : 0d;
+
+                boolean calculoAlimentacionValido =
+                    esCalculoAlimentacionValido(reg);
+
+                /*
+                * Si el cálculo es inválido se conserva null.
+                * No debe convertirse en cero porque eso mostraría 00:00:00.
+                */
+                Double minAlimentacion = calculoAlimentacionValido
+                    ? (
+                        reg.getMinAlimentacion() != null
+                            ? reg.getMinAlimentacion()
+                            : 0d
+                      )
+                    : null;
+
+                boolean esSinControlCalculable =
+                    esHorarioSinControlCalculable(reg);
+
+                boolean excesoAlimentacionJustificado =
+                    alimentacionEsPermiso
+                        || alimentacionEsJHE
+                        || esSinControlCalculable;
+
+                /*
+                * El exceso tampoco puede calcularse cuando los timbres
+                * de alimentación tienen un orden inválido.
+                */
+                Double minExcesoAlimentacion = calculoAlimentacionValido
+                    ? (
+                        excesoAlimentacionJustificado
+                            ? 0d
+                            : calcularExcesoAlimentacion(
+                                minutosAsignadosAlim,
+                                minAlimentacion
+                              )
+                      )
+                    : null;
+
+
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(String.valueOf(contador), fontTextoCompacto, fondo));
 
@@ -345,10 +396,12 @@ public class ReporteAsistenciaService {
                     fontTextoCompacto,
                     minSalidas > 0 ? COLOR_SALIDA_ANTICIPADA : fondo));
 
-                boolean tieneExcesoAlimentacion = !alimentacionEsPermiso
-                    && !alimentacionEsJHE
-                    && minutosAsignadosAlim != null
-                    && minAlimentacion > minutosAsignadosAlim;
+                    boolean tieneExcesoAlimentacion =
+                        calculoAlimentacionValido
+                            && !excesoAlimentacionJustificado
+                            && minutosAsignadosAlim != null
+                            && minAlimentacion != null
+                            && minAlimentacion > minutosAsignadosAlim;
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     convertirMinutosATiempo(minutosAsignadosAlim),
@@ -356,14 +409,24 @@ public class ReporteAsistenciaService {
                     fondo));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
-                    convertirMinutosATiempo(minAlimentacion),
+                    formatearTiempoAlimentacion(
+                        minAlimentacion,
+                        calculoAlimentacionValido
+                    ),
                     fontTextoCompacto,
-                    tieneExcesoAlimentacion ? COLOR_EXCESO_ALIMENTACION : fondo));
+                    tieneExcesoAlimentacion
+                        ? COLOR_EXCESO_ALIMENTACION
+                        : fondo));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
-                    convertirMinutosATiempo(minExcesoAlimentacion),
+                    formatearTiempoAlimentacion(
+                        minExcesoAlimentacion,
+                        calculoAlimentacionValido
+                    ),
                     fontTextoCompacto,
-                    tieneExcesoAlimentacion ? COLOR_EXCESO_ALIMENTACION : fondo));
+                    tieneExcesoAlimentacion
+                        ? COLOR_EXCESO_ALIMENTACION
+                        : fondo));
 
                 tablaData.addCell(ReporteUtil.crearCeldaCompacta(
                     convertirMinutosATiempo(minPlanificados),
@@ -379,25 +442,29 @@ public class ReporteAsistenciaService {
                     safe(reg.getObservaciones()),
                     fondo));
 
-                /*
-                 * totalAtrasos += minAtrasos;
-                 * totalSalidasAnticipadas += minSalidas;
-                 * totalAlimentacionTomado += minAlimentacion;
-                 * totalAlimentacionAsignado += minutosAsignadosAlim != null ?
-                 * minutosAsignadosAlim : 0;
-                 * totalExcesoAlimentacion += minExcesoAlimentacion != null ?
-                 * minExcesoAlimentacion : 0;
-                 * totalPlanificado += minPlanificados;
-                 * totalLaborado += minLaborados;
-                 */
+                totalAtrasos += atrasoEsJHE
+                    ? 0d
+                    : minAtrasos;
 
-                totalAtrasos += atrasoEsJHE ? 0d : minAtrasos;
                 totalSalidasAnticipadas += minSalidas;
-                totalAlimentacionTomado += tieneExcesoAlimentacion ? minAlimentacion : 0d;
-                totalAlimentacionAsignado += minutosAsignadosAlim != null ? minutosAsignadosAlim : 0;
-                totalExcesoAlimentacion += tieneExcesoAlimentacion && minExcesoAlimentacion != null
-                    ? minExcesoAlimentacion
-                    : 0d;
+
+                totalAlimentacionAsignado +=
+                    minutosAsignadosAlim != null
+                        ? minutosAsignadosAlim
+                        : 0d;
+
+                if (calculoAlimentacionValido) {
+                    totalAlimentacionTomado +=
+                        minAlimentacion != null
+                            ? minAlimentacion
+                            : 0d;
+
+                    totalExcesoAlimentacion +=
+                        minExcesoAlimentacion != null
+                            ? minExcesoAlimentacion
+                            : 0d;
+                }
+
                 totalPlanificado += minPlanificados;
                 totalLaborado += minLaborados;
 
@@ -418,10 +485,21 @@ public class ReporteAsistenciaService {
                 fontTextoCompacto, Color.WHITE));
             tablaData.addCell(ReporteUtil.crearCeldaCompacta(convertirMinutosATiempo(totalAlimentacionAsignado),
                 fontTextoCompacto, Color.WHITE));
-            tablaData.addCell(ReporteUtil.crearCeldaCompacta(convertirMinutosATiempo(totalAlimentacionTomado),
-                fontTextoCompacto, Color.WHITE));
-            tablaData.addCell(ReporteUtil.crearCeldaCompacta(convertirMinutosATiempo(totalExcesoAlimentacion),
-                fontTextoCompacto, Color.WHITE));
+            tablaData.addCell(
+                ReporteUtil.crearCeldaCompacta(
+                    convertirMinutosATiempo(totalAlimentacionTomado),
+                    fontTextoCompacto,
+                    Color.WHITE
+                )
+            );
+            tablaData.addCell(
+                ReporteUtil.crearCeldaCompacta(
+                    convertirMinutosATiempo(totalExcesoAlimentacion),
+                    fontTextoCompacto,
+                    Color.WHITE
+                )
+            );
+
             tablaData.addCell(ReporteUtil.crearCeldaCompacta(convertirMinutosATiempo(totalPlanificado),
                 fontTextoCompacto, Color.WHITE));
             tablaData.addCell(
@@ -604,7 +682,7 @@ public class ReporteAsistenciaService {
               String salidaTimbre = obtenerTextoTimbre(salida);
               String salidaEstado = obtenerTextoEstado(salida, safe(t.getOrigen()), t.getControl());
 
-              Double minsLaborados = t.getMinLaborados() != null ? t.getMinLaborados() : 0d;
+              Double minsLaborados = obtenerMinutosLaboradosRegistro(t);
 
               Double asignMin = ("EAS".equals(safe(t.getTipo()))
                   && inicio != null
@@ -619,8 +697,44 @@ public class ReporteAsistenciaService {
                 minsPlanificados = 0d;
               }
 
-              Double minTomadoAlimentacion = t.getMinAlimentacion() != null ? t.getMinAlimentacion() : 0d;
-              Double minExcesoAlimentacion = calcularExcesoAlimentacion(asignMin, minTomadoAlimentacion);
+              boolean calculoAlimentacionValido =
+                  esCalculoAlimentacionValido(t);
+
+              Double minTomadoAlimentacion = calculoAlimentacionValido
+                  ? (
+                      t.getMinAlimentacion() != null
+                          ? t.getMinAlimentacion()
+                          : 0d
+                    )
+                  : null;
+
+              boolean alimentacionEsPermiso =
+                  "P".equalsIgnoreCase(inicioEstado)
+                      || "P".equalsIgnoreCase(finEstado);
+
+              boolean alimentacionEsJHE =
+                  "JHE".equalsIgnoreCase(inicioEstado)
+                      || "JHE".equalsIgnoreCase(finEstado);
+
+              boolean esSinControlCalculable = esHorarioSinControlCalculable(t);
+
+              boolean excesoAlimentacionJustificado =
+                  alimentacionEsPermiso
+                      || alimentacionEsJHE
+                      || esSinControlCalculable;
+
+              Double minExcesoAlimentacion = calculoAlimentacionValido
+                  ? (
+                      excesoAlimentacionJustificado
+                          ? 0d
+                          : calcularExcesoAlimentacion(
+                              asignMin,
+                              minTomadoAlimentacion
+                            )
+                    )
+                  : null;
+
+
               UtilExcel.establecerValor(r, col++, item++, null);
               UtilExcel.establecerTexto(r, col++, safe(usu.getIdentificacion()), null);
               UtilExcel.establecerTexto(r, col++, safe(usu.getCodigo()), null);
@@ -651,8 +765,24 @@ public class ReporteAsistenciaService {
               UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(t.getMinAtrasos()), null);
               UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(t.getMinSalidasAnticipadas()), null);
               UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(asignMin), null);
-              UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(minTomadoAlimentacion), null);
-              UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(minExcesoAlimentacion), null);
+              UtilExcel.establecerTexto(
+                  r,
+                  col++,
+                  formatearTiempoAlimentacion(
+                      minTomadoAlimentacion,
+                      calculoAlimentacionValido
+                  ),
+                  null
+              );
+              UtilExcel.establecerTexto(
+                  r,
+                  col++,
+                  formatearTiempoAlimentacion(
+                      minExcesoAlimentacion,
+                      calculoAlimentacionValido
+                  ),
+                  null
+              );
               UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(minsPlanificados), null);
               UtilExcel.establecerTexto(r, col++, convertirMinutosATiempo(minsLaborados), null);
               UtilExcel.establecerTexto(r, col++, safe(t.getObservaciones()), null);
@@ -688,6 +818,26 @@ public class ReporteAsistenciaService {
             ultimaFila, HEADERS.length - 1,
             true,
             filtros);
+
+        XSSFCellStyle estiloFaltaTimbreExcel = crearEstiloColorExcel(libro, estiloCentroBorde, "E05555");
+        XSSFCellStyle estiloAtrasoExcel = crearEstiloColorExcel(libro, estiloCentroBorde, "E6DA55");
+        XSSFCellStyle estiloSalidaAnticipadaExcel = crearEstiloColorExcel(libro, estiloCentroBorde, "5AA3E6");
+        XSSFCellStyle estiloExcesoAlimentacionExcel = crearEstiloColorExcel(libro, estiloCentroBorde, "66E055");
+        XSSFCellStyle estiloPermisoExcel = crearEstiloColorExcel(libro, estiloCentroBorde, "D1A15A");
+        XSSFCellStyle estiloVacacionesExcel = crearEstiloColorExcel(libro, estiloCentroBorde, "FF8800");
+        XSSFCellStyle estiloJustificacionHoraExtraExcel = crearEstiloColorExcel(libro, estiloCentroBorde, "09BDEB");
+
+        aplicarColoresNovedadesExcel(
+            hoja,
+            filaDatosIni,
+            ultimaFila,
+            estiloFaltaTimbreExcel,
+            estiloPermisoExcel,
+            estiloVacacionesExcel,
+            estiloJustificacionHoraExtraExcel,
+            estiloAtrasoExcel,
+            estiloSalidaAnticipadaExcel,
+            estiloExcesoAlimentacionExcel);
       }
 
       libro.write(baos);
@@ -719,6 +869,23 @@ public class ReporteAsistenciaService {
     return String.format("%02d:%02d:%02d", horas, mins, segundos);
   }
 
+  private boolean esCalculoAlimentacionValido(
+      RegistroAsistenciaDTO registro
+  ) {
+      return registro == null
+          || !Boolean.FALSE.equals(registro.getCalculoAlimentacionValido());
+  }
+
+  private String formatearTiempoAlimentacion(
+      Double minutos,
+      boolean calculoValido
+  ) {
+      return calculoValido
+          ? convertirMinutosATiempo(minutos)
+          : "---";
+  }
+
+
   private String extraerHora(String fechaHora) {
     if (fechaHora == null || !fechaHora.contains(" ")) {
       return "";
@@ -738,22 +905,78 @@ public class ReporteAsistenciaService {
   }
 
   private String obtenerTextoEstado(MarcaDTO marca, String origen, Boolean control) {
-    if (marca == null) {
-      return "";
-    }
+      if (marca == null) {
+          return "";
+      }
 
-    String estadoTimbre = safe(marca.getEstado_timbre());
+      String estado = normalizarCodigo(marca.getEstado_timbre());
+      String origenSeguro = normalizarCodigo(origen);
+      boolean tieneTimbre = !safe(marca.getFecha_hora_timbre()).isEmpty();
 
-    if (!estadoTimbre.isEmpty()) {
-      return estadoTimbre;
-    }
+      // Estados especiales que sí deben respetarse aunque exista timbre.
+      if (esEstadoVisualPrioritario(estado)) {
+          return estado;
+      }
 
-    if ("L".equals(origen) || "FD".equals(origen) || "DHA".equals(origen)) {
-      return origen;
-    }
+      // Si existe timbre real, el estado visual debe ser R.
+      // Aquí entran N, R, HLC, HLSC, HFDC, HFDSC, FD con timbre, etc.
+      if (tieneTimbre) {
+          return "R";
+      }
 
-    return (control != null && control) ? "FT" : "SCA";
+      // Días no laborables default sin timbre.
+      if (esOrigenNoLaborableDefault(origenSeguro)) {
+          return origenSeguro;
+      }
+
+      // Si no hay timbre, se marca según control.
+      return Boolean.TRUE.equals(control) ? "FT" : "SCA";
   }
+  
+  private String normalizarCodigo(Object valor) {
+      return safe(valor).trim().toUpperCase();
+  }
+
+  private boolean esEstadoVisualPrioritario(String estado) {
+      String codigo = normalizarCodigo(estado);
+
+      return "P".equals(codigo)
+          || "V".equals(codigo)
+          || "JHE".equals(codigo)
+          || "FT".equals(codigo)
+          || "SCA".equals(codigo);
+  }
+
+  private boolean esOrigenNoLaborableDefault(String origen) {
+      String codigo = normalizarCodigo(origen);
+
+      return "L".equals(codigo)
+          || "FD".equals(codigo)
+          || "DHA".equals(codigo);
+  }
+
+  private boolean esHorarioSinControlCalculable(RegistroAsistenciaDTO registro) {
+      String origen = normalizarCodigo(registro != null ? registro.getOrigen() : null);
+
+      return "HLSC".equals(origen) || "HFDSC".equals(origen);
+  }
+
+  private Double obtenerMinutosLaboradosRegistro(RegistroAsistenciaDTO registro) {
+      if (registro == null) {
+          return 0d;
+      }
+
+      if (esHorarioSinControlCalculable(registro)) {
+          return registro.getMinLaborados() != null ? registro.getMinLaborados() : 0d;
+      }
+
+      if (Boolean.TRUE.equals(registro.getControl())) {
+          return registro.getMinLaborados() != null ? registro.getMinLaborados() : 0d;
+      }
+
+      return registro.getMinPlanificados() != null ? registro.getMinPlanificados() : 0d;
+  }
+
 
   private Color getColorEstado(
       String valor,
@@ -789,6 +1012,201 @@ public class ReporteAsistenciaService {
     }
 
     return 0d;
+  }
+
+  //METODOS PRA AGERGAR COLORES AL REPORTE ECEL
+  private XSSFCellStyle crearEstiloColorExcel(XSSFWorkbook libro, CellStyle estiloBase, String hex) {
+    XSSFCellStyle estilo = libro.createCellStyle();
+    estilo.cloneStyleFrom(estiloBase);
+    estilo.setFillForegroundColor(new XSSFColor(hexABytes(hex), new DefaultIndexedColorMap()));
+    estilo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+    return estilo;
+  }
+
+  private byte[] hexABytes(String hex) {
+    String limpio = safe(hex).replace("#", "");
+
+    return new byte[] {
+        (byte) Integer.parseInt(limpio.substring(0, 2), 16),
+        (byte) Integer.parseInt(limpio.substring(2, 4), 16),
+        (byte) Integer.parseInt(limpio.substring(4, 6), 16)
+    };
+  }
+
+  private void aplicarColoresNovedadesExcel(
+      XSSFSheet hoja,
+      int filaInicio,
+      int filaFin,
+      CellStyle estiloFaltaTimbre,
+      CellStyle estiloPermiso,
+      CellStyle estiloVacaciones,
+      CellStyle estiloJustificacionHoraExtra,
+      CellStyle estiloAtraso,
+      CellStyle estiloSalidaAnticipada,
+      CellStyle estiloExcesoAlimentacion) {
+
+    DataFormatter formatter = new DataFormatter();
+
+    final int COL_EST_ENTRADA = 12;
+    final int COL_EST_INICIO_ALIMENTACION = 15;
+    final int COL_EST_FIN_ALIMENTACION = 18;
+    final int COL_EST_SALIDA = 21;
+
+    final int COL_ATRASO = 22;
+    final int COL_SALIDA_ANTICIPADA = 23;
+    final int COL_TIEMPO_ALIMENTACION_TOMADO = 25;
+    final int COL_TIEMPO_ALIMENTACION_EXCESO = 26;
+
+    for (int fila = filaInicio; fila <= filaFin; fila++) {
+      Row row = hoja.getRow(fila);
+
+      if (row == null) {
+        continue;
+      }
+
+      aplicarColorEstadoExcel(
+          row,
+          COL_EST_ENTRADA,
+          formatter,
+          estiloFaltaTimbre,
+          estiloPermiso,
+          estiloVacaciones,
+          estiloJustificacionHoraExtra);
+
+      aplicarColorEstadoExcel(
+          row,
+          COL_EST_INICIO_ALIMENTACION,
+          formatter,
+          estiloFaltaTimbre,
+          estiloPermiso,
+          estiloVacaciones,
+          estiloJustificacionHoraExtra);
+
+      aplicarColorEstadoExcel(
+          row,
+          COL_EST_FIN_ALIMENTACION,
+          formatter,
+          estiloFaltaTimbre,
+          estiloPermiso,
+          estiloVacaciones,
+          estiloJustificacionHoraExtra);
+
+      aplicarColorEstadoExcel(
+          row,
+          COL_EST_SALIDA,
+          formatter,
+          estiloFaltaTimbre,
+          estiloPermiso,
+          estiloVacaciones,
+          estiloJustificacionHoraExtra);
+
+      String estadoEntrada = obtenerTextoCelda(row.getCell(COL_EST_ENTRADA), formatter);
+      boolean atrasoEsJHE = "JHE".equalsIgnoreCase(estadoEntrada);
+
+      if (!atrasoEsJHE && esTiempoMayorACero(obtenerTextoCelda(row.getCell(COL_ATRASO), formatter))) {
+        aplicarEstiloCelda(row, COL_ATRASO, estiloAtraso);
+      }
+
+      if (esTiempoMayorACero(obtenerTextoCelda(row.getCell(COL_SALIDA_ANTICIPADA), formatter))) {
+        aplicarEstiloCelda(row, COL_SALIDA_ANTICIPADA, estiloSalidaAnticipada);
+      }
+
+      String estadoInicioAlimentacion = obtenerTextoCelda(row.getCell(COL_EST_INICIO_ALIMENTACION), formatter);
+      String estadoFinAlimentacion = obtenerTextoCelda(row.getCell(COL_EST_FIN_ALIMENTACION), formatter);
+
+      boolean alimentacionEsPermiso =
+          "P".equalsIgnoreCase(estadoInicioAlimentacion)
+              || "P".equalsIgnoreCase(estadoFinAlimentacion);
+
+      boolean alimentacionEsJHE =
+          "JHE".equalsIgnoreCase(estadoInicioAlimentacion)
+              || "JHE".equalsIgnoreCase(estadoFinAlimentacion);
+
+      boolean tieneExcesoAlimentacion =
+          !alimentacionEsPermiso
+              && !alimentacionEsJHE
+              && esTiempoMayorACero(obtenerTextoCelda(row.getCell(COL_TIEMPO_ALIMENTACION_EXCESO), formatter));
+
+      if (tieneExcesoAlimentacion) {
+        aplicarEstiloCelda(row, COL_TIEMPO_ALIMENTACION_TOMADO, estiloExcesoAlimentacion);
+        aplicarEstiloCelda(row, COL_TIEMPO_ALIMENTACION_EXCESO, estiloExcesoAlimentacion);
+      }
+    }
+  }
+
+  private void aplicarColorEstadoExcel(
+      Row row,
+      int columna,
+      DataFormatter formatter,
+      CellStyle estiloFaltaTimbre,
+      CellStyle estiloPermiso,
+      CellStyle estiloVacaciones,
+      CellStyle estiloJustificacionHoraExtra) {
+
+    String estado = obtenerTextoCelda(row.getCell(columna), formatter);
+
+    if ("FT".equalsIgnoreCase(estado)) {
+      aplicarEstiloCelda(row, columna, estiloFaltaTimbre);
+      return;
+    }
+
+    if ("P".equalsIgnoreCase(estado)) {
+      aplicarEstiloCelda(row, columna, estiloPermiso);
+      return;
+    }
+
+    if ("V".equalsIgnoreCase(estado)) {
+      aplicarEstiloCelda(row, columna, estiloVacaciones);
+      return;
+    }
+
+    if ("JHE".equalsIgnoreCase(estado)) {
+      aplicarEstiloCelda(row, columna, estiloJustificacionHoraExtra);
+    }
+  }
+
+  private void aplicarEstiloCelda(Row row, int columna, CellStyle estilo) {
+    Cell cell = row.getCell(columna);
+
+    if (cell == null) {
+      cell = row.createCell(columna);
+    }
+
+    cell.setCellStyle(estilo);
+  }
+
+  private String obtenerTextoCelda(Cell cell, DataFormatter formatter) {
+    if (cell == null) {
+      return "";
+    }
+
+    return safe(formatter.formatCellValue(cell));
+  }
+
+  private boolean esTiempoMayorACero(String tiempo) {
+    String valor = safe(tiempo);
+
+    if (valor.isEmpty() || !valor.contains(":")) {
+      return false;
+    }
+
+    String[] partes = valor.split(":");
+
+    if (partes.length < 2) {
+      return false;
+    }
+
+    try {
+      int horas = Integer.parseInt(partes[0]);
+      int minutos = Integer.parseInt(partes[1]);
+      int segundos = partes.length >= 3 ? Integer.parseInt(partes[2]) : 0;
+
+      int totalSegundos = horas * 3600 + minutos * 60 + segundos;
+
+      return totalSegundos > 0;
+    } catch (Exception e) {
+      return false;
+    }
   }
 
 }

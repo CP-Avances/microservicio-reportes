@@ -42,7 +42,7 @@ public class ConfiguracionPaginaPDF extends PdfPageEventHelper {
             PdfGState gstate = new PdfGState();
             boolean landscape = document.getPageSize().getWidth() > document.getPageSize().getHeight();
             float angulo = landscape ? 30f : 55f; 
-            float fontSize = landscape ? 180f : 160f; 
+            float fontSize = landscape ? 117f : 104f; 
 
             gstate.setFillOpacity(0.1f);
             canvas.saveState();

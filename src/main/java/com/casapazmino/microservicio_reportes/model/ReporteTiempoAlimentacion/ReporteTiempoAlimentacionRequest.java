@@ -17,12 +17,11 @@ public class ReporteTiempoAlimentacionRequest {
     private String logoBase64;
     private String colorPrincipal;
     private String colorSecundario;
-
     private String fechaInicio;
     private String fechaFin;
     private String opcionBusqueda;
+    private String filtroJustificacion;
     private ResumenResumen resumen;
-
     private List<TotalAlimentacionDTO> totales;
     private List<GrupoAlimentacionDTO> grupos;
 
