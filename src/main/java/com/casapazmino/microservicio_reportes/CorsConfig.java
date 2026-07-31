@@ -14,10 +14,17 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins(
-                                "http://localhost:61585",
                                 "http://localhost:4200",
                                 "http://192.168.0.145:4200", // ejemplo: agrega el segundo puerto aquí
-                                "https://nuevofulltime.fulltime.com.ec"
+                                "https://nuevofulltime.fulltime.com.ec",
+                                "https://aqhora.fulltime.com.ec",
+                                "https://www.aqhora.com",
+                                "https://aqhora.com",
+                                
+                                // App móvil Capacitor
+                                "https://localhost",
+                                "http://localhost",
+                                "capacitor://localhost"
 
                 )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")

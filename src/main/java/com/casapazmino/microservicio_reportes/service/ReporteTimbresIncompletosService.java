@@ -23,216 +23,156 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ReporteTimbresIncompletosService {
 
     public byte[] generarReportePDF(ReporteTimbresIncompletosRequest request) {
-
-        // ➊ DRY: constantes locales (manteniendo look & feel)
-        final String TITULO = "TIMBRES INCOMPLETOS - " + (request.getOpcionBusqueda() == 1 ? "ACTIVOS" : "INACTIVOS");
-        final String PERIODO = "PERIODO DEL: " + request.getPeriodo().getInicio() + " AL "
-                + request.getPeriodo().getFin();
-
+        final String estadoUsuarios = Integer.valueOf(1).equals(request.getOpcionBusqueda()) ? "ACTIVOS" : "INACTIVOS";
+        final String TITULO = "TIMBRES INCOMPLETOS - " + estadoUsuarios;
+        final String PERIODO = "PERIODO DEL: " + request.getPeriodo().getInicio() + " AL " + request.getPeriodo().getFin();
         final float[] WIDTHS_TITULO = { 8f, 2f };
         final float[] WIDTHS_INFO = { 4f, 4f, 4f };
-        final float[] WIDTHS_TIMBRES = { 1f, 4f, 4f, 4f };
-
-        final int WIDTH_PERCENT_100 = 100;
-        final float SPACING_AFTER_TITULO_TABLA = 10f;
-        final float SPACING_BEFORE_TIMBRES = 5f;
-        final float PADDING_TITULOS = 5f;
-
-        final Color COLOR_PRIMARIO = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
-        final Color COLOR_SECUNDARIO = ReporteUtil.convertirHexAColor(request.getColorSecundario());
-        final Color COLOR_ZEBRA = ReporteUtil.colorZebraClaro();
+        final float[] WIDTHS_TIMBRES = { 0.5f, 1.3f, 1.1f, 1.3f, 1.2f, 1.2f, 1.5f, 1.2f, 1.2f, 1.2f };
 
         Document document = null;
         PdfWriter writer = null;
         ByteArrayOutputStream baos = null;
 
         try {
-            // 1) Inicialización
             baos = new ByteArrayOutputStream();
-            document = new Document(PageSize.A4, 40, 40, 30, 50);
+            document = new Document(PageSize.A4.rotate(), 30, 30, 30, 50);
             writer = PdfWriter.getInstance(document, baos);
-            writer.setPageEvent(new ConfiguracionPaginaPDF(
-                    request.getUsuario(),
-                    request.getFraseMarcaAgua(),
-                    request.getColorPrincipal()));
+            writer.setPageEvent(new ConfiguracionPaginaPDF(request.getUsuario(), request.getFraseMarcaAgua(), request.getColorPrincipal()));
             document.open();
 
-            // 2) Construcción (helpers existentes)
-            // Logo
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-            if (logo != null) {
-                document.add(logo);
-            }
+            if (logo != null) document.add(logo);
 
-            // Encabezados
             document.add(ReporteUtil.crearTituloEmpresa(request.getEmpresa()));
             document.add(ReporteUtil.crearTituloReporte(TITULO));
             document.add(ReporteUtil.crearTituloPeriodo(PERIODO));
+            document.add(ReporteUtil.crearTituloPeriodo("JUSTIFICACIÓN: " + safe(request.getFiltroJustificacion())));
 
-            // Contador global (timbres)
-            AtomicInteger contadorGlobal = new AtomicInteger(0);
+            Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+            Color zebraColor = ReporteUtil.colorZebraClaro();
+
+            AtomicInteger contadorGlobal = new AtomicInteger();
             if (request.getData_pdf() != null) {
-                for (TimbresSucursalDTO suc : request.getData_pdf()) {
-                    if (suc.getEmpleados() == null)
-                        continue;
-                    for (EmpleadoDTO emp : suc.getEmpleados()) {
-                        if (emp.getTimbres() != null)
-                            contadorGlobal.addAndGet(emp.getTimbres().size());
+                for (TimbresSucursalDTO grupo : request.getData_pdf()) {
+                    if (grupo == null || grupo.getEmpleados() == null) continue;
+                    for (EmpleadoDTO empleado : grupo.getEmpleados()) {
+                        if (empleado != null && empleado.getTimbres() != null) contadorGlobal.addAndGet(empleado.getTimbres().size());
                     }
                 }
             }
 
-            // Título + contador
             PdfPTable tituloTabla = new PdfPTable(2);
-            tituloTabla.setWidthPercentage(WIDTH_PERCENT_100);
+            tituloTabla.setWidthPercentage(100);
             tituloTabla.setWidths(WIDTHS_TITULO);
-            tituloTabla.setSpacingAfter(SPACING_AFTER_TITULO_TABLA);
+            tituloTabla.setSpacingAfter(10f);
 
-            PdfPCell celdaTitulo = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezado()));
-            celdaTitulo.setBackgroundColor(COLOR_SECUNDARIO);
-            celdaTitulo.setPadding(PADDING_TITULOS);
+            PdfPCell celdaTitulo = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezadoTablaData()));
+            celdaTitulo.setBackgroundColor(colorSecundario);
+            celdaTitulo.setPadding(5f);
             celdaTitulo.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
             tituloTabla.addCell(celdaTitulo);
 
-            PdfPCell celdaContador = new PdfPCell(
-                    new Phrase("N° Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezado()));
-            celdaContador.setBackgroundColor(COLOR_SECUNDARIO);
+            PdfPCell celdaContador = new PdfPCell(new Phrase("N° Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezadoTablaData()));
+            celdaContador.setBackgroundColor(colorSecundario);
             celdaContador.setHorizontalAlignment(Element.ALIGN_RIGHT);
             celdaContador.setVerticalAlignment(Element.ALIGN_MIDDLE);
-            celdaContador.setPadding(PADDING_TITULOS);
+            celdaContador.setPadding(5f);
             celdaContador.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.RIGHT);
             tituloTabla.addCell(celdaContador);
-
             document.add(tituloTabla);
 
-            // Iteración sucursales / empleados
             if (request.getData_pdf() != null) {
-                for (TimbresSucursalDTO suc : request.getData_pdf()) {
-                    if (suc.getEmpleados() == null)
-                        continue;
+                for (TimbresSucursalDTO grupo : request.getData_pdf()) {
+                    if (grupo == null || grupo.getEmpleados() == null) continue;
 
-                    for (EmpleadoDTO emp : suc.getEmpleados()) {
+                    for (EmpleadoDTO emp : grupo.getEmpleados()) {
+                        if (emp == null || emp.getTimbres() == null) continue;
 
-                        // 2.1 Bloque info empleado (con borde exterior)
                         PdfPTable infoEmpleado = new PdfPTable(3);
-                        infoEmpleado.setWidthPercentage(WIDTH_PERCENT_100);
+                        infoEmpleado.setWidthPercentage(100);
                         infoEmpleado.setWidths(WIDTHS_INFO);
-
-                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:",
-                                emp.getApellido() + " " + emp.getNombre(), COLOR_ZEBRA));
-                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:", emp.getIdentificacion(), COLOR_ZEBRA));
-                        infoEmpleado
-                                .addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", emp.getRegimen(), COLOR_ZEBRA));
-                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:", emp.getCodigo(), COLOR_ZEBRA));
-                        infoEmpleado.addCell(
-                                ReporteUtil.celdaInfoMixta("DEPARTAMENTO:", emp.getDepartamento(), COLOR_ZEBRA));
-                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:", emp.getCargo(), COLOR_ZEBRA));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:", safe(emp.getApellido()) + " " + safe(emp.getNombre()), zebraColor));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:", safe(emp.getIdentificacion()), zebraColor));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:", safe(emp.getCodigo()), zebraColor));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", safe(emp.getRegimen()), zebraColor));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:", safe(emp.getDepartamento()), zebraColor));
+                        infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CARGO:", safe(emp.getCargo()), zebraColor));
 
                         PdfPTable contenedorInfo = new PdfPTable(1);
-                        contenedorInfo.setWidthPercentage(WIDTH_PERCENT_100);
+                        contenedorInfo.setWidthPercentage(100);
                         PdfPCell celdaContenedora = new PdfPCell(infoEmpleado);
                         celdaContenedora.setPadding(0);
                         celdaContenedora.setBorder(Rectangle.BOX);
                         contenedorInfo.addCell(celdaContenedora);
                         document.add(contenedorInfo);
 
-                        // 2.2 Tabla de timbres (encabezado con rowspan/colspan)
-                        PdfPTable tablaTimbres = new PdfPTable(4);
-                        tablaTimbres.setWidthPercentage(WIDTH_PERCENT_100);
-                        tablaTimbres.setSpacingBefore(SPACING_BEFORE_TIMBRES);
+                        PdfPTable tablaTimbres = new PdfPTable(10);
+                        tablaTimbres.setWidthPercentage(100);
+                        tablaTimbres.setSpacingBefore(5f);
                         tablaTimbres.setWidths(WIDTHS_TIMBRES);
 
-                        // Fila 1
-                        PdfPCell cNum = ReporteUtil.crearCelda("N°", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO);
-                        cNum.setRowspan(2);
-                        cNum.setHorizontalAlignment(Element.ALIGN_CENTER);
-                        cNum.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                        cNum.setBorder(Rectangle.BOX);
-                        tablaTimbres.addCell(cNum);
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("N°", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("HORARIO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 1, 2));
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("ACCIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("ESTADO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("TIPO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("DESCRIPCIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("DESDE", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("HASTA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("DETALLE", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+                        tablaTimbres.addCell(ReporteUtil.crearCelda("HORA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
-                        PdfPCell cTimbre = ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(),
-                                COLOR_PRIMARIO);
-                        cTimbre.setColspan(2);
-                        cTimbre.setHorizontalAlignment(Element.ALIGN_CENTER);
-                        cTimbre.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                        cTimbre.setBorder(Rectangle.TOP | Rectangle.BOTTOM);
-                        tablaTimbres.addCell(cTimbre);
-
-                        PdfPCell cAccion = ReporteUtil.crearCelda("ACCIÓN", ReporteUtil.fuenteEncabezado(),
-                                COLOR_PRIMARIO);
-                        cAccion.setRowspan(2);
-                        cAccion.setHorizontalAlignment(Element.ALIGN_CENTER);
-                        cAccion.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                        cAccion.setBorder(Rectangle.BOX);
-                        tablaTimbres.addCell(cAccion);
-
-                        // Fila 2
-                        tablaTimbres.addCell(
-                                ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
-                        tablaTimbres.addCell(
-                                ReporteUtil.crearCelda("HORA", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
-
-                        // Cuerpo
                         int contadorLocal = 1;
-                        if (emp.getTimbres() != null) {
-                            for (TimbreDTO t : emp.getTimbres()) {
-                                Color fondo = (contadorLocal % 2 == 0) ? COLOR_ZEBRA : null;
+                        for (TimbreDTO timbre : emp.getTimbres()) {
+                            if (timbre == null) continue;
 
-                                String[] partes = t.getFechaHora().split(" ");
-                                String fecha = partes.length > 0 ? partes[0] : "";
-                                String hora = partes.length > 1 ? partes[1] : "";
+                            Color fondo = contadorLocal % 2 == 0 ? zebraColor : Color.WHITE;
+                            String fecha = obtenerFechaHorario(timbre);
+                            String hora = obtenerHoraHorario(timbre);
 
-                                tablaTimbres.addCell(ReporteUtil.crearCelda(String.valueOf(contadorLocal),
-                                        ReporteUtil.fuenteTexto(), fondo));
-                                tablaTimbres.addCell(ReporteUtil.crearCelda(ReporteUtil.formatearFechaConDia(fecha),
-                                        ReporteUtil.fuenteTexto(), fondo));
-                                tablaTimbres.addCell(ReporteUtil.crearCelda(hora, ReporteUtil.fuenteTexto(), fondo));
-                                tablaTimbres.addCell(ReporteUtil.crearCelda(traducirAccion(t.getAccion()),
-                                        ReporteUtil.fuenteTexto(), fondo));
-
-                                contadorLocal++;
-                            }
+                            tablaTimbres.addCell(ReporteUtil.crearCelda(String.valueOf(contadorLocal), ReporteUtil.fuenteTablaData(), fondo));
+                            tablaTimbres.addCell(ReporteUtil.crearCelda(formatearFechaSegura(fecha), ReporteUtil.fuenteTablaData(), fondo));
+                            tablaTimbres.addCell(ReporteUtil.crearCelda(hora, ReporteUtil.fuenteTablaData(), fondo));
+                            tablaTimbres.addCell(ReporteUtil.crearCelda(obtenerAccionTexto(timbre), ReporteUtil.fuenteTablaData(), fondo));
+                            tablaTimbres.addCell(ReporteUtil.crearCelda(safe(timbre.getEstadoJustificacion()), ReporteUtil.fuenteTablaData(), fondo));
+                            tablaTimbres.addCell(ReporteUtil.crearCelda(safe(timbre.getTipoJustificacion()), ReporteUtil.fuenteTablaData(), fondo));
+                            tablaTimbres.addCell(ReporteUtil.crearCelda(safe(timbre.getNombreJustificacion()), ReporteUtil.fuenteTablaData(), fondo));
+                            tablaTimbres.addCell(ReporteUtil.crearCelda(formatearFechaHoraJustificacion(timbre.getDesde()), ReporteUtil.fuenteTablaData(), fondo));
+                            tablaTimbres.addCell(ReporteUtil.crearCelda(formatearFechaHoraJustificacion(timbre.getHasta()), ReporteUtil.fuenteTablaData(), fondo));
+                            tablaTimbres.addCell(ReporteUtil.crearCelda(safe(timbre.getDetalleJustificacion()), ReporteUtil.fuenteTablaData(), fondo));
+                            contadorLocal++;
                         }
 
+                        tablaTimbres.setSpacingAfter(10f);
                         document.add(tablaTimbres);
-                        document.add(Chunk.NEWLINE);
                     }
                 }
             }
 
-            // 3) Cierre + retorno
             document.close();
             return baos.toByteArray();
-
         } catch (IllegalArgumentException e) {
-            // Validaciones de helpers → el controller decidirá 400 si aplica
             throw e;
         } catch (Exception e) {
-            // Fallo interno uniforme → 500
             throw new ReportBuildException("No se pudo generar ReporteTimbresIncompletos.pdf", e);
         } finally {
-            // 4) Ciclo de recursos garantizado
             if (document != null && document.isOpen()) {
-                try {
-                    document.close();
-                } catch (Exception ignore) {
-                }
+                try { document.close(); } catch (Exception ignore) {}
             }
             if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ignore) {
-                }
+                try { writer.close(); } catch (Exception ignore) {}
             }
             if (baos != null) {
-                try {
-                    baos.close();
-                } catch (Exception ignore) {
-                }
+                try { baos.close(); } catch (Exception ignore) {}
             }
         }
     }
-
+        
+    
+    
     public byte[] generarReporteTimbresIncompletosExcel(ReporteTimbresIncompletosRequest request) {
         // =========================
         // 0) Constantes DRY locales
@@ -242,18 +182,27 @@ public class ReporteTimbresIncompletosService {
 
         // MERGES exactos (B1:L5) → (row 0..4, col 1..11)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
-        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 11;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 17;
 
         final String[] HEADERS = {
                 "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
                 "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
-                "FECHA TIMBRE", "HORA TIMBRE", "ACCIÓN"
+                "FECHA HORARIO", "HORA HORARIO", "ACCIÓN", "ESTADO",
+                "TIPO", "DESCRIPCIÓN", "DESDE", "HASTA", "DETALLE"
         };
-        final int[] ANCHOS = { 10, 20, 18, 28, 18, 18, 18, 20, 18, 20, 16, 26 };
 
-        // Filtros: ITEM sin filtro; resto con filtro
-        final boolean[] FILTROS = new boolean[] {
-                false, true, true, true, true, true, true, true, true, true, true, true
+        final int[] ANCHOS = {
+                10, 20, 18, 28,
+                18, 20, 20, 25, 22,
+                20, 18, 25, 20,
+                20, 25, 25, 25, 20
+        };
+
+        final boolean[] FILTROS = {
+                false, true, true, true,
+                true, true, true, true, true,
+                true, true, true, true,
+                true, true, true, true, true
         };
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
@@ -293,6 +242,10 @@ public class ReporteTimbresIncompletosService {
                     + safe(() -> request.getPeriodo().getFin());
             UtilExcel.establecerTexto(hoja, 2, 1, periodo, estiloTitulo);
 
+            UtilExcel.establecerTexto(hoja, 3, 1,
+                "FILTRO DE JUSTIFICACIÓN: " + safe(request.getFiltroJustificacion()),
+                estiloTitulo);
+
             // 4) ENCABEZADOS + ANCHOS (fila 6 → idx 5)
             Row filaHeader = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
             for (int c = 0; c < HEADERS.length; c++) {
@@ -322,19 +275,17 @@ public class ReporteTimbresIncompletosService {
                         String sucursal = firstNonEmpty(safe(emp.getSucursal()), safe(suc.getSucursal()));
 
                         for (TimbreDTO t : emp.getTimbres()) {
-                            if (t == null)
-                                continue;
+                            if (t == null) continue;
 
-                            // fechaHora viene "yyyy-MM-dd HH:mm:ss"
-                            String fhora = safe(t.getFechaHora());
-                            String fecha = "";
-                            if (!fhora.isBlank()) {
-                                int i = fhora.indexOf(' ');
-                                fecha = i > 0 ? fhora.substring(0, i) : fhora;
-                            }
-                            String fechaFmt = ReporteUtil.formatearFechaConDia(fecha);
-                            String hora = safe(t.getHoraTimbre()); // ya formateada desde el front
-                            String accionText = mapAccionTextoLocal(safe(t.getAccion()));
+                            String fechaFmt = formatearFechaSegura(obtenerFechaHorario(t));
+                            String hora = obtenerHoraHorario(t);
+                            String accion = obtenerAccionTexto(t);
+                            String estado = safe(t.getEstadoJustificacion());
+                            String tipo = safe(t.getTipoJustificacion());
+                            String descripcion = safe(t.getNombreJustificacion());
+                            String desde = formatearFechaHoraJustificacion(t.getDesde());
+                            String hasta = formatearFechaHoraJustificacion(t.getHasta());
+                            String detalle = safe(t.getDetalleJustificacion());
 
                             Row r = UtilExcel.asegurarFila(hoja, filaAct++);
                             int col = 0;
@@ -350,8 +301,15 @@ public class ReporteTimbresIncompletosService {
                             UtilExcel.establecerTexto(r, col++, safe(emp.getCargo()), null);
                             UtilExcel.establecerTexto(r, col++, fechaFmt, null);
                             UtilExcel.establecerTexto(r, col++, hora, null);
-                            UtilExcel.establecerTexto(r, col++, accionText, null);
+                            UtilExcel.establecerTexto(r, col++, accion, null);
+                            UtilExcel.establecerTexto(r, col++, estado, null);
+                            UtilExcel.establecerTexto(r, col++, tipo, null);
+                            UtilExcel.establecerTexto(r, col++, descripcion, null);
+                            UtilExcel.establecerTexto(r, col++, desde, null);
+                            UtilExcel.establecerTexto(r, col++, hasta, null);
+                            UtilExcel.establecerTexto(r, col++, detalle, null);
                         }
+
                     }
                 }
             }
@@ -367,20 +325,12 @@ public class ReporteTimbresIncompletosService {
                     0, HEADERS.length - 1, estiloCentroBorde, true);
 
             if (ultimaFila >= filaDatosIni) {
-                // ITEM centrado
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, 0, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 0, HEADERS.length - 1, estiloCentroBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 3, 3, estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 7, 8, estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 14, 14, estiloIzqBorde, true);
+                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 17, 17, estiloIzqBorde, true);
 
-                // Texto largo a la izquierda (apenombre, depto, cargo)
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 3, 3, estiloIzqBorde, true); // APELLIDO
-                                                                                                            // NOMBRE
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 7, 7, estiloIzqBorde, true); // DEPARTAMENTO..CARGO
-
-                // Resto centrado
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 1, 2, estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 4, 6, estiloCentroBorde, true);
-                UtilExcel.aplicarEstiloARegion(hoja, filaDatosIni, ultimaFila, 8, 11, estiloCentroBorde, true);
-
-                // 7) TABLA estilizada + filtros
                 UtilExcel.crearTablaEstilizada(
                         hoja,
                         "TimbresIncompletosReporteTabla",
@@ -401,6 +351,53 @@ public class ReporteTimbresIncompletosService {
             // Internos → 500 uniforme
             throw new ReportBuildException("No se pudo generar TimbresIncompletos.xlsx", e);
         }
+    }
+
+    private String obtenerFechaHorario(TimbreDTO timbre) {
+        String fecha = safe(timbre.getFechaHorario());
+        if (!fecha.isBlank()) return fecha;
+
+        String fechaHora = safe(timbre.getFechaHora());
+        int separador = fechaHora.indexOf(' ');
+        return separador > 0 ? fechaHora.substring(0, separador) : fechaHora;
+    }
+
+    private String obtenerHoraHorario(TimbreDTO timbre) {
+        String hora = firstNonEmpty(safe(timbre.getHoraHorario()), safe(timbre.getHoraTimbre()));
+        if (!hora.isBlank()) return hora;
+
+        String fechaHora = safe(timbre.getFechaHora());
+        int separador = fechaHora.indexOf(' ');
+        return separador >= 0 && separador + 1 < fechaHora.length()
+                ? fechaHora.substring(separador + 1)
+                : "";
+    }
+
+    private String obtenerAccionTexto(TimbreDTO timbre) {
+        return firstNonEmpty(safe(timbre.getAccionTexto()), mapAccionTextoLocal(safe(timbre.getAccion())));
+    }
+
+    private String formatearFechaSegura(String fecha) {
+        String valor = safe(fecha);
+        return valor.isBlank() ? "" : ReporteUtil.formatearFechaConDia(valor);
+    }
+
+    private String formatearFechaHoraJustificacion(String valor) {
+        String texto = safe(valor);
+        if (texto.isBlank()) return "";
+
+        String[] partes = texto.split("\\s+");
+        String fecha = formatearFechaSegura(partes[0]);
+
+        if (partes.length < 2) return fecha;
+
+        StringBuilder hora = new StringBuilder();
+        for (int i = 1; i < partes.length; i++) {
+            if (i > 1) hora.append(" ");
+            hora.append(partes[i]);
+        }
+
+        return fecha + " " + hora;
     }
 
     /* ===== Helpers locales ===== */

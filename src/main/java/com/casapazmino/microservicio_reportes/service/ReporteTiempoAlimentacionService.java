@@ -29,14 +29,54 @@ public class ReporteTiempoAlimentacionService {
                 + ("1".equals(request.getOpcionBusqueda()) ? "ACTIVOS" : "INACTIVOS");
         final String PERIODO = "PERIODO DEL: " + request.getFechaInicio() + " AL " + request.getFechaFin();
 
-        final float[] WIDTHS_COLORES = { 3f, 1.5f, 1.5f, 2f, 2f };
+        final float[] WIDTHS_COLORES = {
+                2.4f,
+                1.35f, 0.45f,
+                1.9f, 0.45f,
+                1.15f, 0.45f,
+                1.25f, 0.45f,
+                1.35f, 0.45f
+        };
+
         final float[] WIDTHS_TITULO = { 8f, 2f };
         final float[] WIDTHS_INFO = { 4f, 4f, 4f };
-        final float[] WIDTHS_TABLA = { 0.5f, 1.8f, 1.8f, 1.8f, 1.8f, 1.8f, 1.8f };
 
-        final String[] ENCAB_COLORES = { "CÓDIGO DE COLOR", "FALTA TIMBRE", " ", "EXCESO DE ALIMENTACIÓN", " " };
-        final String[] ENCAB_TABLA = { "Nº", "FECHA", "INICIO ALIMENTACIÓN", "FIN ALIMENTACIÓN", "M. ALIMENTACIÓN",
-                "M. TOMADOS", "M. EXCESO" };
+        final float[] WIDTHS_TABLA = {
+                0.45f,
+                1.20f,
+                1.10f,
+                1.10f,
+                1.55f,
+                1.70f,
+                1.70f,
+                0.95f,
+                0.95f,
+                1.00f,
+                1.10f
+        };
+
+        final String[] ENCAB_COLORES = {
+                "CÓDIGO DE COLOR",
+                "FALTA TIMBRE", " ",
+                "EXCESO DE ALIMENTACIÓN", " ",
+                "PERMISO", " ",
+                "VACACIONES", " ",
+                "HORAS EXTRA", " "
+        };
+
+        final String[] ENCAB_TABLA = {
+                "Nº",
+                "FECHA",
+                "INICIO ALIMENTACIÓN",
+                "FIN ALIMENTACIÓN",
+                "JUSTIFICACIÓN",
+                "DESDE",
+                "HASTA",
+                "M. ALIMENTACIÓN",
+                "M. TOMADOS",
+                "M. JUSTIFICADOS",
+                "M. EXCESO PENDIENTE"
+        };
 
         final int WIDTH_PERCENT_100 = 100;
         final float SPACING_AFTER_BLOQUE = 10f;
@@ -48,6 +88,9 @@ public class ReporteTiempoAlimentacionService {
         final Color COLOR_ZEBRA = ReporteUtil.colorZebraClaro();
         final Color COLOR_EXCESO = new Color(0x55EE44);
         final Color COLOR_FT = new Color(0xEE4444);
+        final Color COLOR_PERMISO = new Color(0xD1A15A);
+        final Color COLOR_VACACION = new Color(0xFF8800);
+        final Color COLOR_HORA_EXTRA = new Color(0x7EC8E3);
 
         Document document = null;
         PdfWriter writer = null;
@@ -56,7 +99,7 @@ public class ReporteTiempoAlimentacionService {
         try {
             // 1) Inicialización
             baos = new ByteArrayOutputStream();
-            document = new Document(PageSize.A4, 40, 40, 30, 50);
+            document = new Document(PageSize.A4.rotate(), 30, 30, 30, 50);
             writer = PdfWriter.getInstance(document, baos);
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     request.getUsuario(),
@@ -83,6 +126,12 @@ public class ReporteTiempoAlimentacionService {
             colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[2], COLOR_FT));
             colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[3], Color.WHITE));
             colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[4], COLOR_EXCESO));
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[5], Color.WHITE));
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[6], COLOR_PERMISO));
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[7], Color.WHITE));
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[8], COLOR_VACACION));
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[9], Color.WHITE));
+            colores.addCell(ReporteUtil.celdaEncabezado(ENCAB_COLORES[10], COLOR_HORA_EXTRA));
 
             colores.setSpacingAfter(SPACING_AFTER_BLOQUE);
             document.add(colores);
@@ -128,6 +177,7 @@ public class ReporteTiempoAlimentacionService {
 
                     for (EmpleadoAlimentacionDTO emp : grupo.getEmpleados()) {
 
+                        double totalJustificadoAlimentacion = 0d;
                         double totalExcesoAlimentacion = 0d;
                         int contador = 1;
 
@@ -169,48 +219,140 @@ public class ReporteTiempoAlimentacionService {
                             for (RegistroAlimentacionDTO registro : emp.getAlimentacion()) {
                                 Color fondo = (contador % 2 == 0) ? COLOR_ZEBRA : Color.WHITE;
 
-                                String inicio = (registro.getInicioAlimentacion() == null
-                                        || registro.getInicioAlimentacion().isEmpty())
-                                                ? "FT"
-                                                : extraerHora(registro.getInicioAlimentacion());
-                                String fin = (registro.getFinAlimentacion() == null
-                                        || registro.getFinAlimentacion().isEmpty())
-                                                ? "FT"
-                                                : extraerHora(registro.getFinAlimentacion());
+                                String inicio = toHoraOrCodigo(registro.getInicioAlimentacion());
+                                String fin = toHoraOrCodigo(registro.getFinAlimentacion());
 
-                                Color fondoInicio = "FT".equals(inicio) ? COLOR_FT : fondo;
-                                Color fondoFin = "FT".equals(fin) ? COLOR_FT : fondo;
+                                String justificacion =
+                                        obtenerJustificacion(registro);
+
+                                String desde =
+                                        obtenerDesdeJustificacion(registro);
+
+                                String hasta =
+                                        obtenerHastaJustificacion(registro);
+
+                                boolean calculoValido = !Boolean.FALSE.equals(registro.getCalculoValido());
+
+                                String minutosPermitidos = formatNumero(registro.getMinutosPermitidos());
+                                String minutosTomados = calculoValido ? formatNumero(registro.getMinutosTomados()) : "---";
+                                String minutosJustificados = calculoValido
+                                    ? formatNumero(
+                                            registro.getMinutosJustificacionAplicados()
+                                    )
+                                    : "---";
+                                String minutosExceso = calculoValido ? formatNumero(registro.getMinutosExceso()) : "---";
+
+                                Color fondoInicio = obtenerColorTimbre(
+                                        inicio,
+                                        fondo,
+                                        COLOR_FT,
+                                        COLOR_PERMISO,
+                                        COLOR_VACACION,
+                                        COLOR_HORA_EXTRA
+                                );
+
+                                Color fondoFin = obtenerColorTimbre(
+                                        fin,
+                                        fondo,
+                                        COLOR_FT,
+                                        COLOR_PERMISO,
+                                        COLOR_VACACION,
+                                        COLOR_HORA_EXTRA
+                                );
+                                Color fondoJustificacion =
+                                    obtenerColorJustificacion(
+                                            registro,
+                                            fondo,
+                                            COLOR_PERMISO,
+                                            COLOR_VACACION,
+                                            COLOR_HORA_EXTRA
+                                    );
+                                Color fondoExceso = calculoValido
+                                        && registro.getMinutosExceso() != null
+                                        && registro.getMinutosExceso() > 0
+                                                ? COLOR_EXCESO
+                                                : fondo;
 
                                 tablaAlimentacion.addCell(ReporteUtil.celdaCentro(String.valueOf(contador), fondo));
-                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(registro.getFecha(), fondo));
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(safe(registro.getFecha()), fondo));
                                 tablaAlimentacion.addCell(ReporteUtil.celdaCentro(inicio, fondoInicio));
                                 tablaAlimentacion.addCell(ReporteUtil.celdaCentro(fin, fondoFin));
-                                tablaAlimentacion.addCell(ReporteUtil
-                                        .celdaCentro(String.valueOf(registro.getMinutosPermitidos()), fondo));
-                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(
-                                        String.valueOf(registro.getMinutosTomados()).replace(",", "."), fondo));
 
-                                Color fondoExceso = registro.getMinutosExceso() > 0 ? COLOR_EXCESO : fondo;
-                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(
-                                        String.format("%.2f", registro.getMinutosExceso()).replace(",", "."),
-                                        fondoExceso));
+                                tablaAlimentacion.addCell(
+                                        ReporteUtil.celdaCentro(
+                                                justificacion,
+                                                fondoJustificacion
+                                        )
+                                );
 
-                                totalExcesoAlimentacion += registro.getMinutosExceso();
+
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(desde, fondo));
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(hasta, fondo));
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(minutosPermitidos, fondo));
+
+                                tablaAlimentacion.addCell(
+                                        ReporteUtil.celdaCentro(
+                                                minutosTomados,
+                                                fondo
+                                        )
+                                );
+
+                                tablaAlimentacion.addCell(
+                                        ReporteUtil.celdaCentro(
+                                                minutosJustificados,
+                                                fondo
+                                        )
+                                );
+
+
+                                tablaAlimentacion.addCell(ReporteUtil.celdaCentro(minutosExceso, fondoExceso));
+
+                                if (calculoValido && registro.getMinutosExceso() != null) {
+                                    totalExcesoAlimentacion += registro.getMinutosExceso();
+                                }
+
+                                if (
+                                    calculoValido &&
+                                    registro.getMinutosJustificacionAplicados() != null
+                                ) {
+                                    totalJustificadoAlimentacion +=
+                                            registro.getMinutosJustificacionAplicados();
+                                }
+
                                 contador++;
                             }
                         }
 
                         // Fila de totales: 5 vacías + "TOTAL" + total exceso
-                        for (int i = 0; i < 5; i++) {
+                        for (int i = 0; i < 8; i++) {
                             PdfPCell celdaVacia = ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(), Color.WHITE);
                             celdaVacia.setBorder(Rectangle.NO_BORDER);
                             tablaAlimentacion.addCell(celdaVacia);
                         }
-                        tablaAlimentacion
-                                .addCell(ReporteUtil.crearCelda("TOTAL", ReporteUtil.fuenteTexto(), Color.WHITE));
-                        tablaAlimentacion.addCell(ReporteUtil.crearCelda(
-                                String.format("%.2f", totalExcesoAlimentacion).replace(",", "."),
-                                ReporteUtil.fuenteTexto(), Color.WHITE));
+
+                            tablaAlimentacion.addCell(
+                                    ReporteUtil.crearCelda(
+                                            "TOTAL",
+                                            ReporteUtil.fuenteTexto(),
+                                            Color.WHITE
+                                    )
+                            );
+
+                            tablaAlimentacion.addCell(
+                                    ReporteUtil.crearCelda(
+                                            formatNumero(totalJustificadoAlimentacion),
+                                            ReporteUtil.fuenteTexto(),
+                                            Color.WHITE
+                                    )
+                            );
+
+                            tablaAlimentacion.addCell(
+                                    ReporteUtil.crearCelda(
+                                            formatNumero(totalExcesoAlimentacion),
+                                            ReporteUtil.fuenteTexto(),
+                                            Color.WHITE
+                                    )
+                            );
 
                         tablaAlimentacion.setSpacingAfter(SPACING_AFTER_BLOQUE);
                         document.add(tablaAlimentacion);
@@ -251,12 +393,6 @@ public class ReporteTiempoAlimentacionService {
         }
     }
 
-    private String extraerHora(String fechaHora) {
-        if (fechaHora == null || !fechaHora.contains(" "))
-            return fechaHora;
-        return fechaHora.split(" ")[1];
-    }
-
     public byte[] generarReporteTiempoAlimentacionXLSX(ReporteTiempoAlimentacionRequest request) {
         // =========================
         // 0) Constantes DRY locales
@@ -266,24 +402,55 @@ public class ReporteTiempoAlimentacionService {
 
         // MERGES exactos (B1:O5) → (row 0..4, col 1..14)
         final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
-        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 14;
+        final int MERGE_COL_INI = 1, MERGE_COL_FIN = 18;
 
         final String[] HEADERS = {
-                "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
-                "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
-                "FECHA", "INICIO ALIMENTACIÓN", "FIN ALIMENTACIÓN",
-                "MIN. PERMITIDOS", "MIN. TOMADOS", "MIN. EXCESO"
+                "ITEM",
+                "IDENTIFICACIÓN",
+                "CÓDIGO",
+                "APELLIDO NOMBRE",
+                "CIUDAD",
+                "SUCURSAL",
+                "RÉGIMEN",
+                "DEPARTAMENTO",
+                "CARGO",
+                "FECHA",
+                "INICIO ALIMENTACIÓN",
+                "FIN ALIMENTACIÓN",
+                "JUSTIFICACIÓN",
+                "DESDE",
+                "HASTA",
+                "MIN. PERMITIDOS",
+                "MIN. TOMADOS",
+                "MIN. JUSTIFICADOS",
+                "MIN. EXCESO PENDIENTE"
         };
+
         final int[] ANCHOS = {
-                10, 20, 20, 28, 18, 18, 18, 20, 18, 16, 22, 22, 18, 18, 18
+                10,
+                20,
+                20,
+                28,
+                18,
+                18,
+                18,
+                22,
+                20,
+                16,
+                22,
+                22,
+                28,
+                24,
+                24,
+                18,
+                18,
+                20,
+                22
         };
-        // Filtros: ITEM sin filtro; resto con filtro
-        final boolean[] FILTROS = new boolean[] {
-                false, true, true, true,
-                true, true, true, true, true,
-                true, true, true,
-                true, true, true
-        };
+
+        final boolean[] FILTROS = new boolean[HEADERS.length];
+        java.util.Arrays.fill(FILTROS, true);
+        FILTROS[0] = false;
 
         try (XSSFWorkbook libro = new XSSFWorkbook();
                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -354,17 +521,30 @@ public class ReporteTiempoAlimentacionService {
                             int col = 0;
 
                             // === Valores (siguiendo la lógica actual) ===
-                            String fecha = safe(reg.getFecha()); // ya formateada en payload
-                            String inicioAli = toHoraOrFT(reg.getInicioAlimentacion()); // "FT" si null/empty
-                            String finAli = toHoraOrFT(reg.getFinAlimentacion()); // "FT" si null/empty
+                            String fecha = safe(reg.getFecha());
+                            String inicioAli = toHoraOrCodigo(reg.getInicioAlimentacion());
+                            String finAli = toHoraOrCodigo(reg.getFinAlimentacion());
 
-                            // Permitidos entero; Tomados/Exceso con 2 decimales (punto)
-                            String minPermitidos = (reg.getMinutosPermitidos() == null)
-                                    ? "0"
-                                    : String.valueOf(reg.getMinutosPermitidos().intValue());
-                            String minTomados = format2(reg.getMinutosTomados());
-                            String minExceso = format2(reg.getMinutosExceso());
 
+                            String justificacion =
+                                    obtenerJustificacion(reg);
+
+                            String desde =
+                                    obtenerDesdeJustificacion(reg);
+
+                            String hasta =
+                                    obtenerHastaJustificacion(reg);
+
+                            boolean calculoValido = !Boolean.FALSE.equals(reg.getCalculoValido());
+
+                            String minPermitidos = formatNumero(reg.getMinutosPermitidos());
+                            String minTomados = calculoValido ? formatNumero(reg.getMinutosTomados()) : "---";
+                            String minJustificados = calculoValido
+                                ? formatNumero(
+                                        reg.getMinutosJustificacionAplicados()
+                                )
+                                : "---";
+                            String minExceso = calculoValido ? formatNumero(reg.getMinutosExceso()) : "---";
                             // === Escritura ===
                             UtilExcel.establecerValor(r, col++, item++, null);
                             UtilExcel.establecerTexto(r, col++, safe(emp.getIdentificacion()), null);
@@ -375,12 +555,20 @@ public class ReporteTiempoAlimentacionService {
                             UtilExcel.establecerTexto(r, col++, safe(emp.getRegimen()), null);
                             UtilExcel.establecerTexto(r, col++, safe(emp.getDepartamento()), null);
                             UtilExcel.establecerTexto(r, col++, safe(emp.getCargo()), null);
-
                             UtilExcel.establecerTexto(r, col++, fecha, null);
                             UtilExcel.establecerTexto(r, col++, inicioAli, null);
                             UtilExcel.establecerTexto(r, col++, finAli, null);
+                            UtilExcel.establecerTexto(r, col++, justificacion, null);
+                            UtilExcel.establecerTexto(r, col++, desde, null);
+                            UtilExcel.establecerTexto(r, col++, hasta, null);
                             UtilExcel.establecerTexto(r, col++, minPermitidos, null);
                             UtilExcel.establecerTexto(r, col++, minTomados, null);
+                            UtilExcel.establecerTexto(
+                                    r,
+                                    col++,
+                                    minJustificados,
+                                    null
+                            );
                             UtilExcel.establecerTexto(r, col++, minExceso, null);
                         }
                     }
@@ -436,20 +624,185 @@ public class ReporteTiempoAlimentacionService {
         return "null".equalsIgnoreCase(s) ? "" : s;
     }
 
-    // Si viene "yyyy-MM-dd HH:mm:ss" -> devuelve "HH:mm:ss"; si null/"" -> "FT"
-    private String toHoraOrFT(String fechaHora) {
-        if (fechaHora == null || fechaHora.trim().isEmpty())
-            return "FT";
-        int idx = fechaHora.indexOf(' ');
-        if (idx < 0 || idx + 1 >= fechaHora.length())
-            return "FT";
-        return fechaHora.substring(idx + 1);
+    private String toHoraOrCodigo(String valor) {
+        String texto = safe(valor);
+        if (texto.isEmpty()) return "FT";
+
+        String codigo = texto.toUpperCase();
+        if (
+            "FT".equals(codigo) ||
+            "P".equals(codigo) ||
+            "V".equals(codigo) ||
+            "JHE".equals(codigo)
+        ) {
+            return codigo;
+        }
+
+        int indiceEspacio = texto.indexOf(' ');
+        int indiceT = texto.indexOf('T');
+        int indice = indiceEspacio >= 0 ? indiceEspacio : indiceT;
+
+        if (indice >= 0 && indice + 1 < texto.length()) return texto.substring(indice + 1);
+        return texto;
     }
 
-    private String format2(Double v) {
-        if (v == null)
-            return "0.00";
-        return String.format("%.2f", v).replace(",", ".");
+    private String obtenerJustificacion(
+            RegistroAlimentacionDTO registro
+    ) {
+        if (registro == null) {
+            return "";
+        }
+
+        String texto = safe(
+                registro.getTipoJustificacionTexto()
+        );
+
+        if (!texto.isEmpty()) {
+            return texto;
+        }
+
+        String tipo = safe(
+                registro.getTipoJustificacion()
+        ).toUpperCase();
+
+        if ("JHE".equals(tipo)) {
+            return "HORAS EXTRA";
+        }
+
+        if ("V".equals(tipo)) {
+            return "VACACIONES";
+        }
+
+        if ("P".equals(tipo)) {
+            String tipoPermiso = safe(
+                    registro.getTipoPermiso()
+            );
+
+            return tipoPermiso.isEmpty()
+                    ? "PERMISO"
+                    : tipoPermiso;
+        }
+
+        return safe(registro.getTipoPermiso());
+    }
+
+    private Color obtenerColorTimbre(
+            String valor,
+            Color fondoNormal,
+            Color colorFt,
+            Color colorPermiso,
+            Color colorVacacion,
+            Color colorHoraExtra
+    ) {
+        String codigo = safe(valor).toUpperCase();
+
+        if ("FT".equals(codigo)) {
+            return colorFt;
+        }
+
+        if ("P".equals(codigo)) {
+            return colorPermiso;
+        }
+
+        if ("V".equals(codigo)) {
+            return colorVacacion;
+        }
+
+        if ("JHE".equals(codigo)) {
+            return colorHoraExtra;
+        }
+
+        return fondoNormal;
+    }
+        
+    
+    private String formatNumero(Double valor) {
+        if (valor == null || !Double.isFinite(valor)) return "0";
+        if (Math.rint(valor) == valor) return String.valueOf(valor.longValue());
+        return String.format("%.2f", valor).replace(",", ".");
+    }
+
+    private String formatNumero(double valor) {
+        if (!Double.isFinite(valor)) {
+            return "0";
+        }
+
+        if (Math.rint(valor) == valor) {
+            return String.valueOf((long) valor);
+        }
+
+        return String.format(
+                java.util.Locale.US,
+                "%.2f",
+                valor
+        );
+    }
+
+    private boolean esJustificacionHoraExtra(
+            RegistroAlimentacionDTO registro
+    ) {
+        if (registro == null) {
+            return false;
+        }
+
+        if (Boolean.TRUE.equals(
+                registro.getEsJustificacionHoraExtra()
+        )) {
+            return true;
+        }
+
+        return "JHE".equalsIgnoreCase(
+                safe(registro.getTipoJustificacion())
+        );
+    }
+
+    private String obtenerDesdeJustificacion(
+            RegistroAlimentacionDTO registro
+    ) {
+        if (esJustificacionHoraExtra(registro)) {
+            return "-";
+        }
+
+        return safe(registro.getDesde());
+    }
+
+    private String obtenerHastaJustificacion(
+            RegistroAlimentacionDTO registro
+    ) {
+        if (esJustificacionHoraExtra(registro)) {
+            return "-";
+        }
+
+        return safe(registro.getHasta());
+    }
+
+
+    private Color obtenerColorJustificacion(
+            RegistroAlimentacionDTO registro,
+            Color fondoNormal,
+            Color colorPermiso,
+            Color colorVacacion,
+            Color colorHoraExtra
+    ) {
+        String tipo = safe(
+                registro != null
+                        ? registro.getTipoJustificacion()
+                        : null
+        ).toUpperCase();
+
+        if ("P".equals(tipo)) {
+            return colorPermiso;
+        }
+
+        if ("V".equals(tipo)) {
+            return colorVacacion;
+        }
+
+        if ("JHE".equals(tipo)) {
+            return colorHoraExtra;
+        }
+
+        return fondoNormal;
     }
 
 }

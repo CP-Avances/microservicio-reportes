@@ -196,7 +196,7 @@ public class ReporteKardexVacacionesService {
                 ReporteUtil.fuenteTexto(), Color.WHITE));
             filaPeriodo.addCell(ReporteUtil.crearCelda("F.CARGA " + safe(per.getF_carga()),
                 ReporteUtil.fuenteTexto(), Color.WHITE));
-            filaPeriodo.addCell(ReporteUtil.crearCelda("DÍAS ACUM " + fmtDec2(per.getDias_acum_decimal()),
+            filaPeriodo.addCell(ReporteUtil.crearCelda("SALDO " + fmtDec2(per.getDias_acum_decimal()),
                 ReporteUtil.fuenteTexto(), Color.WHITE));
             String est = "ACTIVO".equalsIgnoreCase(safe(per.getEstado_periodo())) ? "Activo" : "Inactivo";
             filaPeriodo.addCell(
@@ -381,7 +381,13 @@ public class ReporteKardexVacacionesService {
             PdfPTable tituloDistrib = construirTituloDistribucionPDF();
             document.add(tituloDistrib);
 
-            PdfPTable distrib = construirTablaDistribucionPDF(per, azulHeader, azulSub);
+            PdfPTable distrib = construirTablaDistribucionPDF(
+                per,
+                int0(emp.getMin_por_dia()),
+                azulHeader,
+                azulSub
+            );
+
             document.add(distrib);
 
             // ==========================
@@ -570,7 +576,7 @@ public class ReporteKardexVacacionesService {
       shRep.setColumnWidth(8, 2400);  // Saldo días
       shRep.setColumnWidth(9, 2400);  // Saldo hor
       shRep.setColumnWidth(10, 2400); // Saldo min
-      for (int c = 11; c <= 20; c++) {
+      for (int c = 11; c <= 32; c++) {
         shRep.setColumnWidth(c, 2400);
       }
 
@@ -611,6 +617,21 @@ public class ReporteKardexVacacionesService {
       stCellWeekend.cloneStyleFrom(stCellC);
       stCellWeekend.setFillForegroundColor(IndexedColors.LEMON_CHIFFON.getIndex());
       stCellWeekend.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+
+      CellStyle stTotalDistribucionEtiqueta =
+          crearEstiloTotalDistribucionExcel(
+              libro,
+              stCellC,
+              org.apache.poi.ss.usermodel.HorizontalAlignment.RIGHT
+          );
+
+      CellStyle stTotalDistribucionValor =
+          crearEstiloTotalDistribucionExcel(
+              libro,
+              stCellC,
+              org.apache.poi.ss.usermodel.HorizontalAlignment.CENTER
+          );
+
 
       // Títulos
       mergeSafeNoBorder(shRep, row, row, C0, C_LAST, stTitulo);
@@ -682,7 +703,7 @@ public class ReporteKardexVacacionesService {
             UtilExcel.establecerTexto(shRep, row, 0, "F.INICIO " + safe(per.getF_ingreso()), stPeriodo);
             UtilExcel.establecerTexto(shRep, row, 2, "F.FIN " + safe(per.getF_salida()), stPeriodo);
             UtilExcel.establecerTexto(shRep, row, 4, "F.CARGA " + safe(per.getF_carga()), stPeriodo);
-            UtilExcel.establecerTexto(shRep, row, 6, "DÍAS ACUM " + fmtDec2(per.getDias_acum_decimal()), stPeriodo);
+            UtilExcel.establecerTexto(shRep, row, 6, "SALDO" + fmtDec2(per.getDias_acum_decimal()), stPeriodo);
             UtilExcel.establecerTexto(shRep, row, 8, "ESTADO " + est, stPeriodo);
             row++;
 
@@ -786,13 +807,16 @@ public class ReporteKardexVacacionesService {
                 shRep,
                 rowInicioPeriodo,
                 per,
+                int0(emp.getMin_por_dia()),
                 stPendTit,
                 stHeadBlue,
                 stSubBlue,
                 stCellC,
                 stHeadWeekend,
                 stSubWeekend,
-                stCellWeekend
+                stCellWeekend,
+                stTotalDistribucionEtiqueta,
+                stTotalDistribucionValor
             );
             
             row++;
@@ -1274,6 +1298,7 @@ public class ReporteKardexVacacionesService {
 
   private PdfPTable construirTablaDistribucionPDF(
       KardexPeriodoDTO per,
+      int minPorDia,
       Color azulHeader,
       Color azulSub) throws Exception {
 
@@ -1281,25 +1306,49 @@ public class ReporteKardexVacacionesService {
     tabla.setWidthPercentage(100);
 
     float[] widths = new float[21];
+
     for (int i = 0; i < 7; i++) {
       widths[i * 3] = 1f;
       widths[i * 3 + 1] = 1f;
       widths[i * 3 + 2] = 1f;
     }
+
     tabla.setWidths(widths);
     noSpace(tabla);
 
-    String[] dias = { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" };
+    String[] dias = {
+        "Lunes",
+        "Martes",
+        "Miércoles",
+        "Jueves",
+        "Viernes",
+        "Sábado",
+        "Domingo"
+    };
 
     Color colorFinSemanaHeader = new Color(255, 231, 163);
     Color colorFinSemanaSub = new Color(255, 243, 205);
     Color colorFinSemanaData = new Color(255, 249, 230);
 
+    // ===============================
+    // CABECERA: NOMBRES DE LOS DÍAS
+    // ===============================
     for (int i = 0; i < dias.length; i++) {
-      boolean finSemana = i >= 5; // sábado y domingo
-      tabla.addCell(hCell(dias[i], finSemana ? colorFinSemanaHeader : azulHeader, 3, 1));
+      boolean finSemana = i >= 5;
+
+      tabla.addCell(
+          hCell(
+              dias[i],
+              finSemana ? colorFinSemanaHeader : azulHeader,
+              3,
+              1
+          )
+      );
     }
 
+    // ===============================
+    // SUBCABECERA: DÍAS, HOR, MIN
+    // ===============================
     for (int i = 0; i < 7; i++) {
       boolean finSemana = i >= 5;
       Color fondoSub = finSemana ? colorFinSemanaSub : azulSub;
@@ -1309,27 +1358,224 @@ public class ReporteKardexVacacionesService {
       tabla.addCell(hCell("Min", fondoSub));
     }
 
-    SemanaDHMDTO total = sumarSemanaPeriodo(per);
+    // ===============================
+    // DISTRIBUCIÓN POR DÍA
+    // ===============================
+    SemanaDHMDTO total = sumarSemanaPeriodo(per, minPorDia);
 
-    addDhmCellsPDF(tabla, total != null ? total.getLunes() : null, Color.WHITE);
-    addDhmCellsPDF(tabla, total != null ? total.getMartes() : null, Color.WHITE);
-    addDhmCellsPDF(tabla, total != null ? total.getMiercoles() : null, Color.WHITE);
-    addDhmCellsPDF(tabla, total != null ? total.getJueves() : null, Color.WHITE);
-    addDhmCellsPDF(tabla, total != null ? total.getViernes() : null, Color.WHITE);
-    addDhmCellsPDF(tabla, total != null ? total.getSabado() : null, colorFinSemanaData);
-    addDhmCellsPDF(tabla, total != null ? total.getDomingo() : null, colorFinSemanaData);
+    addDhmCellsPDF(
+        tabla,
+        total != null ? total.getLunes() : null,
+        Color.WHITE
+    );
+
+    addDhmCellsPDF(
+        tabla,
+        total != null ? total.getMartes() : null,
+        Color.WHITE
+    );
+
+    addDhmCellsPDF(
+        tabla,
+        total != null ? total.getMiercoles() : null,
+        Color.WHITE
+    );
+
+    addDhmCellsPDF(
+        tabla,
+        total != null ? total.getJueves() : null,
+        Color.WHITE
+    );
+
+    addDhmCellsPDF(
+        tabla,
+        total != null ? total.getViernes() : null,
+        Color.WHITE
+    );
+
+    addDhmCellsPDF(
+        tabla,
+        total != null ? total.getSabado() : null,
+        colorFinSemanaData
+    );
+
+    addDhmCellsPDF(
+        tabla,
+        total != null ? total.getDomingo() : null,
+        colorFinSemanaData
+    );
+
+    // ===============================
+    // TOTALES LUNES A VIERNES
+    // ===============================
+    DHMDTO totalLaborables = sumarTotalDistribucion(
+        minPorDia,
+        total != null ? total.getLunes() : null,
+        total != null ? total.getMartes() : null,
+        total != null ? total.getMiercoles() : null,
+        total != null ? total.getJueves() : null,
+        total != null ? total.getViernes() : null
+    );
+
+    agregarFilaTotalDistribucionPDF(
+        tabla,
+        "Total lunes a viernes",
+        totalLaborables,
+        Color.WHITE
+    );
+
+    // ===============================
+    // TOTALES SÁBADO Y DOMINGO
+    // ===============================
+    DHMDTO totalFinSemana = sumarTotalDistribucion(
+        minPorDia,
+        total != null ? total.getSabado() : null,
+        total != null ? total.getDomingo() : null
+    );
+
+    agregarFilaTotalDistribucionPDF(
+        tabla,
+        "Total sábado y domingo",
+        totalFinSemana,
+        Color.WHITE
+    );
 
     tabla.setSpacingAfter(10f);
+
     return tabla;
   }
     
+  
+
+  private DHMDTO sumarTotalDistribucion(
+      int minPorDia,
+      DHMDTO... valores) {
+
+    int totalDias = 0;
+    long totalMinutos = 0;
+
+    if (valores != null) {
+      for (DHMDTO valor : valores) {
+        if (valor == null) {
+          continue;
+        }
+
+        totalDias += int0(valor.getDias());
+
+        totalMinutos +=
+            ((long) int0(valor.getHoras()) * 60L) +
+            int0(valor.getMinutos());
+      }
+    }
+
+    /*
+    * Convierte las horas y minutos acumulados en días,
+    * de acuerdo con la duración de la jornada del empleado.
+    *
+    * Ejemplo:
+    * minPorDia = 480
+    * 9 horas y 7 minutos = 1 día, 1 hora y 7 minutos.
+    */
+    if (minPorDia > 0) {
+      totalDias += (int) (totalMinutos / minPorDia);
+      totalMinutos %= minPorDia;
+    }
+
+    DHMDTO resultado = new DHMDTO();
+    resultado.setDias(totalDias);
+    resultado.setHoras((int) (totalMinutos / 60L));
+    resultado.setMinutos((int) (totalMinutos % 60L));
+
+    return resultado;
+  }
+
+  private void agregarFilaTotalDistribucionPDF(
+      PdfPTable tabla,
+      String etiqueta,
+      DHMDTO total,
+      Color fondo) {
+
+    /*
+    * La tabla tiene 21 columnas:
+    *
+    * Etiqueta: 15 columnas
+    * Días:       2 columnas
+    * Horas:      2 columnas
+    * Minutos:    2 columnas
+    *
+    * Total: 21 columnas
+    */
+
+    PdfPCell celdaEtiqueta = crearCeldaTotalDistribucionPDF(
+        etiqueta,
+        15,
+        fondo,
+        Element.ALIGN_RIGHT
+    );
+
+    PdfPCell celdaDias = crearCeldaTotalDistribucionPDF(
+        "Días: " + int0(total != null ? total.getDias() : 0),
+        2,
+        fondo,
+        Element.ALIGN_CENTER
+    );
+
+    PdfPCell celdaHoras = crearCeldaTotalDistribucionPDF(
+        "Hor: " + int0(total != null ? total.getHoras() : 0),
+        2,
+        fondo,
+        Element.ALIGN_CENTER
+    );
+
+    PdfPCell celdaMinutos = crearCeldaTotalDistribucionPDF(
+        "Min: " + int0(total != null ? total.getMinutos() : 0),
+        2,
+        fondo,
+        Element.ALIGN_CENTER
+    );
+
+    tabla.addCell(celdaEtiqueta);
+    tabla.addCell(celdaDias);
+    tabla.addCell(celdaHoras);
+    tabla.addCell(celdaMinutos);
+  }
+
+  private PdfPCell crearCeldaTotalDistribucionPDF(
+      String texto,
+      int colspan,
+      Color fondo,
+      int alineacion) {
+
+    PdfPCell celda = new PdfPCell(
+        new Phrase(
+            safe(texto),
+            ReporteUtil.fuenteEncabezadoTablaData()
+        )
+    );
+
+    celda.setColspan(colspan);
+    celda.setHorizontalAlignment(alineacion);
+    celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+    celda.setBackgroundColor(fondo);
+    celda.setPadding(5f);
+    celda.setBorder(Rectangle.BOX);
+    celda.setBorderColor(new Color(80, 80, 80));
+    celda.setBorderWidth(0.6f);
+
+    return celda;
+  }
+
+
   private void addDhmCellsPDF(PdfPTable tabla, DHMDTO dhm, Color fondo) {
     tabla.addCell(cellCenter(String.valueOf(int0(dhm != null ? dhm.getDias() : 0)), fondo));
     tabla.addCell(cellCenter(String.valueOf(int0(dhm != null ? dhm.getHoras() : 0)), fondo));
     tabla.addCell(cellCenter(String.valueOf(int0(dhm != null ? dhm.getMinutos() : 0)), fondo));
   }
 
-  private SemanaDHMDTO sumarSemanaPeriodo(KardexPeriodoDTO per) {
+  private SemanaDHMDTO sumarSemanaPeriodo(
+      KardexPeriodoDTO per,
+      int minPorDia) {
+
     SemanaDHMDTO out = semanaVacia();
 
     if (per == null || per.getMovimientos() == null) {
@@ -1337,21 +1583,100 @@ public class ReporteKardexVacacionesService {
     }
 
     for (KardexMovimientoDTO mov : per.getMovimientos()) {
-      if (mov == null || mov.getSemana_descuento() == null) continue;
+      if (mov == null || mov.getSemana_descuento() == null) {
+        continue;
+      }
 
-      SemanaDHMDTO s = mov.getSemana_descuento();
+      SemanaDHMDTO semana = mov.getSemana_descuento();
 
-      acumularDhm(out.getLunes(), s.getLunes());
-      acumularDhm(out.getMartes(), s.getMartes());
-      acumularDhm(out.getMiercoles(), s.getMiercoles());
-      acumularDhm(out.getJueves(), s.getJueves());
-      acumularDhm(out.getViernes(), s.getViernes());
-      acumularDhm(out.getSabado(), s.getSabado());
-      acumularDhm(out.getDomingo(), s.getDomingo());
+      acumularDhm(out.getLunes(), semana.getLunes());
+      acumularDhm(out.getMartes(), semana.getMartes());
+      acumularDhm(out.getMiercoles(), semana.getMiercoles());
+      acumularDhm(out.getJueves(), semana.getJueves());
+      acumularDhm(out.getViernes(), semana.getViernes());
+      acumularDhm(out.getSabado(), semana.getSabado());
+      acumularDhm(out.getDomingo(), semana.getDomingo());
     }
+
+    /*
+    * Después de acumular todos los movimientos,
+    * normalizamos cada día según la jornada del empleado.
+    */
+    out.setLunes(normalizarDhm(out.getLunes(), minPorDia));
+    out.setMartes(normalizarDhm(out.getMartes(), minPorDia));
+    out.setMiercoles(normalizarDhm(out.getMiercoles(), minPorDia));
+    out.setJueves(normalizarDhm(out.getJueves(), minPorDia));
+    out.setViernes(normalizarDhm(out.getViernes(), minPorDia));
+    out.setSabado(normalizarDhm(out.getSabado(), minPorDia));
+    out.setDomingo(normalizarDhm(out.getDomingo(), minPorDia));
 
     return out;
   }
+
+  private DHMDTO normalizarDhm(
+      DHMDTO valor,
+      int minPorDia) {
+
+    return sumarDhmNormalizado(minPorDia, valor);
+  }
+
+  private DHMDTO sumarDhmNormalizado(
+      int minPorDia,
+      DHMDTO... valores) {
+
+    long totalDias = 0L;
+    long minutosHoras = 0L;
+
+    if (valores != null) {
+      for (DHMDTO valor : valores) {
+        if (valor == null) {
+          continue;
+        }
+
+        totalDias += int0(valor.getDias());
+
+        minutosHoras +=
+            ((long) int0(valor.getHoras()) * 60L)
+            + int0(valor.getMinutos());
+      }
+    }
+
+    DHMDTO resultado = new DHMDTO();
+
+    /*
+    * Cuando conocemos la jornada:
+    * días, horas y minutos se convierten primero a minutos.
+    */
+    if (minPorDia > 0) {
+      long totalMinutos =
+          (totalDias * (long) minPorDia)
+          + minutosHoras;
+
+      long diasNormalizados = totalMinutos / minPorDia;
+      long minutosRestantes = totalMinutos % minPorDia;
+
+      resultado.setDias((int) diasNormalizados);
+      resultado.setHoras((int) (minutosRestantes / 60L));
+      resultado.setMinutos((int) (minutosRestantes % 60L));
+
+      return resultado;
+    }
+
+    /*
+    * Si por algún motivo no llega minPorDia,
+    * al menos convertimos 60 minutos en una hora.
+    * No convertimos horas en días porque desconocemos la jornada.
+    */
+    resultado.setDias((int) totalDias);
+    resultado.setHoras((int) (minutosHoras / 60L));
+    resultado.setMinutos((int) (minutosHoras % 60L));
+
+    return resultado;
+  }
+
+
+
+
 
   private SemanaDHMDTO semanaVacia() {
     SemanaDHMDTO s = new SemanaDHMDTO();
@@ -1374,66 +1699,322 @@ public class ReporteKardexVacacionesService {
   }
 
   private void acumularDhm(DHMDTO destino, DHMDTO origen) {
-    if (destino == null || origen == null) return;
+    if (destino == null || origen == null) {
+      return;
+    }
 
-    destino.setDias(int0(destino.getDias()) + int0(origen.getDias()));
-    destino.setHoras(int0(destino.getHoras()) + int0(origen.getHoras()));
-    destino.setMinutos(int0(destino.getMinutos()) + int0(origen.getMinutos()));
+    destino.setDias(
+        int0(destino.getDias()) + int0(origen.getDias())
+    );
+
+    destino.setHoras(
+        int0(destino.getHoras()) + int0(origen.getHoras())
+    );
+
+    destino.setMinutos(
+        int0(destino.getMinutos()) + int0(origen.getMinutos())
+    );
   }
+
+
+
+
 
   private void escribirDistribucionExcelLateral(
       XSSFSheet sh,
       int rowInicioPeriodo,
       KardexPeriodoDTO per,
+      int minPorDia,
       CellStyle stTitulo,
       CellStyle stHeadBlue,
       CellStyle stSubBlue,
       CellStyle stCellC,
       CellStyle stHeadWeekend,
       CellStyle stSubWeekend,
-      CellStyle stCellWeekend) {
+      CellStyle stCellWeekend,
+      CellStyle stTotalEtiqueta,
+      CellStyle stTotalValor) {
 
     final int DIST_START = 12; // M
+    final int DIST_END = DIST_START + 20; // AG
 
-    SemanaDHMDTO total = sumarSemanaPeriodo(per);
+    SemanaDHMDTO total = sumarSemanaPeriodo(per, minPorDia);
 
-    mergeSafe(sh, rowInicioPeriodo - 1, rowInicioPeriodo - 1, DIST_START, DIST_START + 20, stTitulo);
-    UtilExcel.establecerTexto(sh, rowInicioPeriodo - 1, DIST_START, "Distribución de días", stTitulo);
+    // ===============================
+    // TÍTULO
+    // ===============================
+    mergeSafe(
+        sh,
+        rowInicioPeriodo - 1,
+        rowInicioPeriodo - 1,
+        DIST_START,
+        DIST_END,
+        stTitulo
+    );
 
-    String[] dias = { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" };
+    UtilExcel.establecerTexto(
+        sh,
+        rowInicioPeriodo - 1,
+        DIST_START,
+        "Distribución de días",
+        stTitulo
+    );
+
+    // ===============================
+    // CABECERA DE DÍAS
+    // ===============================
+    String[] dias = {
+        "Lunes",
+        "Martes",
+        "Miércoles",
+        "Jueves",
+        "Viernes",
+        "Sábado",
+        "Domingo"
+    };
+
     int col = DIST_START;
+
     for (int i = 0; i < dias.length; i++) {
       boolean finSemana = i >= 5;
-      CellStyle styleHead = finSemana ? stHeadWeekend : stHeadBlue;
+      CellStyle styleHead = finSemana
+          ? stHeadWeekend
+          : stHeadBlue;
 
-      mergeSafe(sh, rowInicioPeriodo, rowInicioPeriodo, col, col + 2, styleHead);
-      UtilExcel.establecerTexto(sh, rowInicioPeriodo, col, dias[i], styleHead);
+      mergeSafe(
+          sh,
+          rowInicioPeriodo,
+          rowInicioPeriodo,
+          col,
+          col + 2,
+          styleHead
+      );
+
+      UtilExcel.establecerTexto(
+          sh,
+          rowInicioPeriodo,
+          col,
+          dias[i],
+          styleHead
+      );
+
       col += 3;
     }
 
-    Row sub = UtilExcel.asegurarFila(sh, rowInicioPeriodo + 1);
+    // ===============================
+    // SUBCABECERA
+    // ===============================
+    Row sub = UtilExcel.asegurarFila(
+        sh,
+        rowInicioPeriodo + 1
+    );
+
     col = DIST_START;
+
     for (int i = 0; i < 7; i++) {
       boolean finSemana = i >= 5;
-      CellStyle styleSub = finSemana ? stSubWeekend : stSubBlue;
+      CellStyle styleSub = finSemana
+          ? stSubWeekend
+          : stSubBlue;
 
       UtilExcel.establecerTexto(sub, col++, "Días", styleSub);
       UtilExcel.establecerTexto(sub, col++, "Hor", styleSub);
       UtilExcel.establecerTexto(sub, col++, "Min", styleSub);
     }
 
-    Row data = UtilExcel.asegurarFila(sh, rowInicioPeriodo + 2);
+    // ===============================
+    // VALORES POR DÍA
+    // ===============================
+    Row data = UtilExcel.asegurarFila(
+        sh,
+        rowInicioPeriodo + 2
+    );
+
     col = DIST_START;
-    col = escribirDhmExcel(data, col, total != null ? total.getLunes() : null, stCellC);
-    col = escribirDhmExcel(data, col, total != null ? total.getMartes() : null, stCellC);
-    col = escribirDhmExcel(data, col, total != null ? total.getMiercoles() : null, stCellC);
-    col = escribirDhmExcel(data, col, total != null ? total.getJueves() : null, stCellC);
-    col = escribirDhmExcel(data, col, total != null ? total.getViernes() : null, stCellC);
-    col = escribirDhmExcel(data, col, total != null ? total.getSabado() : null, stCellWeekend);
-    col = escribirDhmExcel(data, col, total != null ? total.getDomingo() : null, stCellWeekend);
+
+    col = escribirDhmExcel(
+        data,
+        col,
+        total != null ? total.getLunes() : null,
+        stCellC
+    );
+
+    col = escribirDhmExcel(
+        data,
+        col,
+        total != null ? total.getMartes() : null,
+        stCellC
+    );
+
+    col = escribirDhmExcel(
+        data,
+        col,
+        total != null ? total.getMiercoles() : null,
+        stCellC
+    );
+
+    col = escribirDhmExcel(
+        data,
+        col,
+        total != null ? total.getJueves() : null,
+        stCellC
+    );
+
+    col = escribirDhmExcel(
+        data,
+        col,
+        total != null ? total.getViernes() : null,
+        stCellC
+    );
+
+    col = escribirDhmExcel(
+        data,
+        col,
+        total != null ? total.getSabado() : null,
+        stCellWeekend
+    );
+
+    escribirDhmExcel(
+        data,
+        col,
+        total != null ? total.getDomingo() : null,
+        stCellWeekend
+    );
+
+    // ===============================
+    // TOTAL LUNES A VIERNES
+    // ===============================
+    DHMDTO totalLaborables = sumarTotalDistribucion(
+        minPorDia,
+        total != null ? total.getLunes() : null,
+        total != null ? total.getMartes() : null,
+        total != null ? total.getMiercoles() : null,
+        total != null ? total.getJueves() : null,
+        total != null ? total.getViernes() : null
+    );
+
+    int rowTotalLaborables = rowInicioPeriodo + 3;
+
+    escribirFilaTotalDistribucionExcel(
+        sh,
+        rowTotalLaborables,
+        DIST_START,
+        "Total lunes a viernes",
+        totalLaborables,
+        stTotalEtiqueta,
+        stTotalValor
+    );
+
+    // ===============================
+    // TOTAL SÁBADO Y DOMINGO
+    // ===============================
+    DHMDTO totalFinSemana = sumarTotalDistribucion(
+        minPorDia,
+        total != null ? total.getSabado() : null,
+        total != null ? total.getDomingo() : null
+    );
+
+    int rowTotalFinSemana = rowInicioPeriodo + 4;
+
+    escribirFilaTotalDistribucionExcel(
+        sh,
+        rowTotalFinSemana,
+        DIST_START,
+        "Total sábado y domingo",
+        totalFinSemana,
+        stTotalEtiqueta,
+        stTotalValor
+    );
+  }
+
+  private void escribirFilaTotalDistribucionExcel(
+      XSSFSheet sh,
+      int row,
+      int colInicio,
+      String etiqueta,
+      DHMDTO total,
+      CellStyle stEtiqueta,
+      CellStyle stValor) {
+
+    /*
+    * La distribución contiene 21 columnas:
+    *
+    * 15 columnas para la etiqueta.
+    * 2 columnas para días.
+    * 2 columnas para horas.
+    * 2 columnas para minutos.
+    */
+
+    mergeSafe(
+        sh,
+        row,
+        row,
+        colInicio,
+        colInicio + 14,
+        stEtiqueta
+    );
+
+    UtilExcel.establecerTexto(
+        sh,
+        row,
+        colInicio,
+        etiqueta,
+        stEtiqueta
+    );
+
+    mergeSafe(
+        sh,
+        row,
+        row,
+        colInicio + 15,
+        colInicio + 16,
+        stValor
+    );
+
+    UtilExcel.establecerTexto(
+        sh,
+        row,
+        colInicio + 15,
+        "Días: " + int0(total != null ? total.getDias() : 0),
+        stValor
+    );
+
+    mergeSafe(
+        sh,
+        row,
+        row,
+        colInicio + 17,
+        colInicio + 18,
+        stValor
+    );
+
+    UtilExcel.establecerTexto(
+        sh,
+        row,
+        colInicio + 17,
+        "Hor: " + int0(total != null ? total.getHoras() : 0),
+        stValor
+    );
+
+    mergeSafe(
+        sh,
+        row,
+        row,
+        colInicio + 19,
+        colInicio + 20,
+        stValor
+    );
+
+    UtilExcel.establecerTexto(
+        sh,
+        row,
+        colInicio + 19,
+        "Min: " + int0(total != null ? total.getMinutos() : 0),
+        stValor
+    );
   }
     
-  
+
   private int escribirDhmExcel(Row row, int col, DHMDTO dhm, CellStyle style) {
     UtilExcel.establecerValor(row, col++, int0(dhm != null ? dhm.getDias() : 0), style);
     UtilExcel.establecerValor(row, col++, int0(dhm != null ? dhm.getHoras() : 0), style);
@@ -1473,6 +2054,29 @@ public class ReporteKardexVacacionesService {
 
     return estilo;
   }
+
+  private CellStyle crearEstiloTotalDistribucionExcel(
+      XSSFWorkbook libro,
+      CellStyle estiloBase,
+      org.apache.poi.ss.usermodel.HorizontalAlignment alineacion) {
+
+    CellStyle estilo = libro.createCellStyle();
+    estilo.cloneStyleFrom(estiloBase);
+
+    estilo.setAlignment(alineacion);
+    estilo.setVerticalAlignment(
+        org.apache.poi.ss.usermodel.VerticalAlignment.CENTER
+    );
+
+    org.apache.poi.xssf.usermodel.XSSFFont fuente = libro.createFont();
+    fuente.setBold(true);
+    fuente.setFontHeightInPoints((short) 10);
+
+    estilo.setFont(fuente);
+
+    return estilo;
+  }
+
 
 
 }

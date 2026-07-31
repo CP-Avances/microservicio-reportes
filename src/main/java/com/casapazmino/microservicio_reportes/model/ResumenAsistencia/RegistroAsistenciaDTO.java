@@ -1,5 +1,6 @@
 package com.casapazmino.microservicio_reportes.model.ResumenAsistencia;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,6 +26,12 @@ public class RegistroAsistenciaDTO {
     private Double minAlimentacion;
     private Double minAtrasos;
     private Double minSalidasAnticipadas;
+
+    @JsonProperty("calculo_alimentacion_valido")
+    private Boolean calculoAlimentacionValido;
+
+    @JsonProperty("motivo_calculo_alimentacion")
+    private String motivoCalculoAlimentacion;
 
     private String observaciones;
 }

@@ -11,7 +11,6 @@ import java.util.List;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ReporteFaltasRequest {
-
     private String usuario;
     private String empresa;
     private String fraseMarcaAgua;
@@ -21,6 +20,7 @@ public class ReporteFaltasRequest {
     private String fechaInicio;
     private String fechaFin;
     private Integer opcionBusqueda;
-    private Boolean resumen;
+    private String filtroJustificacion;
+    private FiltroResumenFaltasDTO resumen;
     private List<GrupoFaltasDTO> grupos;
 }
