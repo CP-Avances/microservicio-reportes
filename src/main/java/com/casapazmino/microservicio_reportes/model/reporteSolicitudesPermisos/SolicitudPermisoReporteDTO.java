@@ -11,6 +11,9 @@ import lombok.Setter;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SolicitudPermisoReporteDTO {
 
+    // ==========================
+    // DATOS DEL EMPLEADO
+    // ==========================
     private Long id_empleado;
     private String identificacion;
     private String codigo;
@@ -24,6 +27,9 @@ public class SolicitudPermisoReporteDTO {
     private String cargo;
     private String rol;
 
+    // ==========================
+    // DATOS DE LA SOLICITUD
+    // ==========================
     private Long solicitud;
     private Long codigo_solicitud;
     private Long id_tipo_permiso;
@@ -41,7 +47,38 @@ public class SolicitudPermisoReporteDTO {
     private String estado_texto;
     private String autorizado;
 
+    // ==========================
+    // CAMPOS ANTERIORES
+    // Se mantienen por compatibilidad
+    // ==========================
     private Long id_empleado_aprobador;
     private String autoriza;
     private String fecha_autorizacion;
+
+    // ==========================
+    // NUEVO HISTORIAL DE APROBACIÓN
+    // Viene desde ea_historial_aprobacion
+    // ==========================
+    private Long id_historial;
+    private Integer orden_paso;
+
+    private Long id_departamento_destino;
+    private String departamento_aprobacion;
+    private String departamento_nombre;
+
+    private String empleado_nombre;
+
+    private String accion;
+    private String estado_flujo;
+
+    private String fecha_hora_accion;
+    private String observacion;
+
+    private String tipo_paso;
+    private Boolean obligatorio;
+    private String modo_aprobador;
+
+    private String cargo_en_momento;
+    private Boolean es_jefe_en_momento;
+    private Boolean historial_activo;
 }
