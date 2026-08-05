@@ -39,6 +39,11 @@ public class SolicitudPermisoReporteDTO {
     private String fecha_inicio;
     private String fecha_fin;
 
+    private String hora_inicio;
+    private String timbre_inicio_permiso;
+    private String hora_fin;
+    private String timbre_fin_permiso;
+
     private Double dias;
     private Double horas;
     private Integer minutos_totales;

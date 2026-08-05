@@ -36,37 +36,27 @@ public class ReporteConsolidadoSolicitudPermisoService {
         Document document = null;
         PdfWriter writer = null;
         ByteArrayOutputStream baos = null;
-
         try {
-            if (request == null) {
-                throw new IllegalArgumentException("request nulo");
-            }
-
+            if (request == null) throw new IllegalArgumentException("request nulo");
             baos = new ByteArrayOutputStream();
             document = new Document(PageSize.A4.rotate(), 30, 30, 30, 50);
             writer = PdfWriter.getInstance(document, baos);
-
-            writer.setPageEvent(new ConfiguracionPaginaPDF(
-                    safe(request.getUsuario()),
-                    safe(request.getFraseMarcaAgua()),
-                    safe(request.getColorPrincipal())));
-
+            writer.setPageEvent(new ConfiguracionPaginaPDF(safe(request.getUsuario()), safe(request.getFraseMarcaAgua()), safe(request.getColorPrincipal())));
             document.open();
 
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-            if (logo != null) {
-                document.add(logo);
-            }
+            if (logo != null) document.add(logo);
 
+            String tipoUsuarios = obtenerTextoUsuarios(request.getUsuarios());
             document.add(ReporteUtil.crearTituloEmpresa(safe(request.getEmpresa())));
-            document.add(ReporteUtil.crearTituloReporte("REPORTE DE SOLICITUDES DE PERMISOS"));
-            document.add(ReporteUtil.crearTituloPeriodo(
-                    "RANGO DE FECHAS: " + safe(request.getFechaDesde()) + " - " + safe(request.getFechaHasta())));
+            document.add(ReporteUtil.crearTituloReporte("REPORTE DE SOLICITUDES DE PERMISOS - USUARIOS " + tipoUsuarios));
+            document.add(ReporteUtil.crearTituloPeriodo("PERIODO DEL: " + safe(request.getFechaDesde()) + " AL " + safe(request.getFechaHasta())));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
+            Color colorSecundario = ReporteUtil.convertirHexAColor(request.getColorSecundario());
+            Color zebraColor = ReporteUtil.colorZebraClaro();
 
             List<SolicitudPermisoReporteDTO> filas = request.getSolicitudes();
-
             if (filas == null || filas.isEmpty()) {
                 Paragraph p = new Paragraph("Sin datos para mostrar", ReporteUtil.fuenteTexto());
                 p.setAlignment(Element.ALIGN_CENTER);
@@ -77,360 +67,206 @@ public class ReporteConsolidadoSolicitudPermisoService {
             }
 
             List<GrupoEmpleadoReporte> grupos = agruparPorEmpleadoSolicitud(filas);
+            int totalSolicitudes = grupos.stream().mapToInt(g -> g.solicitudes == null ? 0 : g.solicitudes.size()).sum();
 
-            final float[] W_EMP_INFO = { 4f, 4f, 2f };
+            PdfPTable tituloTabla = new PdfPTable(2);
+            tituloTabla.setWidthPercentage(100);
+            tituloTabla.setWidths(new float[]{8f, 2f});
+            tituloTabla.setSpacingAfter(10f);
 
+            PdfPCell celdaTitulo = new PdfPCell(new Phrase("LISTA DE SOLICITUDES", ReporteUtil.fuenteEncabezadoTablaData()));
+            celdaTitulo.setBackgroundColor(colorSecundario);
+            celdaTitulo.setPadding(5f);
+            celdaTitulo.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
+            tituloTabla.addCell(celdaTitulo);
+
+            PdfPCell celdaContador = new PdfPCell(new Phrase("N° Registros: " + totalSolicitudes, ReporteUtil.fuenteEncabezadoTablaData()));
+            celdaContador.setBackgroundColor(colorSecundario);
+            celdaContador.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            celdaContador.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            celdaContador.setPadding(5f);
+            celdaContador.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.RIGHT);
+            tituloTabla.addCell(celdaContador);
+            document.add(tituloTabla);
+
+            int contadorSolicitud = 0;
             for (GrupoEmpleadoReporte emp : grupos) {
+                PdfPTable infoEmpleado = new PdfPTable(3);
+                infoEmpleado.setWidthPercentage(100);
+                infoEmpleado.setWidths(new float[]{4f, 4f, 4f});
 
-                // ==========================
-                // DATOS DEL EMPLEADO
-                // ==========================
-                PdfPTable infoEmp = new PdfPTable(3);
-                infoEmp.setWidthPercentage(100);
-                infoEmp.setWidths(W_EMP_INFO);
+                infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("C.C.:", emp.identificacion, zebraColor));
+                infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("EMPLEADO:", emp.empleado, zebraColor));
+                infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("COD:", emp.codigo, zebraColor));
+                infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("CIUDAD:", emp.ciudad, zebraColor));
+                infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", emp.regimen, zebraColor));
+                infoEmpleado.addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:", emp.departamento, zebraColor));
 
-                infoEmp.addCell(celdaInfoMixtaLocal("CIUDAD:", emp.ciudad, colorPrincipal));
-                infoEmp.addCell(celdaInfoMixtaLocal("C.C.:", emp.identificacion, colorPrincipal));
-                infoEmp.addCell(celdaInfoMixtaLocal("COD:", emp.codigo, colorPrincipal));
+                PdfPCell cargo = ReporteUtil.celdaInfoMixta("CARGO:", emp.cargo, zebraColor);
+                cargo.setColspan(3);
+                infoEmpleado.addCell(cargo);
 
-                PdfPCell cNombre = celdaInfoMixtaLocal("EMPLEADO:", emp.empleado, colorPrincipal);
-                cNombre.setColspan(3);
-                infoEmp.addCell(cNombre);
+                PdfPTable contenedora = new PdfPTable(1);
+                contenedora.setWidthPercentage(100);
+                contenedora.setSpacingAfter(7f);
+                PdfPCell contenedor = new PdfPCell(infoEmpleado);
+                contenedor.setPadding(0f);
+                contenedor.setBorder(Rectangle.BOX);
+                contenedora.addCell(contenedor);
+                document.add(contenedora);
 
-                PdfPCell cReg = celdaInfoMixtaLocal("RÉGIMEN LABORAL:", emp.regimen, Color.WHITE);
-                cReg.setColspan(3);
-                infoEmp.addCell(cReg);
-
-                PdfPCell cDep = celdaInfoMixtaLocal("DEPARTAMENTO:", emp.departamento, Color.WHITE);
-                cDep.setColspan(3);
-                infoEmp.addCell(cDep);
-
-                PdfPCell cCargo = celdaInfoMixtaLocal("CARGO:", emp.cargo, Color.WHITE);
-                cCargo.setColspan(3);
-                infoEmp.addCell(cCargo);
-
-                PdfPTable contInfoEmp = new PdfPTable(1);
-                contInfoEmp.setWidthPercentage(100);
-
-                PdfPCell wrap = new PdfPCell(infoEmp);
-                wrap.setBorder(Rectangle.BOX);
-                wrap.setPadding(0);
-                contInfoEmp.addCell(wrap);
-                contInfoEmp.setSpacingBefore(4f);
-                contInfoEmp.setSpacingAfter(8f);
-
-                document.add(contInfoEmp);
-
-                // ==========================
-                // SOLICITUDES DEL EMPLEADO
-                // ==========================
                 if (emp.solicitudes == null || emp.solicitudes.isEmpty()) {
-                    Paragraph p = new Paragraph("Sin solicitudes registradas hasta la fecha de corte",
-                            ReporteUtil.fuenteTexto());
+                    Paragraph p = new Paragraph("Sin solicitudes registradas hasta la fecha de corte", ReporteUtil.fuenteTexto());
                     p.setAlignment(Element.ALIGN_CENTER);
-                    p.setSpacingBefore(8f);
-                    p.setSpacingAfter(12f);
+                    p.setSpacingAfter(10f);
                     document.add(p);
                     continue;
                 }
 
                 for (GrupoSolicitudReporte sol : emp.solicitudes) {
+                    Color fondo = contadorSolicitud++ % 2 == 0 ? Color.WHITE : zebraColor;
+                    PdfPTable bloque = new PdfPTable(1);
+                    bloque.setWidthPercentage(100);
+                    bloque.setSpacingAfter(10f);
+                    bloque.setKeepTogether(true);
 
-                    // BLOQUE VISUAL POR CADA CÓDIGO DE SOLICITUD
-                    PdfPTable bloqueSolicitud = new PdfPTable(1);
-                    bloqueSolicitud.setWidthPercentage(100);
-                    bloqueSolicitud.setSpacingBefore(6f);
-                    bloqueSolicitud.setSpacingAfter(12f);
-
-                    PdfPCell celdaBloque = new PdfPCell();
-                    celdaBloque.setBorder(Rectangle.BOX);
-                    celdaBloque.setBorderColor(new Color(70, 70, 70));
-                    celdaBloque.setBorderWidth(0.8f);
-                    celdaBloque.setPadding(0f);
-
-                    celdaBloque.addElement(crearTablaCabeceraSolicitudPDF(sol, colorPrincipal));
-                    celdaBloque.addElement(crearTablaHistorialSolicitudPDF(sol, colorPrincipal));
-
-                    bloqueSolicitud.addCell(celdaBloque);
-                    document.add(bloqueSolicitud);
+                    PdfPCell contenido = new PdfPCell();
+                    contenido.setBorder(Rectangle.NO_BORDER);
+                    contenido.setPadding(0f);
+                    contenido.addElement(crearTablaCabeceraSolicitudPDF(sol, colorPrincipal, colorSecundario, fondo));
+                    contenido.addElement(crearTablaHistorialSolicitudPDF(sol, colorSecundario));
+                    bloque.addCell(contenido);
+                    document.add(bloque);
                 }
             }
 
             document.close();
             return baos.toByteArray();
-
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
             throw new ReportBuildException("No se pudo generar ReporteSolicitudesPermisos.pdf", e);
         } finally {
             if (document != null && document.isOpen()) {
-                try {
-                    document.close();
-                } catch (Exception ignore) {
-                }
+                try { document.close(); } catch (Exception ignore) {}
             }
             if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ignore) {
-                }
+                try { writer.close(); } catch (Exception ignore) {}
             }
             if (baos != null) {
-                try {
-                    baos.close();
-                } catch (Exception ignore) {
-                }
+                try { baos.close(); } catch (Exception ignore) {}
             }
         }
     }
-
+        
+    
     // =========================================================================================
     // EXCEL
     // =========================================================================================
-    // =========================================================================================
-// EXCEL
-// =========================================================================================
-public byte[] generarReporteSolicitudesPermisosExcel(ReporteSolicitudesPermisosRequest request) {
-    try (XSSFWorkbook libro = new XSSFWorkbook();
-         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+    public byte[] generarReporteSolicitudesPermisosExcel(ReporteSolicitudesPermisosRequest request) {
+        final String NOMBRE_HOJA = "Solicitudes_Permisos";
+        final int FILA_ENCABEZADO = 5;
+        final String[] HEADERS = {
+                "ITEM","IDENTIFICACIÓN","CÓDIGO","APELLIDO NOMBRE","CIUDAD","SUCURSAL","RÉGIMEN","DEPARTAMENTO","CARGO",
+                "CÓDIGO SOLICITUD","TIPO PERMISO","FECHA SOLICITUD","FECHA INICIO","FECHA FIN","HORA INICIO","TIMBRE INICIO",
+                "HORA FIN","TIMBRE FIN","DÍAS","DURACIÓN","AUTORIZADO","ESTADO SOLICITUD","PASO","DEPARTAMENTO APROBACIÓN",
+                "AUTORIZA","ESTADO FLUJO","FECHA AUTORIZACIÓN","OBSERVACIÓN"
+        };
+        final int[] ANCHOS = {10,20,15,28,18,24,24,28,22,18,28,22,18,18,16,18,16,18,10,14,14,20,10,28,28,18,22,30};
 
-        if (request == null) {
-            throw new IllegalArgumentException("request nulo");
-        }
+        try (XSSFWorkbook libro = new XSSFWorkbook(); ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            if (request == null) throw new IllegalArgumentException("request nulo");
+            XSSFSheet hoja = libro.createSheet(NOMBRE_HOJA);
+            hoja.createFreezePane(0, FILA_ENCABEZADO + 1);
 
-        CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
-        CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
-        CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
-        CellStyle stCabGray = ConfiguracionExcel.crearEstiloCabeceraGris(libro);
-        CellStyle stCabActivo = crearEstiloCabeceraEmpleadoActivo(libro, request.getColorPrincipal());
-        CellStyle stHeadBlue = ConfiguracionExcel.crearEstiloHeaderAzul(libro);
+            byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
+            if (logo != null && logo.length > 0) UtilExcel.insertarLogoEstandar(libro, hoja, logo);
 
-        XSSFSheet sh = libro.createSheet("Solicitudes_Permisos");
+            for (int fila = 0; fila <= 4; fila++) UtilExcel.combinarCeldas(hoja, fila, fila, 1, HEADERS.length - 1);
 
-        byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-        if (logo != null && logo.length > 0) {
-            insertarLogoA1A4(libro, sh, logo);
-        }
+            CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
+            UtilExcel.establecerTexto(hoja, 0, 1, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())), estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 1, 1, "REPORTE DE SOLICITUDES DE PERMISOS - USUARIOS " + obtenerTextoUsuarios(request.getUsuarios()), estiloTitulo);
+            UtilExcel.establecerTexto(hoja, 2, 1, "PERIODO DEL REPORTE: " + safe(request.getFechaDesde()) + " AL " + safe(request.getFechaHasta()), estiloTitulo);
 
-        // Columnas usadas para el nuevo formato
-        sh.setColumnWidth(0, 4500);   // Código / Paso
-        sh.setColumnWidth(1, 9000);   // Tipo permiso / Departamento
-        sh.setColumnWidth(2, 8500);   // Fecha solicitud / Autoriza
-        sh.setColumnWidth(3, 5000);   // Fecha inicio / Estado flujo
-        sh.setColumnWidth(4, 5500);   // Fecha fin / Fecha autorización
-        sh.setColumnWidth(5, 4500);   // Días / Observación
-        sh.setColumnWidth(6, 3500);   // Horas
-        sh.setColumnWidth(7, 4500);   // Autorizado
-        sh.setColumnWidth(8, 5500);   // Estado solicitud
+            Row encabezado = UtilExcel.asegurarFila(hoja, FILA_ENCABEZADO);
+            for (int columna = 0; columna < HEADERS.length; columna++) UtilExcel.establecerTexto(encabezado, columna, HEADERS[columna], null);
+            CellStyle estiloHeader = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
+            UtilExcel.aplicarEstiloAFila(encabezado, HEADERS.length, estiloHeader);
+            UtilExcel.establecerAnchosColumnas(hoja, ANCHOS);
+            encabezado.setHeightInPoints(18f);
 
-        int row = 0;
-        int C0 = 0;
-        int C_LAST = 8;
+            List<GrupoEmpleadoReporte> grupos = agruparPorEmpleadoSolicitud(request.getSolicitudes());
+            int filaActual = FILA_ENCABEZADO + 1;
+            int item = 1;
 
-        // ==========================
-        // TÍTULOS DEL REPORTE
-        // ==========================
-        mergeSafeNoBorder(sh, row, row, C0, C_LAST, estiloTitulo);
-        UtilExcel.establecerTexto(
-                sh,
-                row++,
-                C0,
-                UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())),
-                estiloTitulo
-        );
+            for (GrupoEmpleadoReporte empleado : grupos) {
+                for (GrupoSolicitudReporte solicitud : empleado.solicitudes) {
+                    List<AprobacionSolicitudReporte> aprobaciones = solicitud.aprobaciones == null || solicitud.aprobaciones.isEmpty()
+                            ? Collections.singletonList(null) : solicitud.aprobaciones;
+                    boolean permisoPorHoras = esPermisoPorHoras(solicitud);
 
-        mergeSafeNoBorder(sh, row, row, C0, C_LAST, estiloTitulo);
-        UtilExcel.establecerTexto(
-                sh,
-                row++,
-                C0,
-                "REPORTE DE SOLICITUDES DE PERMISOS",
-                estiloTitulo
-        );
+                    for (AprobacionSolicitudReporte aprobacion : aprobaciones) {
+                        Row fila = UtilExcel.asegurarFila(hoja, filaActual++);
+                        int columna = 0;
+                        UtilExcel.establecerValor(fila, columna++, item++, null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(empleado.identificacion), null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(empleado.codigo), null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(empleado.empleado), null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(empleado.ciudad), null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(empleado.sucursal), null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(empleado.regimen), null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(empleado.departamento), null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(empleado.cargo), null);
+                        UtilExcel.establecerValor(fila, columna++, long0(solicitud.codigoSolicitud), null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(solicitud.tipoPermiso), null);
+                        UtilExcel.establecerTexto(fila, columna++, formatFechaHora(solicitud.fechaSolicitud), null);
+                        UtilExcel.establecerTexto(fila, columna++, formatFecha(solicitud.fechaInicio), null);
+                        UtilExcel.establecerTexto(fila, columna++, formatFecha(solicitud.fechaFin), null);
+                        UtilExcel.establecerTexto(fila, columna++, permisoPorHoras ? formatearHora(solicitud.horaInicio) : "", null);
+                        UtilExcel.establecerTexto(fila, columna++, permisoPorHoras ? formatearHora(solicitud.timbreInicioPermiso) : "", null);
+                        UtilExcel.establecerTexto(fila, columna++, permisoPorHoras ? formatearHora(solicitud.horaFin) : "", null);
+                        UtilExcel.establecerTexto(fila, columna++, permisoPorHoras ? formatearHora(solicitud.timbreFinPermiso) : "", null);
+                        UtilExcel.establecerTexto(fila, columna++, formatearDias(solicitud.dias), null);
+                        UtilExcel.establecerTexto(fila, columna++, permisoPorHoras ? formatearDuracion(solicitud.minutosTotales) : "", null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(solicitud.autorizado), null);
+                        UtilExcel.establecerTexto(fila, columna++, safe(solicitud.estadoTexto), null);
+                        UtilExcel.establecerTexto(fila, columna++, aprobacion == null || aprobacion.ordenPaso == null ? "" : String.valueOf(aprobacion.ordenPaso), null);
+                        UtilExcel.establecerTexto(fila, columna++, aprobacion == null ? "" : safe(aprobacion.departamentoAprobacion), null);
+                        UtilExcel.establecerTexto(fila, columna++, aprobacion == null ? "" : safe(aprobacion.autoriza), null);
+                        UtilExcel.establecerTexto(fila, columna++, aprobacion == null ? "" : safe(aprobacion.estadoFlujo), null);
+                        UtilExcel.establecerTexto(fila, columna++, aprobacion == null ? "" : formatFechaHora(aprobacion.fechaAutorizacion), null);
+                        UtilExcel.establecerTexto(fila, columna, aprobacion == null ? "" : safe(aprobacion.observacion), null);
+                    }
+                }
+            }
 
-        mergeSafeNoBorder(sh, row, row, C0, C_LAST, estiloTitulo);
-        UtilExcel.establecerTexto(
-                sh,
-                row++,
-                C0,
-                "RANGO DE FECHAS: " + safe(request.getFechaDesde()) + " - " + safe(request.getFechaHasta()),
-                estiloTitulo
-        );
+            int ultimaFila = filaActual == FILA_ENCABEZADO + 1 ? FILA_ENCABEZADO : filaActual - 1;
+            CellStyle estiloCentro = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
+            CellStyle estiloIzquierda = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO, FILA_ENCABEZADO, 0, HEADERS.length - 1, estiloCentro, true);
 
-        row++;
+            if (ultimaFila > FILA_ENCABEZADO) {
+                UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO + 1, ultimaFila, 0, HEADERS.length - 1, estiloCentro, true);
+                int[] columnasIzquierda = {3,5,6,7,8,10,23,24,27};
+                for (int columna : columnasIzquierda) UtilExcel.aplicarEstiloARegion(hoja, FILA_ENCABEZADO + 1, ultimaFila, columna, columna, estiloIzquierda, true);
 
-        List<SolicitudPermisoReporteDTO> filas = request.getSolicitudes();
-        if (filas == null) {
-            filas = new ArrayList<>();
-        }
-
-        if (filas.isEmpty()) {
-            mergeSafe(sh, row, row, C0, C_LAST, estiloCentroBorde);
-            UtilExcel.establecerTexto(sh, row, C0, "Sin datos para mostrar", estiloCentroBorde);
+                boolean[] filtros = new boolean[HEADERS.length];
+                Arrays.fill(filtros, true);
+                filtros[0] = false;
+                UtilExcel.crearTablaEstilizada(hoja, "SolicitudesPermisosReporteTabla", FILA_ENCABEZADO, 0, ultimaFila, HEADERS.length - 1, true, filtros);
+            }
 
             libro.write(baos);
             return baos.toByteArray();
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ReportBuildException("No se pudo generar ReporteSolicitudesPermisos.xlsx", e);
         }
-
-        List<GrupoEmpleadoReporte> grupos = agruparPorEmpleadoSolicitud(filas);
-
-        for (GrupoEmpleadoReporte emp : grupos) {
-
-            // ==========================
-            // CABECERA DEL EMPLEADO
-            // ==========================
-            int rCabIni = row;
-
-            mergeSafeNoBorder(sh, row, row, 0, 2, stCabActivo);
-            mergeSafeNoBorder(sh, row, row, 3, 5, stCabActivo);
-            mergeSafeNoBorder(sh, row, row, 6, 8, stCabActivo);
-
-            UtilExcel.establecerTexto(sh, row, 0, "CIUDAD: " + safe(emp.ciudad), stCabActivo);
-            UtilExcel.establecerTexto(sh, row, 3, "C.C.: " + safe(emp.identificacion), stCabActivo);
-            UtilExcel.establecerTexto(sh, row, 6, "COD: " + safe(emp.codigo), stCabActivo);
-            row++;
-
-            mergeSafeNoBorder(sh, row, row, 0, 8, stCabActivo);
-            UtilExcel.establecerTexto(sh, row, 0, "EMPLEADO: " + safe(emp.empleado), stCabActivo);
-            row++;
-
-            mergeSafeNoBorder(sh, row, row, 0, 2, stCabGray);
-            mergeSafeNoBorder(sh, row, row, 3, 5, stCabGray);
-            mergeSafeNoBorder(sh, row, row, 6, 8, stCabGray);
-
-            UtilExcel.establecerTexto(sh, row, 0, "RÉGIMEN LABORAL: " + safe(emp.regimen), stCabGray);
-            UtilExcel.establecerTexto(sh, row, 3, "DEPARTAMENTO: " + safe(emp.departamento), stCabGray);
-            UtilExcel.establecerTexto(sh, row, 6, "CARGO: " + safe(emp.cargo), stCabGray);
-            row++;
-
-            int rCabFin = row - 1;
-            limpiarBordesEnRegion(sh, rCabIni, rCabFin, 0, 8);
-            bordeExternoGrueso(sh, new CellRangeAddress(rCabIni, rCabFin, 0, 8));
-
-            row++;
-
-            // ==========================
-            // SOLICITUDES DEL EMPLEADO
-            // ==========================
-            if (emp.solicitudes == null || emp.solicitudes.isEmpty()) {
-                mergeSafe(sh, row, row, 0, 8, estiloCentroBorde);
-                UtilExcel.establecerTexto(
-                        sh,
-                        row++,
-                        0,
-                        "Sin solicitudes registradas hasta la fecha de corte",
-                        estiloCentroBorde
-                );
-
-                row += 2;
-                continue;
-            }
-
-            for (GrupoSolicitudReporte sol : emp.solicitudes) {
-                int rBloqueIni = row;
-
-                // ==========================
-                // CABECERA DE LA SOLICITUD
-                // ==========================
-                Row hSol = UtilExcel.asegurarFila(sh, row++);
-                UtilExcel.establecerTexto(hSol, 0, "Código Solicitud", stHeadBlue);
-                UtilExcel.establecerTexto(hSol, 1, "Tipo Permiso", stHeadBlue);
-                UtilExcel.establecerTexto(hSol, 2, "Fecha Solicitud", stHeadBlue);
-                UtilExcel.establecerTexto(hSol, 3, "Fecha Inicio", stHeadBlue);
-                UtilExcel.establecerTexto(hSol, 4, "Fecha Fin", stHeadBlue);
-                UtilExcel.establecerTexto(hSol, 5, "Días", stHeadBlue);
-                UtilExcel.establecerTexto(hSol, 6, "Horas", stHeadBlue);
-                UtilExcel.establecerTexto(hSol, 7, "Autorizado", stHeadBlue);
-                UtilExcel.establecerTexto(hSol, 8, "Estado Solicitud", stHeadBlue);
-
-                Row rSol = UtilExcel.asegurarFila(sh, row++);
-                UtilExcel.establecerValor(rSol, 0, long0(sol.codigoSolicitud), estiloCentroBorde);
-                UtilExcel.establecerTexto(rSol, 1, safe(sol.tipoPermiso), estiloIzqBorde);
-                UtilExcel.establecerTexto(rSol, 2, formatFechaHora(sol.fechaSolicitud), estiloCentroBorde);
-                UtilExcel.establecerTexto(rSol, 3, formatFecha(sol.fechaInicio), estiloCentroBorde);
-                UtilExcel.establecerTexto(rSol, 4, formatFecha(sol.fechaFin), estiloCentroBorde);
-                UtilExcel.establecerTexto(rSol, 5, fmtDec2(sol.dias), estiloCentroBorde);
-                UtilExcel.establecerTexto(rSol, 6, fmtDec2(sol.horas), estiloCentroBorde);
-                UtilExcel.establecerTexto(rSol, 7, safe(sol.autorizado), estiloCentroBorde);
-                UtilExcel.establecerTexto(rSol, 8, safe(sol.estadoTexto), estiloCentroBorde);
-
-                // ==========================
-                // CABECERA DEL HISTORIAL
-                // ==========================
-                Row hHist = UtilExcel.asegurarFila(sh, row++);
-                UtilExcel.establecerTexto(hHist, 0, "Paso", stCabGray);
-                UtilExcel.establecerTexto(hHist, 1, "Departamento", stCabGray);
-                UtilExcel.establecerTexto(hHist, 2, "Autoriza", stCabGray);
-                UtilExcel.establecerTexto(hHist, 3, "Estado Flujo", stCabGray);
-                UtilExcel.establecerTexto(hHist, 4, "Fecha Autorización", stCabGray);
-
-                mergeSafe(sh, hHist.getRowNum(), hHist.getRowNum(), 5, 8, stCabGray);
-                UtilExcel.establecerTexto(sh, hHist.getRowNum(), 5, "Observación", stCabGray);
-
-                // ==========================
-                // DETALLE DEL HISTORIAL
-                // ==========================
-                if (sol.aprobaciones == null || sol.aprobaciones.isEmpty()) {
-                    mergeSafe(sh, row, row, 0, 8, estiloCentroBorde);
-                    UtilExcel.establecerTexto(
-                            sh,
-                            row++,
-                            0,
-                            "Sin historial de aprobaciones registrado.",
-                            estiloCentroBorde
-                    );
-                } else {
-                    for (AprobacionSolicitudReporte a : sol.aprobaciones) {
-                        Row rr = UtilExcel.asegurarFila(sh, row);
-
-                        UtilExcel.establecerTexto(
-                                rr,
-                                0,
-                                a.ordenPaso == null ? "" : String.valueOf(a.ordenPaso),
-                                estiloCentroBorde
-                        );
-
-                        UtilExcel.establecerTexto(rr, 1, safe(a.departamentoAprobacion), estiloIzqBorde);
-                        UtilExcel.establecerTexto(rr, 2, safe(a.autoriza), estiloIzqBorde);
-                        UtilExcel.establecerTexto(rr, 3, safe(a.estadoFlujo), estiloCentroBorde);
-                        UtilExcel.establecerTexto(rr, 4, formatFechaHora(a.fechaAutorizacion), estiloCentroBorde);
-
-                        mergeSafe(sh, row, row, 5, 8, estiloIzqBorde);
-                        UtilExcel.establecerTexto(
-                                sh,
-                                row,
-                                5,
-                                safe(a.observacion).isBlank() ? "—" : safe(a.observacion),
-                                estiloIzqBorde
-                        );
-
-                        row++;
-                    }
-                }
-
-                int rBloqueFin = row - 1;
-                bordeExternoGrueso(sh, new CellRangeAddress(rBloqueIni, rBloqueFin, 0, 8));
-
-                row++;
-            }
-
-            row++;
-        }
-
-        sh.createFreezePane(0, 4);
-
-        libro.write(baos);
-        return baos.toByteArray();
-
-    } catch (IllegalArgumentException e) {
-        throw e;
-    } catch (Exception e) {
-        throw new ReportBuildException("No se pudo generar ReporteSolicitudesPermisos.xlsx", e);
     }
-}
 
-    // =========================================================================================
+// =========================================================================================
     // HELPERS DE AGRUPACIÓN
     // =========================================================================================
     // EMPLEADO -> SOLICITUD -> HISTORIAL DE APROBACIONES
@@ -458,6 +294,9 @@ public byte[] generarReporteSolicitudesPermisosExcel(ReporteSolicitudesPermisosR
 
             if (emp == null) {
                 emp = new GrupoEmpleadoReporte();
+                emp.ciudad = safe(row.getCiudad());
+                emp.sucursal = safe(row.getSucursal());
+                emp.regimen = safe(row.getRegimen());
                 emp.idEmpleado = idEmpleado;
                 emp.identificacion = safe(row.getIdentificacion());
                 emp.codigo = safe(row.getCodigo());
@@ -486,6 +325,10 @@ public byte[] generarReporteSolicitudesPermisosExcel(ReporteSolicitudesPermisosR
                 sol.fechaSolicitud = safe(row.getFecha_solicitud());
                 sol.fechaInicio = safe(row.getFecha_inicio());
                 sol.fechaFin = safe(row.getFecha_fin());
+                sol.horaInicio = safe(row.getHora_inicio());
+                sol.timbreInicioPermiso = safe(row.getTimbre_inicio_permiso());
+                sol.horaFin = safe(row.getHora_fin());
+                sol.timbreFinPermiso = safe(row.getTimbre_fin_permiso());
                 sol.dias = row.getDias();
                 sol.horas = row.getHoras();
                 sol.minutosTotales = row.getMinutos_totales();
@@ -566,6 +409,7 @@ public byte[] generarReporteSolicitudesPermisosExcel(ReporteSolicitudesPermisosR
         String codigo;
         String empleado;
         String ciudad;
+        String sucursal;
         String regimen;
         String departamento;
         String cargo;
@@ -580,6 +424,10 @@ public byte[] generarReporteSolicitudesPermisosExcel(ReporteSolicitudesPermisosR
         String fechaSolicitud;
         String fechaInicio;
         String fechaFin;
+        String horaInicio;
+        String timbreInicioPermiso;
+        String horaFin;
+        String timbreFinPermiso;
         Double dias;
         Double horas;
         Integer minutosTotales;
@@ -607,17 +455,6 @@ public byte[] generarReporteSolicitudesPermisosExcel(ReporteSolicitudesPermisosR
         Boolean esJefeEnMomento;
     }
 
-    private static class GrupoEmpleado {
-        Long idEmpleado;
-        String identificacion;
-        String codigo;
-        String empleado;
-        String ciudad;
-        String regimen;
-        String departamento;
-        String cargo;
-        List<SolicitudPermisoReporteDTO> solicitudes;
-    }
 
     // =========================================================================================
     // HELPERS PDF
@@ -658,100 +495,85 @@ public byte[] generarReporteSolicitudesPermisosExcel(ReporteSolicitudesPermisosR
         return c;
     }
 
-    private PdfPCell celdaInfoMixtaLocal(String etiqueta, String valor, Color fondo) {
-        Phrase contenido = new Phrase();
-        contenido.add(new Chunk(safe(etiqueta) + " ", ReporteUtil.fuenteEncabezadoTablaData()));
-        contenido.add(new Chunk(safe(valor), ReporteUtil.fuenteTablaData()));
 
-        PdfPCell celda = new PdfPCell(contenido);
-        celda.setBackgroundColor(fondo);
-        celda.setPadding(2f);
-        celda.setBorder(Rectangle.NO_BORDER);
-        return celda;
-    }
-
-    private PdfPTable crearTablaCabeceraSolicitudPDF(GrupoSolicitudReporte sol, Color colorPrincipal)
-            throws DocumentException {
-        final float[] W_SOLICITUD = {
-                1.5f, 3.2f, 2.2f, 1.8f, 1.8f, 0.9f, 0.9f, 1.3f, 1.8f
-        };
-
-        PdfPTable tabla = new PdfPTable(9);
+    private PdfPTable crearTablaCabeceraSolicitudPDF(GrupoSolicitudReporte sol, Color colorPrincipal, Color colorSecundario, Color fondo) throws DocumentException {
+        final float[] widths = {0.8f, 2.5f, 1.8f, 1.4f, 1.4f, 1.1f, 1.2f, 1.1f, 1.2f, 0.7f, 1.0f, 1.2f, 1.5f};
+        PdfPTable tabla = new PdfPTable(13);
         tabla.setWidthPercentage(100);
-        tabla.setWidths(W_SOLICITUD);
+        tabla.setWidths(widths);
         tabla.setSpacingAfter(0f);
 
-        tabla.addCell(hCell("Código Solicitud", colorPrincipal));
-        tabla.addCell(hCell("Tipo Permiso", colorPrincipal));
-        tabla.addCell(hCell("Fecha Solicitud", colorPrincipal));
-        tabla.addCell(hCell("Fecha Inicio", colorPrincipal));
-        tabla.addCell(hCell("Fecha Fin", colorPrincipal));
-        tabla.addCell(hCell("Días", colorPrincipal));
-        tabla.addCell(hCell("Horas", colorPrincipal));
-        tabla.addCell(hCell("Autorizado", colorPrincipal));
-        tabla.addCell(hCell("Estado Solicitud", colorPrincipal));
+        tabla.addCell(ReporteUtil.crearCelda("CÓDIGO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+        tabla.addCell(ReporteUtil.crearCelda("TIPO PERMISO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+        tabla.addCell(ReporteUtil.crearCelda("FECHA SOLICITUD", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+        tabla.addCell(ReporteUtil.crearCelda("PERIODO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 1, 2));
+        tabla.addCell(ReporteUtil.crearCelda("INICIO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 1, 2));
+        tabla.addCell(ReporteUtil.crearCelda("FIN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 1, 2));
+        tabla.addCell(ReporteUtil.crearCelda("TIEMPO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 1, 2));
+        tabla.addCell(ReporteUtil.crearCelda("AUTORIZADO", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+        tabla.addCell(ReporteUtil.crearCelda("ESTADO SOLICITUD", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
 
-        Color fondo = new Color(245, 245, 245);
+        tabla.addCell(ReporteUtil.crearCelda("DESDE", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+        tabla.addCell(ReporteUtil.crearCelda("HASTA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+        tabla.addCell(ReporteUtil.crearCelda("SOLICITADA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+        tabla.addCell(ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+        tabla.addCell(ReporteUtil.crearCelda("SOLICITADA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+        tabla.addCell(ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+        tabla.addCell(ReporteUtil.crearCelda("DÍAS", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
+        tabla.addCell(ReporteUtil.crearCelda("DURACIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
+        boolean permisoPorHoras = esPermisoPorHoras(sol);
         tabla.addCell(cellCenter(String.valueOf(long0(sol.codigoSolicitud)), fondo));
         tabla.addCell(cellLeft(safe(sol.tipoPermiso), fondo));
         tabla.addCell(cellCenter(formatFechaHora(sol.fechaSolicitud), fondo));
         tabla.addCell(cellCenter(formatFecha(sol.fechaInicio), fondo));
         tabla.addCell(cellCenter(formatFecha(sol.fechaFin), fondo));
-        tabla.addCell(cellCenter(fmtDec2(sol.dias), fondo));
-        tabla.addCell(cellCenter(fmtDec2(sol.horas), fondo));
+        tabla.addCell(cellCenter(permisoPorHoras ? formatearHora(sol.horaInicio) : "", fondo));
+        tabla.addCell(cellCenter(permisoPorHoras ? formatearHora(sol.timbreInicioPermiso) : "", fondo));
+        tabla.addCell(cellCenter(permisoPorHoras ? formatearHora(sol.horaFin) : "", fondo));
+        tabla.addCell(cellCenter(permisoPorHoras ? formatearHora(sol.timbreFinPermiso) : "", fondo));
+        tabla.addCell(cellCenter(formatearDias(sol.dias), fondo));
+        tabla.addCell(cellCenter(permisoPorHoras ? formatearDuracion(sol.minutosTotales) : "", fondo));
         tabla.addCell(cellCenter(safe(sol.autorizado), fondo));
         tabla.addCell(cellCenter(safe(sol.estadoTexto), fondo));
-
         return tabla;
     }
 
-    private PdfPTable crearTablaHistorialSolicitudPDF(GrupoSolicitudReporte sol, Color colorPrincipal)
-            throws DocumentException {
-        final float[] W_HISTORIAL = {
-                0.8f, 2.6f, 3.2f, 1.8f, 2.3f, 4.3f
-        };
-
+    private PdfPTable crearTablaHistorialSolicitudPDF(GrupoSolicitudReporte sol, Color colorSecundario) throws DocumentException {
+        final float[] widths = {0.8f, 2.6f, 3.2f, 1.8f, 2.3f, 4.3f};
         PdfPTable tabla = new PdfPTable(6);
         tabla.setWidthPercentage(100);
-        tabla.setWidths(W_HISTORIAL);
+        tabla.setWidths(widths);
         tabla.setSpacingBefore(0f);
         tabla.setSpacingAfter(0f);
 
-        Color fondoHeader = new Color(250, 250, 250);
-
-        tabla.addCell(hCell("Paso", fondoHeader));
-        tabla.addCell(hCell("Departamento", fondoHeader));
-        tabla.addCell(hCell("Autoriza", fondoHeader));
-        tabla.addCell(hCell("Estado Flujo", fondoHeader));
-        tabla.addCell(hCell("Fecha Autorización", fondoHeader));
-        tabla.addCell(hCell("Observación", fondoHeader));
+        tabla.addCell(ReporteUtil.crearCelda("PASO", ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+        tabla.addCell(ReporteUtil.crearCelda("DEPARTAMENTO", ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+        tabla.addCell(ReporteUtil.crearCelda("AUTORIZA", ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+        tabla.addCell(ReporteUtil.crearCelda("ESTADO FLUJO", ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+        tabla.addCell(ReporteUtil.crearCelda("FECHA AUTORIZACIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
+        tabla.addCell(ReporteUtil.crearCelda("OBSERVACIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorSecundario));
 
         if (sol.aprobaciones == null || sol.aprobaciones.isEmpty()) {
-            PdfPCell sinHistorial = cellCenterColspan("Sin historial de aprobaciones registrado.", Color.WHITE, 6);
-            tabla.addCell(sinHistorial);
+            tabla.addCell(cellCenterColspan("Sin historial de aprobaciones registrado.", Color.WHITE, 6));
             return tabla;
         }
 
-        int i = 1;
+        int contador = 1;
         Color zebra = ReporteUtil.colorZebraClaro();
-
-        for (AprobacionSolicitudReporte a : sol.aprobaciones) {
-            Color fondo = (i % 2 == 0) ? zebra : Color.WHITE;
-
-            tabla.addCell(cellCenter(a.ordenPaso == null ? "" : String.valueOf(a.ordenPaso), fondo));
-            tabla.addCell(cellLeft(safe(a.departamentoAprobacion), fondo));
-            tabla.addCell(cellLeft(safe(a.autoriza), fondo));
-            tabla.addCell(cellCenter(safe(a.estadoFlujo), fondo));
-            tabla.addCell(cellCenter(formatFechaHora(a.fechaAutorizacion), fondo));
-            tabla.addCell(cellLeft(safe(a.observacion).isBlank() ? "—" : safe(a.observacion), fondo));
-
-            i++;
+        for (AprobacionSolicitudReporte aprobacion : sol.aprobaciones) {
+            Color fondo = contador++ % 2 == 0 ? zebra : Color.WHITE;
+            tabla.addCell(cellCenter(aprobacion.ordenPaso == null ? "" : String.valueOf(aprobacion.ordenPaso), fondo));
+            tabla.addCell(cellLeft(safe(aprobacion.departamentoAprobacion), fondo));
+            tabla.addCell(cellLeft(safe(aprobacion.autoriza), fondo));
+            tabla.addCell(cellCenter(safe(aprobacion.estadoFlujo), fondo));
+            tabla.addCell(cellCenter(formatFechaHora(aprobacion.fechaAutorizacion), fondo));
+            tabla.addCell(cellLeft(safe(aprobacion.observacion).isBlank() ? "—" : safe(aprobacion.observacion), fondo));
         }
-
         return tabla;
     }
-
+        
+    
     private PdfPCell cellCenterColspan(String text, Color bg, int colspan) {
         PdfPCell c = new PdfPCell(new Phrase(safe(text), ReporteUtil.fuenteTablaData()));
         c.setHorizontalAlignment(Element.ALIGN_CENTER);
@@ -764,6 +586,22 @@ public byte[] generarReporteSolicitudesPermisosExcel(ReporteSolicitudesPermisosR
         c.setBorderWidth(0.6f);
         return c;
     }
+
+    private String obtenerTextoUsuarios(Map<String, Boolean> usuarios) {
+        if (usuarios == null) return "ACTIVOS";
+        boolean activos = Boolean.TRUE.equals(usuarios.get("activos"));
+        boolean inactivos = Boolean.TRUE.equals(usuarios.get("inactivos"));
+        if (activos && inactivos) return "ACTIVOS E INACTIVOS";
+        if (inactivos) return "INACTIVOS";
+        return "ACTIVOS";
+    }
+
+    private String formatearDias(Double dias) {
+        if (dias == null) return "0";
+        if (dias.doubleValue() == Math.rint(dias.doubleValue())) return String.valueOf(dias.intValue());
+        return String.format(Locale.US, "%.2f", dias).replace('.', ',');
+    }
+    
 
     // =========================================================================================
     // HELPERS EXCEL
@@ -960,4 +798,42 @@ public byte[] generarReporteSolicitudesPermisosExcel(ReporteSolicitudesPermisosR
 
         return v;
     }
+
+
+    private boolean esPermisoPorHoras(GrupoSolicitudReporte sol) {
+        if (sol == null) {
+            return false;
+        }
+
+        double dias = sol.dias == null ? 0D : sol.dias;
+
+        return Double.compare(dias, 0D) == 0
+                && !safe(sol.horaInicio).isBlank()
+                && !safe(sol.horaFin).isBlank();
+    }
+
+    private String formatearHora(String valor) {
+        String hora = safe(valor);
+
+        if (hora.isBlank()) {
+            return "";
+        }
+
+        int posicionDosPuntos = hora.indexOf(':');
+
+        if (posicionDosPuntos >= 2 && posicionDosPuntos + 2 < hora.length()) {
+            return hora.substring(posicionDosPuntos - 2, posicionDosPuntos + 3);
+        }
+
+        return hora;
+    }
+
+    private String formatearDuracion(Integer minutosTotales) {
+        int total = minutosTotales == null ? 0 : Math.max(0, minutosTotales);
+        int horas = total / 60;
+        int minutos = total % 60;
+
+        return String.format("%02d:%02d", horas, minutos);
+    }
+    
 }

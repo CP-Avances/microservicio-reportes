@@ -152,14 +152,14 @@ public class ReporteTiempoAlimentacionService {
             tablaTitulo.setWidthPercentage(WIDTH_PERCENT_100);
             tablaTitulo.setWidths(WIDTHS_TITULO);
 
-            PdfPCell celda1 = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezado()));
+            PdfPCell celda1 = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezadoTablaData()));
             celda1.setBackgroundColor(COLOR_SECUNDARIO);
             celda1.setPadding(PADDING_TITULOS);
             celda1.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
             tablaTitulo.addCell(celda1);
 
             PdfPCell celda2 = new PdfPCell(
-                    new Phrase("Nº Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezado()));
+                    new Phrase("Nº Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezadoTablaData()));
             celda2.setBackgroundColor(COLOR_SECUNDARIO);
             celda2.setHorizontalAlignment(Element.ALIGN_RIGHT);
             celda2.setVerticalAlignment(Element.ALIGN_MIDDLE);
@@ -177,6 +177,8 @@ public class ReporteTiempoAlimentacionService {
 
                     for (EmpleadoAlimentacionDTO emp : grupo.getEmpleados()) {
 
+                        double totalMinutosAlimentacion = 0d;
+                        double totalMinutosTomados = 0d;
                         double totalJustificadoAlimentacion = 0d;
                         double totalExcesoAlimentacion = 0d;
                         int contador = 1;
@@ -212,7 +214,7 @@ public class ReporteTiempoAlimentacionService {
 
                         for (String h : ENCAB_TABLA) {
                             tablaAlimentacion
-                                    .addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
+                                    .addCell(ReporteUtil.crearCelda(h, ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
                         }
 
                         if (emp.getAlimentacion() != null) {
@@ -307,8 +309,15 @@ public class ReporteTiempoAlimentacionService {
 
                                 tablaAlimentacion.addCell(ReporteUtil.celdaCentro(minutosExceso, fondoExceso));
 
-                                if (calculoValido && registro.getMinutosExceso() != null) {
-                                    totalExcesoAlimentacion += registro.getMinutosExceso();
+                                // M. ALIMENTACIÓN se muestra incluso cuando el cálculo del registro
+                                // no es válido, por eso se acumula independientemente de calculoValido.
+                                if (registro.getMinutosPermitidos() != null) {
+                                    totalMinutosAlimentacion += registro.getMinutosPermitidos();
+                                }
+
+                                // Los demás valores solo se presentan cuando el cálculo es válido.
+                                if (calculoValido && registro.getMinutosTomados() != null) {
+                                    totalMinutosTomados += registro.getMinutosTomados();
                                 }
 
                                 if (
@@ -316,43 +325,70 @@ public class ReporteTiempoAlimentacionService {
                                     registro.getMinutosJustificacionAplicados() != null
                                 ) {
                                     totalJustificadoAlimentacion +=
-                                            registro.getMinutosJustificacionAplicados();
+                                        registro.getMinutosJustificacionAplicados();
                                 }
+
+                                if (calculoValido && registro.getMinutosExceso() != null) {
+                                    totalExcesoAlimentacion += registro.getMinutosExceso();
+                                }
+
 
                                 contador++;
                             }
                         }
 
                         // Fila de totales: 5 vacías + "TOTAL" + total exceso
-                        for (int i = 0; i < 8; i++) {
-                            PdfPCell celdaVacia = ReporteUtil.crearCelda("", ReporteUtil.fuenteTexto(), Color.WHITE);
+                        for (int i = 0; i < 6; i++) {
+                            PdfPCell celdaVacia = ReporteUtil.crearCelda(
+                                    "",
+                                    ReporteUtil.fuenteTexto(),
+                                    Color.WHITE
+                            );
                             celdaVacia.setBorder(Rectangle.NO_BORDER);
                             tablaAlimentacion.addCell(celdaVacia);
                         }
 
-                            tablaAlimentacion.addCell(
-                                    ReporteUtil.crearCelda(
-                                            "TOTAL",
-                                            ReporteUtil.fuenteTexto(),
-                                            Color.WHITE
-                                    )
-                            );
+                        tablaAlimentacion.addCell(
+                                ReporteUtil.crearCelda(
+                                        "TOTAL",
+                                        ReporteUtil.fuenteTexto(),
+                                        Color.WHITE
+                                )
+                        );
 
-                            tablaAlimentacion.addCell(
-                                    ReporteUtil.crearCelda(
-                                            formatNumero(totalJustificadoAlimentacion),
-                                            ReporteUtil.fuenteTexto(),
-                                            Color.WHITE
-                                    )
-                            );
+                        tablaAlimentacion.addCell(
+                                ReporteUtil.crearCelda(
+                                        formatNumero(totalMinutosAlimentacion),
+                                        ReporteUtil.fuenteTexto(),
+                                        Color.WHITE
+                                )
+                        );
 
-                            tablaAlimentacion.addCell(
-                                    ReporteUtil.crearCelda(
-                                            formatNumero(totalExcesoAlimentacion),
-                                            ReporteUtil.fuenteTexto(),
-                                            Color.WHITE
-                                    )
-                            );
+                        tablaAlimentacion.addCell(
+                                ReporteUtil.crearCelda(
+                                        formatNumero(totalMinutosTomados),
+                                        ReporteUtil.fuenteTexto(),
+                                        Color.WHITE
+                                )
+                        );
+
+                        tablaAlimentacion.addCell(
+                                ReporteUtil.crearCelda(
+                                        formatNumero(totalJustificadoAlimentacion),
+                                        ReporteUtil.fuenteTexto(),
+                                        Color.WHITE
+                                )
+                        );
+
+                        tablaAlimentacion.addCell(
+                                ReporteUtil.crearCelda(
+                                        formatNumero(totalExcesoAlimentacion),
+                                        ReporteUtil.fuenteTexto(),
+                                        Color.WHITE
+                                )
+                        );
+
+
 
                         tablaAlimentacion.setSpacingAfter(SPACING_AFTER_BLOQUE);
                         document.add(tablaAlimentacion);
