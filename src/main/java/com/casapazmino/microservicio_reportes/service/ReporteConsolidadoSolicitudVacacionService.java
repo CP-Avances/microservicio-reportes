@@ -1,6 +1,5 @@
 package com.casapazmino.microservicio_reportes.service;
 
-import org.springframework.stereotype.Service;
 import com.casapazmino.microservicio_reportes.model.reporteSolicitudesVacaciones.ReporteSolicitudVacacionRequest;
 import com.casapazmino.microservicio_reportes.model.reporteSolicitudesVacaciones.SolicitudVacacionEmpleadoDTO;
 import com.casapazmino.microservicio_reportes.model.reporteSolicitudesVacaciones.SolicitudVacacionReporteDTO;
@@ -9,15 +8,29 @@ import com.casapazmino.microservicio_reportes.util.ConfiguracionPaginaPDF;
 import com.casapazmino.microservicio_reportes.util.ReportBuildException;
 import com.casapazmino.microservicio_reportes.util.ReporteUtil;
 import com.casapazmino.microservicio_reportes.util.UtilExcel;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.RegionUtil;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.openpdf.text.*;
-import org.openpdf.text.pdf.*;
+import org.springframework.stereotype.Service;
+import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+
+import org.openpdf.text.Document;
+import org.openpdf.text.Element;
+import org.openpdf.text.Image;
+import org.openpdf.text.PageSize;
+import org.openpdf.text.Paragraph;
+import org.openpdf.text.Phrase;
+import org.openpdf.text.Rectangle;
+import org.openpdf.text.pdf.PdfPCell;
+import org.openpdf.text.pdf.PdfPTable;
+import org.openpdf.text.pdf.PdfWriter;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
@@ -28,11 +41,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
+
 @Service
 public class ReporteConsolidadoSolicitudVacacionService {
+
     // =========================================================================================
     // PDF
     // =========================================================================================
+
     public byte[] generarReporteSolicitudesVacacionesPDF(ReporteSolicitudVacacionRequest request) {
         final float[] W_EMP_INFO = {4f, 4f, 2f};
         final float[] W_EMP_INFO_2 = {4f, 4f, 3f};
@@ -56,9 +72,7 @@ public class ReporteConsolidadoSolicitudVacacionService {
             document.open();
 
             Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
-            if (logo != null) {
-                document.add(logo);
-            }
+            if (logo != null) document.add(logo);
 
             document.add(ReporteUtil.crearTituloEmpresa(safe(request.getEmpresa())));
             document.add(ReporteUtil.crearTituloReporte("REPORTE - SOLICITUDES DE VACACIONES"));
@@ -83,72 +97,90 @@ public class ReporteConsolidadoSolicitudVacacionService {
             for (SolicitudVacacionEmpleadoDTO emp : empleados) {
                 if (emp == null) continue;
 
+                // =============================================================================
+                // Información del empleado
+                // Se mantienen los mismos campos y distribución.
+                // Únicamente se aplica el diseño estándar de los demás reportes.
+                // =============================================================================
+
                 PdfPTable infoEmp = new PdfPTable(3);
                 infoEmp.setWidthPercentage(100);
                 infoEmp.setWidths(W_EMP_INFO);
+                infoEmp.setSpacingBefore(0f);
+                infoEmp.setSpacingAfter(0f);
 
-                infoEmp.addCell(celdaInfoMixtaLocal("CIUDAD:", safe(emp.getCiudad()), Color.WHITE));
-                infoEmp.addCell(celdaInfoMixtaLocal("C.C.:", safe(emp.getIdentificacion()), Color.WHITE));
-                infoEmp.addCell(celdaInfoMixtaLocal("COD:", safe(emp.getCodigo()), Color.WHITE));
+                infoEmp.addCell(ReporteUtil.celdaInfoMixta("CIUDAD:", safe(emp.getCiudad()), zebra));
+                infoEmp.addCell(ReporteUtil.celdaInfoMixta("C.C.:", safe(emp.getIdentificacion()), zebra));
+                infoEmp.addCell(ReporteUtil.celdaInfoMixta("COD:", safe(emp.getCodigo()), zebra));
 
-                PdfPCell cNombre = celdaInfoMixtaLocal("EMPLEADO:", safe(emp.getEmpleado()), Color.WHITE);
+                PdfPCell cNombre = ReporteUtil.celdaInfoMixta("EMPLEADO:", safe(emp.getEmpleado()), zebra);
                 cNombre.setColspan(3);
                 infoEmp.addCell(cNombre);
 
                 PdfPTable infoEmp2 = new PdfPTable(3);
                 infoEmp2.setWidthPercentage(100);
                 infoEmp2.setWidths(W_EMP_INFO_2);
+                infoEmp2.setSpacingBefore(0f);
+                infoEmp2.setSpacingAfter(0f);
 
-                infoEmp2.addCell(celdaInfoMixtaLocal("RÉGIMEN LABORAL:", safe(emp.getRegimen()), Color.WHITE));
-                infoEmp2.addCell(celdaInfoMixtaLocal("DEPARTAMENTO:", safe(emp.getDepartamento()), Color.WHITE));
-                infoEmp2.addCell(celdaInfoMixtaLocal("CARGO:", safe(emp.getCargo()), Color.WHITE));
+                infoEmp2.addCell(ReporteUtil.celdaInfoMixta("RÉGIMEN LABORAL:", safe(emp.getRegimen()), zebra));
+                infoEmp2.addCell(ReporteUtil.celdaInfoMixta("DEPARTAMENTO:", safe(emp.getDepartamento()), zebra));
+                infoEmp2.addCell(ReporteUtil.celdaInfoMixta("CARGO:", safe(emp.getCargo()), zebra));
 
                 PdfPTable contInfo = new PdfPTable(1);
                 contInfo.setWidthPercentage(100);
-                noSpace(contInfo);
+                contInfo.setSpacingBefore(6f);
+                contInfo.setSpacingAfter(0f);
 
                 PdfPCell wrap1 = new PdfPCell(infoEmp);
                 wrap1.setPadding(0f);
-                wrap1.setBorder(Rectangle.BOX);
-                wrap1.setBorderColor(new Color(120, 120, 120));
+                wrap1.setBorder(Rectangle.TOP | Rectangle.LEFT | Rectangle.RIGHT);
                 contInfo.addCell(wrap1);
 
                 PdfPCell wrap2 = new PdfPCell(infoEmp2);
                 wrap2.setPadding(0f);
-                wrap2.setBorder(Rectangle.BOX);
-                wrap2.setBorderColor(new Color(120, 120, 120));
+                wrap2.setBorder(Rectangle.BOTTOM | Rectangle.LEFT | Rectangle.RIGHT);
                 contInfo.addCell(wrap2);
 
-                contInfo.setSpacingBefore(6f);
-                contInfo.setSpacingAfter(6f);
                 document.add(contInfo);
+
+                // =============================================================================
+                // Tabla de solicitudes
+                // Se conservan exactamente las mismas nueve columnas.
+                // =============================================================================
 
                 PdfPTable tabla = new PdfPTable(9);
                 tabla.setWidthPercentage(100);
                 tabla.setWidths(W_SOL);
+                tabla.setSpacingBefore(0f);
 
-                tabla.addCell(hCell("Solicitud", colorPrincipal));
-                tabla.addCell(hCell("Desde", colorPrincipal));
-                tabla.addCell(hCell("Hasta", colorPrincipal));
-                tabla.addCell(hCell("Días L-V", colorPrincipal));
-                tabla.addCell(hCell("Días S-D", colorPrincipal));
-                tabla.addCell(hCell("Autorizado", colorPrincipal));
-                tabla.addCell(hCell("Estado", colorPrincipal));
-                tabla.addCell(hCell("Autoriza", colorPrincipal));
-                tabla.addCell(hCell("Fecha de Autorización", colorPrincipal));
+                tabla.addCell(hCell("SOLICITUD", colorPrincipal));
+                tabla.addCell(hCell("DESDE", colorPrincipal));
+                tabla.addCell(hCell("HASTA", colorPrincipal));
+                tabla.addCell(hCell("DÍAS L-V", colorPrincipal));
+                tabla.addCell(hCell("DÍAS S-D", colorPrincipal));
+                tabla.addCell(hCell("AUTORIZADO", colorPrincipal));
+                tabla.addCell(hCell("ESTADO", colorPrincipal));
+                tabla.addCell(hCell("AUTORIZA", colorPrincipal));
+                tabla.addCell(hCell("FECHA DE AUTORIZACIÓN", colorPrincipal));
 
                 List<SolicitudVacacionReporteDTO> solicitudes = ordenarSolicitudes(emp.getSolicitudes());
 
                 if (solicitudes.isEmpty()) {
-                    PdfPCell sin = new PdfPCell(new Phrase("Sin solicitudes en el rango seleccionado", ReporteUtil.fuenteTablaData()));
+                    PdfPCell sin = new PdfPCell(new Phrase(
+                            "Sin solicitudes en el rango seleccionado",
+                            ReporteUtil.fuenteTablaData()
+                    ));
                     sin.setColspan(9);
                     sin.setHorizontalAlignment(Element.ALIGN_CENTER);
+                    sin.setVerticalAlignment(Element.ALIGN_MIDDLE);
                     sin.setPadding(6f);
                     tabla.addCell(sin);
                 } else {
                     int i = 1;
+
                     for (SolicitudVacacionReporteDTO s : solicitudes) {
-                        Color fondo = (i % 2 == 0) ? zebra : Color.WHITE;
+                        Color fondo = i % 2 == 0 ? zebra : Color.WHITE;
 
                         tabla.addCell(cellCenter(String.valueOf(long0(s.getSolicitud())), fondo));
                         tabla.addCell(cellCenter(formatearFecha(s.getDesde()), fondo));
@@ -159,11 +191,12 @@ public class ReporteConsolidadoSolicitudVacacionService {
                         tabla.addCell(cellCenter(safe(s.getEstado_texto()), fondo));
                         tabla.addCell(cellLeft(safe(s.getAutoriza()), fondo));
                         tabla.addCell(cellCenter(formatearFechaHora(s.getFecha_autorizacion()), fondo));
+
                         i++;
                     }
                 }
 
-                tabla.setSpacingAfter(14f);
+                tabla.setSpacingAfter(10f);
                 document.add(tabla);
             }
 
@@ -176,13 +209,24 @@ public class ReporteConsolidadoSolicitudVacacionService {
             throw new ReportBuildException("No se pudo generar ReporteSolicitudesVacaciones.pdf", e);
         } finally {
             if (document != null && document.isOpen()) {
-                try { document.close(); } catch (Exception ignore) {}
+                try {
+                    document.close();
+                } catch (Exception ignore) {
+                }
             }
+
             if (writer != null) {
-                try { writer.close(); } catch (Exception ignore) {}
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
+
             if (baos != null) {
-                try { baos.close(); } catch (Exception ignore) {}
+                try {
+                    baos.close();
+                } catch (Exception ignore) {
+                }
             }
         }
     }
@@ -190,6 +234,7 @@ public class ReporteConsolidadoSolicitudVacacionService {
     // =========================================================================================
     // EXCEL
     // =========================================================================================
+
     public byte[] generarReporteSolicitudesVacacionesExcel(ReporteSolicitudVacacionRequest request) {
         try (XSSFWorkbook libro = new XSSFWorkbook();
              ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -197,17 +242,16 @@ public class ReporteConsolidadoSolicitudVacacionService {
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
             CellStyle estiloIzqBorde = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+            CellStyle estiloEncabezado = ConfiguracionExcel.crearEstiloEncabezadoTabla(libro);
             CellStyle stCabGray = ConfiguracionExcel.crearEstiloCabeceraGris(libro);
             CellStyle stCabActivo = crearEstiloCabeceraEmpleadoActivo(libro, request.getColorPrincipal());
 
             XSSFSheet hoja = libro.createSheet("Solicitudes_Vacaciones");
 
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
-            if (logo != null && logo.length > 0) {
-                insertarLogo(libro, hoja, logo);
-            }
+            if (logo != null && logo.length > 0) UtilExcel.insertarLogoEstandar(libro, hoja, logo);
 
-            hoja.setColumnWidth(0, 5500);  // empleado / solicitud
+            hoja.setColumnWidth(0, 5500);
             hoja.setColumnWidth(1, 4500);
             hoja.setColumnWidth(2, 4500);
             hoja.setColumnWidth(3, 3500);
@@ -219,18 +263,35 @@ public class ReporteConsolidadoSolicitudVacacionService {
 
             int row = 0;
 
-            mergeSafeNoBorder(hoja, row, row, 0, 8, estiloTitulo);
-            UtilExcel.establecerTexto(hoja, row++, 0, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())), estiloTitulo);
+            for (int fila = 0; fila <= 4; fila++) {
+                UtilExcel.combinarCeldas(hoja, fila, fila, 1, 8);
+            }
 
-            mergeSafeNoBorder(hoja, row, row, 0, 8, estiloTitulo);
-            UtilExcel.establecerTexto(hoja, row++, 0, "REPORTE - SOLICITUDES DE VACACIONES", estiloTitulo);
+            UtilExcel.establecerTexto(
+                    hoja,
+                    row++,
+                    1,
+                    UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())),
+                    estiloTitulo
+            );
 
-            mergeSafeNoBorder(hoja, row, row, 0, 8, estiloTitulo);
-            UtilExcel.establecerTexto(hoja, row++, 0,
+            UtilExcel.establecerTexto(
+                    hoja,
+                    row++,
+                    1,
+                    "REPORTE - SOLICITUDES DE VACACIONES",
+                    estiloTitulo
+            );
+
+            UtilExcel.establecerTexto(
+                    hoja,
+                    row++,
+                    1,
                     "RANGO DE FECHAS: " + safe(request.getFechaDesde()) + " - " + safe(request.getFechaHasta()),
-                    estiloTitulo);
+                    estiloTitulo
+            );
 
-            row++;
+            row += 2;
 
             List<SolicitudVacacionEmpleadoDTO> empleados = agruparPorEmpleado(request.getSolicitudes());
 
@@ -244,19 +305,22 @@ public class ReporteConsolidadoSolicitudVacacionService {
             for (SolicitudVacacionEmpleadoDTO emp : empleados) {
                 if (emp == null) continue;
 
-                CellStyle stCab = stCabActivo;
+                // =============================================================================
+                // Cabecera del empleado
+                // Se mantienen los mismos datos, combinaciones y distribución.
+                // =============================================================================
 
-                mergeSafeNoBorder(hoja, row, row, 0, 2, stCab);
-                mergeSafeNoBorder(hoja, row, row, 3, 5, stCab);
-                mergeSafeNoBorder(hoja, row, row, 6, 8, stCab);
+                mergeSafeNoBorder(hoja, row, row, 0, 2, stCabActivo);
+                mergeSafeNoBorder(hoja, row, row, 3, 5, stCabActivo);
+                mergeSafeNoBorder(hoja, row, row, 6, 8, stCabActivo);
 
-                UtilExcel.establecerTexto(hoja, row, 0, "CIUDAD: " + safe(emp.getCiudad()), stCab);
-                UtilExcel.establecerTexto(hoja, row, 3, "C.C.: " + safe(emp.getIdentificacion()), stCab);
-                UtilExcel.establecerTexto(hoja, row, 6, "COD: " + safe(emp.getCodigo()), stCab);
+                UtilExcel.establecerTexto(hoja, row, 0, "CIUDAD: " + safe(emp.getCiudad()), stCabActivo);
+                UtilExcel.establecerTexto(hoja, row, 3, "C.C.: " + safe(emp.getIdentificacion()), stCabActivo);
+                UtilExcel.establecerTexto(hoja, row, 6, "COD: " + safe(emp.getCodigo()), stCabActivo);
                 row++;
 
-                mergeSafeNoBorder(hoja, row, row, 0, 8, stCab);
-                UtilExcel.establecerTexto(hoja, row++, 0, "EMPLEADO: " + safe(emp.getEmpleado()), stCab);
+                mergeSafeNoBorder(hoja, row, row, 0, 8, stCabActivo);
+                UtilExcel.establecerTexto(hoja, row++, 0, "EMPLEADO: " + safe(emp.getEmpleado()), stCabActivo);
 
                 mergeSafeNoBorder(hoja, row, row, 0, 2, stCabGray);
                 mergeSafeNoBorder(hoja, row, row, 3, 5, stCabGray);
@@ -267,25 +331,38 @@ public class ReporteConsolidadoSolicitudVacacionService {
                 UtilExcel.establecerTexto(hoja, row, 6, "CARGO: " + safe(emp.getCargo()), stCabGray);
                 row++;
 
+                // =============================================================================
+                // Encabezado de las solicitudes
+                // Mismas columnas, únicamente con el estilo estándar de encabezado.
+                // =============================================================================
+
                 Row head = UtilExcel.asegurarFila(hoja, row++);
-                UtilExcel.establecerTexto(head, 0, "Solicitud", estiloCentroBorde);
-                UtilExcel.establecerTexto(head, 1, "Desde", estiloCentroBorde);
-                UtilExcel.establecerTexto(head, 2, "Hasta", estiloCentroBorde);
-                UtilExcel.establecerTexto(head, 3, "Días L-V", estiloCentroBorde);
-                UtilExcel.establecerTexto(head, 4, "Días S-D", estiloCentroBorde);
-                UtilExcel.establecerTexto(head, 5, "Autorizado", estiloCentroBorde);
-                UtilExcel.establecerTexto(head, 6, "Estado", estiloCentroBorde);
-                UtilExcel.establecerTexto(head, 7, "Autoriza", estiloCentroBorde);
-                UtilExcel.establecerTexto(head, 8, "Fecha de Autorización", estiloCentroBorde);
+                UtilExcel.establecerTexto(head, 0, "SOLICITUD", estiloEncabezado);
+                UtilExcel.establecerTexto(head, 1, "DESDE", estiloEncabezado);
+                UtilExcel.establecerTexto(head, 2, "HASTA", estiloEncabezado);
+                UtilExcel.establecerTexto(head, 3, "DÍAS L-V", estiloEncabezado);
+                UtilExcel.establecerTexto(head, 4, "DÍAS S-D", estiloEncabezado);
+                UtilExcel.establecerTexto(head, 5, "AUTORIZADO", estiloEncabezado);
+                UtilExcel.establecerTexto(head, 6, "ESTADO", estiloEncabezado);
+                UtilExcel.establecerTexto(head, 7, "AUTORIZA", estiloEncabezado);
+                UtilExcel.establecerTexto(head, 8, "FECHA DE AUTORIZACIÓN", estiloEncabezado);
+                head.setHeightInPoints(22f);
 
                 List<SolicitudVacacionReporteDTO> solicitudes = ordenarSolicitudes(emp.getSolicitudes());
 
                 if (solicitudes.isEmpty()) {
                     mergeSafe(hoja, row, row, 0, 8, estiloCentroBorde);
-                    UtilExcel.establecerTexto(hoja, row++, 0, "Sin solicitudes en el rango seleccionado", estiloCentroBorde);
+                    UtilExcel.establecerTexto(
+                            hoja,
+                            row++,
+                            0,
+                            "Sin solicitudes en el rango seleccionado",
+                            estiloCentroBorde
+                    );
                 } else {
                     for (SolicitudVacacionReporteDTO s : solicitudes) {
                         Row rr = UtilExcel.asegurarFila(hoja, row++);
+
                         UtilExcel.establecerValor(rr, 0, long0(s.getSolicitud()), estiloCentroBorde);
                         UtilExcel.establecerTexto(rr, 1, formatearFecha(s.getDesde()), estiloCentroBorde);
                         UtilExcel.establecerTexto(rr, 2, formatearFecha(s.getHasta()), estiloCentroBorde);
@@ -294,14 +371,19 @@ public class ReporteConsolidadoSolicitudVacacionService {
                         UtilExcel.establecerTexto(rr, 5, safe(s.getAutorizado()), estiloCentroBorde);
                         UtilExcel.establecerTexto(rr, 6, safe(s.getEstado_texto()), estiloCentroBorde);
                         UtilExcel.establecerTexto(rr, 7, safe(s.getAutoriza()), estiloIzqBorde);
-                        UtilExcel.establecerTexto(rr, 8, formatearFechaHora(s.getFecha_autorizacion()), estiloCentroBorde);
+                        UtilExcel.establecerTexto(
+                                rr,
+                                8,
+                                formatearFechaHora(s.getFecha_autorizacion()),
+                                estiloCentroBorde
+                        );
                     }
                 }
 
                 row += 2;
             }
 
-            hoja.createFreezePane(0, 4);
+            hoja.createFreezePane(0, 5);
 
             libro.write(baos);
             return baos.toByteArray();
@@ -316,10 +398,9 @@ public class ReporteConsolidadoSolicitudVacacionService {
     // =========================================================================================
     // Helpers agrupación
     // =========================================================================================
+
     private List<SolicitudVacacionEmpleadoDTO> agruparPorEmpleado(List<SolicitudVacacionReporteDTO> filas) {
-        if (filas == null || filas.isEmpty()) {
-            return new ArrayList<>();
-        }
+        if (filas == null || filas.isEmpty()) return new ArrayList<>();
 
         Map<Long, SolicitudVacacionEmpleadoDTO> map = new LinkedHashMap<>();
 
@@ -330,14 +411,17 @@ public class ReporteConsolidadoSolicitudVacacionService {
 
             if (!map.containsKey(id)) {
                 SolicitudVacacionEmpleadoDTO emp = new SolicitudVacacionEmpleadoDTO();
+
                 emp.setId_empleado(id);
                 emp.setIdentificacion(row.getIdentificacion());
                 emp.setCodigo(row.getCodigo());
                 emp.setNombre(row.getNombre());
                 emp.setApellido(row.getApellido());
-                emp.setEmpleado(safe(row.getEmpleado()).isBlank()
-                        ? (safe(row.getApellido()) + " " + safe(row.getNombre())).trim()
-                        : row.getEmpleado());
+                emp.setEmpleado(
+                        safe(row.getEmpleado()).isBlank()
+                                ? (safe(row.getApellido()) + " " + safe(row.getNombre())).trim()
+                                : row.getEmpleado()
+                );
                 emp.setCiudad(row.getCiudad());
                 emp.setSucursal(row.getSucursal());
                 emp.setRegimen(row.getRegimen());
@@ -345,6 +429,7 @@ public class ReporteConsolidadoSolicitudVacacionService {
                 emp.setCargo(row.getCargo());
                 emp.setRol(row.getRol());
                 emp.setSolicitudes(new ArrayList<>());
+
                 map.put(id, emp);
             }
 
@@ -362,8 +447,7 @@ public class ReporteConsolidadoSolicitudVacacionService {
 
         return solicitudes.stream()
                 .filter(Objects::nonNull)
-                .sorted(Comparator
-                        .comparing((SolicitudVacacionReporteDTO s) -> safe(s.getDesde()))
+                .sorted(Comparator.comparing((SolicitudVacacionReporteDTO s) -> safe(s.getDesde()))
                         .thenComparing(s -> long0(s.getSolicitud())))
                 .collect(Collectors.toList());
     }
@@ -371,70 +455,28 @@ public class ReporteConsolidadoSolicitudVacacionService {
     // =========================================================================================
     // Helpers PDF
     // =========================================================================================
+
     private PdfPCell hCell(String text, Color bg) {
-        return ReporteUtil.crearCelda(text, ReporteUtil.fuenteEncabezado(), bg);
+        return ReporteUtil.crearCelda(text, ReporteUtil.fuenteEncabezadoTablaData(), bg);
     }
 
     private PdfPCell cellCenter(String text, Color bg) {
-        PdfPCell c = new PdfPCell(new Phrase(safe(text), ReporteUtil.fuenteTablaData()));
+        PdfPCell c = ReporteUtil.crearCelda(safe(text), ReporteUtil.fuenteTablaData(), bg);
         c.setHorizontalAlignment(Element.ALIGN_CENTER);
         c.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        c.setBackgroundColor(bg);
-        c.setPadding(4f);
-        c.setBorder(Rectangle.BOX);
-        c.setBorderColor(new Color(80, 80, 80));
-        c.setBorderWidth(0.6f);
         return c;
     }
 
     private PdfPCell cellLeft(String text, Color bg) {
-        PdfPCell c = new PdfPCell(new Phrase(safe(text), ReporteUtil.fuenteTablaData()));
+        PdfPCell c = ReporteUtil.crearCelda(safe(text), ReporteUtil.fuenteTablaData(), bg);
         c.setHorizontalAlignment(Element.ALIGN_LEFT);
         c.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        c.setBackgroundColor(bg);
-        c.setPadding(4f);
-        c.setBorder(Rectangle.BOX);
-        c.setBorderColor(new Color(80, 80, 80));
-        c.setBorderWidth(0.6f);
         return c;
-    }
-
-    private PdfPCell celdaInfoMixtaLocal(String etiqueta, String valor, Color fondo) {
-        Phrase contenido = new Phrase();
-        contenido.add(new Chunk(safe(etiqueta) + " ", ReporteUtil.fuenteEncabezadoTablaData()));
-        contenido.add(new Chunk(safe(valor), ReporteUtil.fuenteTablaData()));
-
-        PdfPCell celda = new PdfPCell(contenido);
-        celda.setBackgroundColor(fondo);
-        celda.setPadding(4f);
-        celda.setBorder(Rectangle.NO_BORDER);
-        return celda;
     }
 
     // =========================================================================================
     // Helpers Excel
     // =========================================================================================
-    private void insertarLogo(Workbook wb, Sheet hoja, byte[] imagenBytes) {
-        if (imagenBytes == null || imagenBytes.length == 0) return;
-
-        int idx = wb.addPicture(imagenBytes, Workbook.PICTURE_TYPE_PNG);
-
-        Drawing<?> drawing = hoja.createDrawingPatriarch();
-        CreationHelper helper = wb.getCreationHelper();
-        ClientAnchor anchor = helper.createClientAnchor();
-
-        anchor.setCol1(0);
-        anchor.setCol2(1);
-        anchor.setRow1(0);
-        anchor.setRow2(4);
-        anchor.setDx1(0);
-        anchor.setDx2(0);
-        anchor.setDy1(0);
-        anchor.setDy2(0);
-        anchor.setAnchorType(ClientAnchor.AnchorType.MOVE_DONT_RESIZE);
-
-        drawing.createPicture(anchor, idx);
-    }
 
     private void mergeSafe(XSSFSheet sh, int r1, int r2, int c1, int c2, CellStyle estilo) {
         if (r1 == r2 && c1 == c2) {
@@ -453,8 +495,9 @@ public class ReporteConsolidadoSolicitudVacacionService {
         CellRangeAddress region = new CellRangeAddress(rr1, rr2, cc1, cc2);
 
         for (int i = 0; i < sh.getNumMergedRegions(); i++) {
-            CellRangeAddress ex = sh.getMergedRegion(i);
-            if (ex.formatAsString().equals(region.formatAsString())) {
+            CellRangeAddress existente = sh.getMergedRegion(i);
+
+            if (existente.formatAsString().equals(region.formatAsString())) {
                 UtilExcel.aplicarEstiloARegion(sh, rr1, rr2, cc1, cc2, estilo, true);
                 aplicarBordeRegion(sh, region);
                 return;
@@ -484,7 +527,6 @@ public class ReporteConsolidadoSolicitudVacacionService {
         sh.addMergedRegion(region);
 
         UtilExcel.aplicarEstiloARegion(sh, rr1, rr2, cc1, cc2, estilo, true);
-
         RegionUtil.setBorderTop(BorderStyle.NONE, region, sh);
         RegionUtil.setBorderBottom(BorderStyle.NONE, region, sh);
         RegionUtil.setBorderLeft(BorderStyle.NONE, region, sh);
@@ -497,22 +539,22 @@ public class ReporteConsolidadoSolicitudVacacionService {
         RegionUtil.setBorderLeft(BorderStyle.THIN, region, sh);
         RegionUtil.setBorderRight(BorderStyle.THIN, region, sh);
 
-        short col = IndexedColors.GREY_50_PERCENT.getIndex();
-        RegionUtil.setTopBorderColor(col, region, sh);
-        RegionUtil.setBottomBorderColor(col, region, sh);
-        RegionUtil.setLeftBorderColor(col, region, sh);
-        RegionUtil.setRightBorderColor(col, region, sh);
+        short color = IndexedColors.GREY_50_PERCENT.getIndex();
+
+        RegionUtil.setTopBorderColor(color, region, sh);
+        RegionUtil.setBottomBorderColor(color, region, sh);
+        RegionUtil.setLeftBorderColor(color, region, sh);
+        RegionUtil.setRightBorderColor(color, region, sh);
     }
 
     private CellStyle crearEstiloCabeceraEmpleadoActivo(XSSFWorkbook libro, String colorHex) {
         CellStyle estilo = libro.createCellStyle();
         estilo.cloneStyleFrom(ConfiguracionExcel.crearEstiloCabeceraGris(libro));
 
-        org.apache.poi.xssf.usermodel.XSSFColor color =
-                new org.apache.poi.xssf.usermodel.XSSFColor(
-                        ReporteUtil.convertirHexAColor(colorHex),
-                        null
-                );
+        org.apache.poi.xssf.usermodel.XSSFColor color = new org.apache.poi.xssf.usermodel.XSSFColor(
+                ReporteUtil.convertirHexAColor(colorHex),
+                null
+        );
 
         ((org.apache.poi.xssf.usermodel.XSSFCellStyle) estilo).setFillForegroundColor(color);
         estilo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -520,16 +562,13 @@ public class ReporteConsolidadoSolicitudVacacionService {
         return estilo;
     }
 
-    private void noSpace(PdfPTable t) {
-        t.setSpacingBefore(0f);
-        t.setSpacingAfter(0f);
-    }
-
     // =========================================================================================
     // Helpers util
     // =========================================================================================
+
     private String safe(Object v) {
         if (v == null) return "";
+
         String s = String.valueOf(v).trim();
         return "null".equalsIgnoreCase(s) ? "" : s;
     }
@@ -550,15 +589,18 @@ public class ReporteConsolidadoSolicitudVacacionService {
             if (f.contains("T")) {
                 return OffsetDateTime.parse(f).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
 
         try {
             return LocalDate.parse(f).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
 
         try {
             return LocalDateTime.parse(f).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
 
         return f;
     }
@@ -571,15 +613,18 @@ public class ReporteConsolidadoSolicitudVacacionService {
             if (f.contains("T")) {
                 return OffsetDateTime.parse(f).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
 
         try {
             return LocalDateTime.parse(f).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
 
         try {
             return LocalDate.parse(f).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
 
         return f;
     }
