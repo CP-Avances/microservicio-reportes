@@ -17,4 +17,5 @@ public class TimbreUsuarioDTO {
     private String observacion;
     private String longitud;
     private String latitud;
+    private String imagenUrl;
 }

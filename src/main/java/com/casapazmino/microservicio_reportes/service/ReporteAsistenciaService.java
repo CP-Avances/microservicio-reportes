@@ -472,13 +472,23 @@ public class ReporteAsistenciaService {
               }
             }
 
-            for (int i = 0; i < 13; i++) {
-              PdfPCell celdaVacia = ReporteUtil.crearCeldaCompacta("", fontTextoCompacto, Color.WHITE);
+            for (int i = 0; i < 12; i++) {
+              PdfPCell celdaVacia = ReporteUtil.crearCeldaCompacta(
+                  "",
+                  fontTextoCompacto,
+                  Color.WHITE
+              );
               celdaVacia.setBorder(Rectangle.NO_BORDER);
               tablaData.addCell(celdaVacia);
             }
 
-            tablaData.addCell(ReporteUtil.crearCeldaCompacta("TOTAL", fontTextoCompacto, Color.WHITE));
+            PdfPCell celdaTotal = ReporteUtil.crearCeldaCompacta("TOTAL", fontTextoCompacto, Color.WHITE );
+
+            celdaTotal.setColspan(2);
+            celdaTotal.setHorizontalAlignment(Element.ALIGN_CENTER);
+            celdaTotal.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            tablaData.addCell(celdaTotal);
+
             tablaData.addCell(
                 ReporteUtil.crearCeldaCompacta(convertirMinutosATiempo(totalAtrasos), fontTextoCompacto, Color.WHITE));
             tablaData.addCell(ReporteUtil.crearCeldaCompacta(convertirMinutosATiempo(totalSalidasAnticipadas),
@@ -542,6 +552,8 @@ public class ReporteAsistenciaService {
       }
     }
   }
+
+
 
   public byte[] generarReporteResumenAsistenciaXLSX(ReporteAsistenciaRequest request) {
     final String NOMBRE_HOJA = "Resumen_asistencia";

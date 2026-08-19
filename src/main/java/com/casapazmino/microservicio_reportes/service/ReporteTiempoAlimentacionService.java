@@ -47,10 +47,10 @@ public class ReporteTiempoAlimentacionService {
                 1.10f,
                 1.10f,
                 1.55f,
-                1.70f,
-                1.70f,
-                0.95f,
-                0.95f,
+                1.60f,
+                1.60f,
+                1.20f,
+                1.00f,
                 1.00f,
                 1.10f
         };

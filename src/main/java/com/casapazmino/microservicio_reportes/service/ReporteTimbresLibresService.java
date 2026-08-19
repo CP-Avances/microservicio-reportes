@@ -10,11 +10,14 @@ import com.casapazmino.microservicio_reportes.util.UtilExcel;
 
 import org.openpdf.text.*;
 import org.openpdf.text.pdf.*;
-
+import org.apache.poi.common.usermodel.HyperlinkType;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.Hyperlink;
 
 import org.springframework.stereotype.Service;
 
@@ -36,8 +39,29 @@ public class ReporteTimbresLibresService {
         final String PERIODO = request.getPeriodo() == null ? "" : "PERIODO DEL: " + safe(request.getPeriodo().getInicio()) + " AL " + safe(request.getPeriodo().getFin());
         final float[] WIDTHS_TITULO = { 8f, 2f };
         final float[] WIDTHS_INFO = { 4f, 4f, 4f };
-        final float[] WIDTHS_CON_DISPOSITIVO = { 0.5f, 1.2f, 1.0f, 1.2f, 1.0f, 0.9f, 1.3f, 2.5f, 1.2f, 1.2f };
-        final float[] WIDTHS_SIN_DISPOSITIVO = { 0.5f, 1.3f, 1.1f, 0.9f, 1.3f, 3.0f, 1.2f, 1.2f };
+        final float[] WIDTHS_CON_DISPOSITIVO = {
+            0.5f,
+            1.2f,
+            1.0f,
+            1.2f,
+            1.0f,
+            0.9f,
+            1.3f,
+            2.7f,
+            1.2f,
+            1.2f
+        };
+
+        final float[] WIDTHS_SIN_DISPOSITIVO = {
+            0.5f,
+            1.3f,
+            1.1f,
+            0.9f,
+            1.3f,
+            3.2f,
+            1.2f,
+            1.2f
+        };
 
         Document document = null;
         PdfWriter writer = null;
@@ -120,6 +144,7 @@ public class ReporteTimbresLibresService {
                         document.add(contenedorInfo);
 
                         int columnas = conDispositivo ? 10 : 8;
+
                         PdfPTable tablaTimbres = new PdfPTable(columnas);
                         tablaTimbres.setWidthPercentage(100);
                         tablaTimbres.setSpacingBefore(5f);
@@ -135,9 +160,27 @@ public class ReporteTimbresLibresService {
                         tablaTimbres.addCell(ReporteUtil.crearCelda("RELOJ", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
                         tablaTimbres.addCell(ReporteUtil.crearCelda("ACCIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
                         tablaTimbres.addCell(ReporteUtil.crearCelda("OBSERVACIÓN", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
-                        tablaTimbres.addCell(ReporteUtil.crearCelda("LONGITUD", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
-                        tablaTimbres.addCell(ReporteUtil.crearCelda("LATITUD", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal, 2, 1));
+                        
+                        tablaTimbres.addCell(
+                            ReporteUtil.crearCelda(
+                                "UBICACIÓN",
+                                ReporteUtil.fuenteEncabezadoTablaData(),
+                                colorPrincipal,
+                                2,
+                                1
+                            )
+                        );
 
+                        tablaTimbres.addCell(
+                            ReporteUtil.crearCelda(
+                                "IMAGEN",
+                                ReporteUtil.fuenteEncabezadoTablaData(),
+                                colorPrincipal,
+                                2,
+                                1
+                            )
+                        );
+                        
                         tablaTimbres.addCell(ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
                         tablaTimbres.addCell(ReporteUtil.crearCelda("HORA", ReporteUtil.fuenteEncabezadoTablaData(), colorPrincipal));
 
@@ -168,8 +211,18 @@ public class ReporteTimbresLibresService {
                             tablaTimbres.addCell(ReporteUtil.crearCelda(safe(timbre.getId_reloj()), ReporteUtil.fuenteTablaData(), fondo));
                             tablaTimbres.addCell(ReporteUtil.crearCelda(mapAccion(safe(timbre.getAccion())), ReporteUtil.fuenteTablaData(), fondo));
                             tablaTimbres.addCell(ReporteUtil.crearCelda(safe(timbre.getObservacion()), ReporteUtil.fuenteTablaData(), fondo));
-                            tablaTimbres.addCell(ReporteUtil.crearCelda(safe(timbre.getLongitud()), ReporteUtil.fuenteTablaData(), fondo));
-                            tablaTimbres.addCell(ReporteUtil.crearCelda(safe(timbre.getLatitud()), ReporteUtil.fuenteTablaData(), fondo));
+                            tablaTimbres.addCell(
+                                crearCeldaUbicacionPDF(
+                                    timbre.getLatitud(),
+                                    timbre.getLongitud(),
+                                    fondo
+                                )
+                            );
+                            
+                            tablaTimbres.addCell(crearCeldaImagenPDF(
+                                    timbre.getImagenUrl(),
+                                    fondo
+                            ));
 
                             contadorLocal++;
                         }
@@ -195,7 +248,7 @@ public class ReporteTimbresLibresService {
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            throw new ReportBuildException("No se pudo generar ReporteTimbresLibres.pdf", e);
+            throw new ReportBuildException("No se pudo generar ReporteTimbresEspeciales.pdf", e);
         } finally {
             if (document != null && document.isOpen()) {
                 try { document.close(); } catch (Exception ignore) {}
@@ -239,6 +292,8 @@ public class ReporteTimbresLibresService {
             final int MERGE_FIL_INI = 0, MERGE_FIL_FIN = 4;
             final int MERGE_COL_INI = 1;
             final int MERGE_COL_FIN = conDispositivo ? 17 : 15;
+
+
             for (int fila = MERGE_FIL_INI; fila <= MERGE_FIL_FIN; fila++) {
                 UtilExcel.combinarCeldas(hoja, fila, fila, MERGE_COL_INI, MERGE_COL_FIN);
             }
@@ -267,29 +322,50 @@ public class ReporteTimbresLibresService {
                     "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
                     "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
                     "FECHA TIMBRE", "HORA TIMBRE", "RELOJ", "ACCIÓN",
-                    "OBSERVACIÓN", "LATITUD", "LONGITUD"
+                    "OBSERVACIÓN", "UBICACIÓN", "IMAGEN"
             };
+
             final int[] ANCHOS_SIN_DISP = {
-                    10, 20, 20, 28, 18, 18, 18, 20, 18, 20, 16, 16, 20, 24, 18, 18
+                    10, 20, 20, 28,
+                    18, 18, 18, 20, 18,
+                    20, 16, 16, 20,
+                    28, 18, 18
             };
+
             final boolean[] FILTROS_SIN_DISP = {
-                    false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true
+                false,
+                true, true, true, true, true,
+                true, true, true, true, true,
+                true, true, true, true, true
             };
+
 
             final String[] HEADERS_CON_DISP = {
                     "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE",
                     "CIUDAD", "SUCURSAL", "RÉGIMEN", "DEPARTAMENTO", "CARGO",
                     "FECHA TIMBRE", "HORA TIMBRE", "RELOJ", "ACCIÓN",
-                    "OBSERVACIÓN", "LATITUD", "LONGITUD",
+                    "OBSERVACIÓN", "UBICACIÓN", "IMAGEN",
                     "FECHA TIMBRE DISPOSITIVO", "HORA TIMBRE DISPOSITIVO"
             };
+
+
             final int[] ANCHOS_CON_DISP = {
-                    10, 20, 20, 28, 18, 18, 18, 20, 18, 20, 16, 16, 20, 24, 18, 18, 22, 20
+                    10, 20, 20, 28,
+                    18, 18, 18, 20, 18,
+                    20, 16, 16, 20,
+                    28, 18, 18,
+                    22, 20
             };
+
+
             final boolean[] FILTROS_CON_DISP = {
-                    false, true, true, true, true, true, true, true, true,
-                    true, true, true, true, true, true, true, true, true
+                    false,
+                    true, true, true, true, true,
+                    true, true, true, true, true,
+                    true, true, true, true,
+                    true, true
             };
+
 
             final String[] HEADERS = conDispositivo ? HEADERS_CON_DISP : HEADERS_SIN_DISP;
             final int[] ANCHOS = conDispositivo ? ANCHOS_CON_DISP : ANCHOS_SIN_DISP;
@@ -336,8 +412,8 @@ public class ReporteTimbresLibresService {
                             UtilExcel.establecerTexto(r, c++, "", null); // RELOJ
                             UtilExcel.establecerTexto(r, c++, "", null); // ACCIÓN
                             UtilExcel.establecerTexto(r, c++, "", null); // OBSERVACIÓN
-                            UtilExcel.establecerTexto(r, c++, "", null); // LAT
-                            UtilExcel.establecerTexto(r, c++, "", null); // LON
+                            UtilExcel.establecerTexto(r, c++, "", null); // UBICACIÓN
+                            UtilExcel.establecerTexto(r, c++, "", null); // IMAGEN
                             if (conDispositivo) {
                                 UtilExcel.establecerTexto(r, c++, "", null); // FECHA TIMBRE DISPOSITIVO
                                 UtilExcel.establecerTexto(r, c++, "", null); // HORA TIMBRE DISPOSITIVO
@@ -363,8 +439,19 @@ public class ReporteTimbresLibresService {
                             UtilExcel.establecerTexto(r, c++, safe(t.getId_reloj()), null);
                             UtilExcel.establecerTexto(r, c++, mapAccion(safe(t.getAccion())), null);
                             UtilExcel.establecerTexto(r, c++, safe(t.getObservacion()), null);
-                            UtilExcel.establecerTexto(r, c++, safe(t.getLatitud()), null);
-                            UtilExcel.establecerTexto(r, c++, safe(t.getLongitud()), null);
+                            establecerUbicacionExcel(
+                                    libro,
+                                    r,
+                                    c++,
+                                    t.getLatitud(),
+                                    t.getLongitud()
+                            );
+                            establecerImagenExcel(
+                                    libro,
+                                    r,
+                                    c++,
+                                    t.getImagenUrl()
+                            );
                             if (conDispositivo) {
                                 UtilExcel.establecerTexto(r, c++, fechaCortaExcel(t.getFechaDispositivo()), null);
                                 UtilExcel.establecerTexto(r, c++, safe(t.getHoraDispositivo()), null);
@@ -392,6 +479,33 @@ public class ReporteTimbresLibresService {
                         true);
             }
 
+            CellStyle estiloLink = libro.createCellStyle();
+            estiloLink.cloneStyleFrom(estiloIzqBorde);
+
+            org.apache.poi.ss.usermodel.Font fuenteLink = libro.createFont();
+            fuenteLink.setColor(IndexedColors.BLUE.getIndex());
+            fuenteLink.setUnderline(org.apache.poi.ss.usermodel.Font.U_SINGLE);
+
+            estiloLink.setFont(fuenteLink);
+
+            final int COLUMNA_UBICACION = 14;
+            final int COLUMNA_IMAGEN = 15;
+
+            for (int f = filaDatosIni; f <= ultimaFila; f++) {
+                Row fila = hoja.getRow(f);
+                if (fila == null) continue;
+
+                org.apache.poi.ss.usermodel.Cell celdaUbicacion = fila.getCell(COLUMNA_UBICACION);
+                if (celdaUbicacion != null && celdaUbicacion.getHyperlink() != null) {
+                    celdaUbicacion.setCellStyle(estiloLink);
+                }
+
+                org.apache.poi.ss.usermodel.Cell celdaImagen = fila.getCell(COLUMNA_IMAGEN);
+                if (celdaImagen != null && celdaImagen.getHyperlink() != null) {
+                    celdaImagen.setCellStyle(estiloLink);
+                }
+            }
+
             // 7) Tabla estilizada + AutoFilter (ITEM sin filtro)
             if (ultimaFila >= filaDatosIni) {
                 String tableName = conDispositivo ? "TimbresReporteTabla" : "TimbresAbiertoReporteTabla";
@@ -415,6 +529,137 @@ public class ReporteTimbresLibresService {
             // Internos → 500 uniforme
             throw new ReportBuildException("No se pudo generar TimbresEspeciales.xlsx", e);
         }
+    }
+
+    private String construirUrlMaps(String latitud, String longitud) {
+        String lat = safe(latitud).trim();
+        String lon = safe(longitud).trim();
+
+        if (lat.isBlank() || lon.isBlank()) {
+            return "";
+        }
+
+        return "https://www.google.com/maps/search/?api=1&query="
+                + lat + "," + lon;
+    }
+
+    private PdfPCell crearCeldaUbicacionPDF(
+            String latitud,
+            String longitud,
+            Color fondo) {
+
+        String url = construirUrlMaps(latitud, longitud);
+
+        // Conservamos exactamente la apariencia de las demás celdas
+        PdfPCell celda = ReporteUtil.crearCelda(
+                "",
+                ReporteUtil.fuenteTablaData(),
+                fondo
+        );
+
+        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+
+        if (url.isBlank()) {
+            return celda;
+        }
+
+        Font fuenteBase = ReporteUtil.fuenteTablaData();
+
+        Font fuenteLink = new Font(
+                fuenteBase.getFamily(),
+                fuenteBase.getSize(),
+                Font.UNDERLINE,
+                Color.BLUE
+        );
+
+        Chunk enlace = new Chunk("Ubicación", fuenteLink);
+        enlace.setAnchor(url);
+
+        celda.setPhrase(new Phrase(enlace));
+
+        return celda;
+    }
+
+    private void establecerUbicacionExcel(
+            XSSFWorkbook libro,
+            Row fila,
+            int columna,
+            String latitud,
+            String longitud) {
+
+        String url = construirUrlMaps(latitud, longitud);
+
+        if (url.isBlank()) {
+            UtilExcel.establecerTexto(
+                    fila,
+                    columna,
+                    "",
+                    null
+            );
+            return;
+        }
+
+        UtilExcel.establecerTexto(
+                fila,
+                columna,
+                "Ubicación",
+                null
+        );
+
+        org.apache.poi.ss.usermodel.Cell celda =
+                fila.getCell(columna);
+
+        CreationHelper helper =
+                libro.getCreationHelper();
+
+        Hyperlink hyperlink =
+                helper.createHyperlink(HyperlinkType.URL);
+
+        hyperlink.setAddress(url);
+
+        celda.setHyperlink(hyperlink);
+    }
+
+    private PdfPCell crearCeldaImagenPDF(String imagenUrl, Color fondo) {
+        PdfPCell celda = ReporteUtil.crearCelda("", ReporteUtil.fuenteTablaData(), fondo);
+        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+
+        String url = safe(imagenUrl).trim();
+        if (url.isBlank()) return celda;
+
+        Font fuenteBase = ReporteUtil.fuenteTablaData();
+        Font fuenteLink = new Font(fuenteBase.getFamily(), fuenteBase.getSize(), Font.UNDERLINE, Color.BLUE);
+
+        Chunk enlace = new Chunk("Imagen", fuenteLink);
+        enlace.setAnchor(url);
+
+        celda.setPhrase(new Phrase(enlace));
+        return celda;
+    }
+
+    private void establecerImagenExcel(
+            XSSFWorkbook libro,
+            Row fila,
+            int columna,
+            String imagenUrl) {
+
+        String url = safe(imagenUrl).trim();
+
+        if (url.isBlank()) {
+            UtilExcel.establecerTexto(fila, columna, "", null);
+            return;
+        }
+
+        UtilExcel.establecerTexto(fila, columna, "Imagen", null);
+
+        org.apache.poi.ss.usermodel.Cell celda = fila.getCell(columna);
+        CreationHelper helper = libro.getCreationHelper();
+        Hyperlink hyperlink = helper.createHyperlink(HyperlinkType.URL);
+
+        hyperlink.setAddress(url);
+        celda.setHyperlink(hyperlink);
     }
 
     private boolean hayColumnaDispositivo(ReporteTimbresLibresRequest req) {

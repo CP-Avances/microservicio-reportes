@@ -20,4 +20,6 @@ public class TimbreDTO {
     private String observacion;
     private String latitud;
     private String longitud;
+    private String imagenUrl;
+
 }

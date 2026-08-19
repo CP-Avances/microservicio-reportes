@@ -20,6 +20,7 @@ import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.common.usermodel.HyperlinkType;
 
 import java.awt.Color;
 import java.io.OutputStream;
@@ -44,7 +45,6 @@ public class ReporteTimbresUsuariosService {
         final float[] WIDTHS_TIMBRES = { 1f, 2.5f, 1.5f, 1.5f, 2.3f, 4.5f, 2f, 2f };
         final int WIDTH_PERCENT_100 = 100;
         final float SPACING_AFTER_TIT = 10f;
-        final float SPACING_BEFORE_TB = 0f;
         final float PADDING_TITULOS = 5f;
 
         final Color COLOR_PRIMARIO = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
@@ -93,14 +93,14 @@ public class ReporteTimbresUsuariosService {
             tituloTabla.setWidths(WIDTHS_TITULO);
             tituloTabla.setSpacingAfter(SPACING_AFTER_TIT);
 
-            PdfPCell celdaTitulo = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezado()));
+            PdfPCell celdaTitulo = new PdfPCell(new Phrase("LISTA EMPLEADOS", ReporteUtil.fuenteEncabezadoTablaData()));
             celdaTitulo.setBackgroundColor(COLOR_SECUNDARIO);
             celdaTitulo.setPadding(PADDING_TITULOS);
             celdaTitulo.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.LEFT);
             tituloTabla.addCell(celdaTitulo);
 
             PdfPCell celdaContador = new PdfPCell(
-                    new Phrase("N° Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezado()));
+                    new Phrase("N° Registros: " + contadorGlobal.get(), ReporteUtil.fuenteEncabezadoTablaData()));
             celdaContador.setBackgroundColor(COLOR_SECUNDARIO);
             celdaContador.setHorizontalAlignment(Element.ALIGN_RIGHT);
             celdaContador.setVerticalAlignment(Element.ALIGN_MIDDLE);
@@ -148,59 +148,63 @@ public class ReporteTimbresUsuariosService {
                         tablaTimbres.setWidths(WIDTHS_TIMBRES);
 
                         // Encabezado fila 1
-                        PdfPCell celdaN = ReporteUtil.crearCelda("N°", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO);
+                        PdfPCell celdaN = ReporteUtil.crearCelda("N°", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO);
                         celdaN.setRowspan(2);
                         celdaN.setHorizontalAlignment(Element.ALIGN_CENTER);
                         celdaN.setVerticalAlignment(Element.ALIGN_MIDDLE);
                         tablaTimbres.addCell(celdaN);
 
-                        PdfPCell celdaTimbre = ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezado(),
+                        PdfPCell celdaTimbre = ReporteUtil.crearCelda("TIMBRE", ReporteUtil.fuenteEncabezadoTablaData(),
                                 COLOR_PRIMARIO);
                         celdaTimbre.setColspan(2);
                         celdaTimbre.setHorizontalAlignment(Element.ALIGN_CENTER);
                         celdaTimbre.setVerticalAlignment(Element.ALIGN_MIDDLE);
                         tablaTimbres.addCell(celdaTimbre);
 
-                        PdfPCell celdaReloj = ReporteUtil.crearCelda("RELOJ", ReporteUtil.fuenteEncabezado(),
+                        PdfPCell celdaReloj = ReporteUtil.crearCelda("RELOJ", ReporteUtil.fuenteEncabezadoTablaData(),
                                 COLOR_PRIMARIO);
                         celdaReloj.setRowspan(2);
                         celdaReloj.setHorizontalAlignment(Element.ALIGN_CENTER);
                         celdaReloj.setVerticalAlignment(Element.ALIGN_MIDDLE);
                         tablaTimbres.addCell(celdaReloj);
 
-                        PdfPCell celdaAccion = ReporteUtil.crearCelda("ACCIÓN", ReporteUtil.fuenteEncabezado(),
+                        PdfPCell celdaAccion = ReporteUtil.crearCelda("ACCIÓN", ReporteUtil.fuenteEncabezadoTablaData(),
                                 COLOR_PRIMARIO);
                         celdaAccion.setRowspan(2);
                         celdaAccion.setHorizontalAlignment(Element.ALIGN_CENTER);
                         celdaAccion.setVerticalAlignment(Element.ALIGN_MIDDLE);
                         tablaTimbres.addCell(celdaAccion);
 
-                        PdfPCell celdaObs = ReporteUtil.crearCelda("OBSERVACIÓN", ReporteUtil.fuenteEncabezado(),
+                        PdfPCell celdaObs = ReporteUtil.crearCelda("OBSERVACIÓN", ReporteUtil.fuenteEncabezadoTablaData(),
                                 COLOR_PRIMARIO);
                         celdaObs.setRowspan(2);
                         celdaObs.setHorizontalAlignment(Element.ALIGN_CENTER);
                         celdaObs.setVerticalAlignment(Element.ALIGN_MIDDLE);
                         tablaTimbres.addCell(celdaObs);
 
-                        PdfPCell celdaLong = ReporteUtil.crearCelda("LONGITUD", ReporteUtil.fuenteEncabezado(),
+                        PdfPCell celdaUbicacion = ReporteUtil.crearCelda(
+                                "UBICACIÓN",
+                                ReporteUtil.fuenteEncabezadoTablaData(),
                                 COLOR_PRIMARIO);
-                        celdaLong.setRowspan(2);
-                        celdaLong.setHorizontalAlignment(Element.ALIGN_CENTER);
-                        celdaLong.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                        tablaTimbres.addCell(celdaLong);
+                        celdaUbicacion.setRowspan(2);
+                        celdaUbicacion.setHorizontalAlignment(Element.ALIGN_CENTER);
+                        celdaUbicacion.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        tablaTimbres.addCell(celdaUbicacion);
 
-                        PdfPCell celdaLat = ReporteUtil.crearCelda("LATITUD", ReporteUtil.fuenteEncabezado(),
+                        PdfPCell celdaImagen = ReporteUtil.crearCelda(
+                                "IMAGEN",
+                                ReporteUtil.fuenteEncabezadoTablaData(),
                                 COLOR_PRIMARIO);
-                        celdaLat.setRowspan(2);
-                        celdaLat.setHorizontalAlignment(Element.ALIGN_CENTER);
-                        celdaLat.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                        tablaTimbres.addCell(celdaLat);
+                        celdaImagen.setRowspan(2);
+                        celdaImagen.setHorizontalAlignment(Element.ALIGN_CENTER);
+                        celdaImagen.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        tablaTimbres.addCell(celdaImagen);
 
                         // Encabezado fila 2
                         tablaTimbres.addCell(
-                                ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
+                                ReporteUtil.crearCelda("FECHA", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
                         tablaTimbres.addCell(
-                                ReporteUtil.crearCelda("HORA", ReporteUtil.fuenteEncabezado(), COLOR_PRIMARIO));
+                                ReporteUtil.crearCelda("HORA", ReporteUtil.fuenteEncabezadoTablaData(), COLOR_PRIMARIO));
 
                         // Cuerpo (zebra)
                         int contadorLocal = 1;
@@ -213,21 +217,26 @@ public class ReporteTimbresUsuariosService {
                                 String hora = partes.length > 1 ? partes[1] : "";
 
                                 tablaTimbres.addCell(ReporteUtil.crearCelda(String.valueOf(contadorLocal),
-                                        ReporteUtil.fuenteTexto(), fondo));
+                                        ReporteUtil.fuenteTablaData(), fondo));
                                 tablaTimbres.addCell(ReporteUtil.crearCelda(ReporteUtil.formatearFechaConDia(fecha),
-                                        ReporteUtil.fuenteTexto(), fondo));
-                                tablaTimbres.addCell(ReporteUtil.crearCelda(hora, ReporteUtil.fuenteTexto(), fondo));
+                                        ReporteUtil.fuenteTablaData(), fondo));
+                                tablaTimbres.addCell(ReporteUtil.crearCelda(hora, ReporteUtil.fuenteTablaData(), fondo));
                                 tablaTimbres.addCell(
-                                        ReporteUtil.crearCelda(t.getId_reloj(), ReporteUtil.fuenteTexto(), fondo));
+                                        ReporteUtil.crearCelda(t.getId_reloj(), ReporteUtil.fuenteTablaData(), fondo));
                                 tablaTimbres.addCell(ReporteUtil.crearCelda(ReporteUtil.traducirAccion(t.getAccion()),
-                                        ReporteUtil.fuenteTexto(), fondo));
+                                        ReporteUtil.fuenteTablaData(), fondo));
                                 tablaTimbres.addCell(
-                                        ReporteUtil.crearCelda(t.getObservacion(), ReporteUtil.fuenteTexto(), fondo));
+                                        ReporteUtil.crearCelda(t.getObservacion(), ReporteUtil.fuenteTablaData(), fondo));
                                 tablaTimbres.addCell(
-                                        ReporteUtil.crearCelda(t.getLongitud(), ReporteUtil.fuenteTexto(), fondo));
-                                tablaTimbres.addCell(
-                                        ReporteUtil.crearCelda(t.getLatitud(), ReporteUtil.fuenteTexto(), fondo));
+                                        crearCeldaUbicacionPDF(
+                                                t.getLatitud(),
+                                                t.getLongitud(),
+                                                fondo));
 
+                                tablaTimbres.addCell(
+                                        crearCeldaImagenPDF(
+                                                t.getImagenUrl(),
+                                                fondo));
                                 contadorLocal++;
                             }
                         }
@@ -278,10 +287,10 @@ public class ReporteTimbresUsuariosService {
         String[] headers = conDispositivo
                 ? new String[] { "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "CIUDAD", "SUCURSAL", "RÉGIMEN",
                         "DEPARTAMENTO", "CARGO", "FECHA TIMBRE", "HORA TIMBRE", "RELOJ", "ACCIÓN", "OBSERVACIÓN",
-                        "LATITUD", "LONGITUD", "FECHA TIMBRE DISPOSITIVO", "HORA TIMBRE DISPOSITIVO" }
+                        "UBICACIÓN", "IMAGEN", "FECHA TIMBRE DISPOSITIVO", "HORA TIMBRE DISPOSITIVO" }
                 : new String[] { "ITEM", "IDENTIFICACIÓN", "CÓDIGO", "APELLIDO NOMBRE", "CIUDAD", "SUCURSAL", "RÉGIMEN",
                         "DEPARTAMENTO", "CARGO", "FECHA TIMBRE", "HORA TIMBRE", "RELOJ", "ACCIÓN", "OBSERVACIÓN",
-                        "LATITUD", "LONGITUD" };
+                        "UBICACIÓN", "IMAGEN" };
         int lastCol = headers.length - 1;
 
         // 2) Libro base + streaming (cerrando ambos recursos)
@@ -325,6 +334,22 @@ public class ReporteTimbresUsuariosService {
             estiloIzqZebra.cloneStyleFrom(estiloIzqBorde);
             estiloIzqZebra.setFillPattern(FillPatternType.SOLID_FOREGROUND);
             estiloIzqZebra.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+
+            // === ESTILOS PARA HIPERVÍNCULOS ===
+            org.apache.poi.ss.usermodel.Font fuenteLink = wbBase.createFont();
+            fuenteLink.setColor(IndexedColors.BLUE.getIndex());
+            fuenteLink.setUnderline(org.apache.poi.ss.usermodel.Font.U_SINGLE);
+
+            // Link fondo blanco
+            CellStyle estiloLinkCentro = wbBase.createCellStyle();
+            estiloLinkCentro.cloneStyleFrom(estiloCentroBorde);
+            estiloLinkCentro.setFont(fuenteLink);
+
+            // Link fondo zebra
+            CellStyle estiloLinkCentroZebra = wbBase.createCellStyle();
+            estiloLinkCentroZebra.cloneStyleFrom(estiloCentroZebra);
+            estiloLinkCentroZebra.setFont(fuenteLink);
+
 
             // === LOGO A1:B5 ===
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
@@ -475,11 +500,34 @@ public class ReporteTimbresUsuariosService {
                             c13.setCellStyle(csLeft);
 
                             Cell c14 = r.createCell(col++);
-                            setNumericIfPossible(c14, safe(t.getLatitud()));
-                            c14.setCellStyle(csLeft);
+
+                            establecerUbicacionExcel(
+                                    wb,
+                                    c14,
+                                    t.getLatitud(),
+                                    t.getLongitud()
+                            );
+
+                            c14.setCellStyle(
+                                    c14.getHyperlink() != null
+                                            ? (zebra ? estiloLinkCentroZebra : estiloLinkCentro)
+                                            : csCenter
+                            );
+
+
                             Cell c15 = r.createCell(col++);
-                            setNumericIfPossible(c15, safe(t.getLongitud()));
-                            c15.setCellStyle(csLeft);
+
+                            establecerImagenExcel(
+                                    wb,
+                                    c15,
+                                    t.getImagenUrl()
+                            );
+
+                            c15.setCellStyle(
+                                    c15.getHyperlink() != null
+                                            ? (zebra ? estiloLinkCentroZebra : estiloLinkCentro)
+                                            : csCenter
+                            );
 
                             if (conDispositivo) {
                                 Cell c16 = r.createCell(col++);
@@ -548,14 +596,6 @@ public class ReporteTimbresUsuariosService {
         return (i >= 0 && i + 1 < fh.length()) ? fh.substring(i + 1) : "";
     }
 
-    private void setNumericIfPossible(Cell cell, String v) {
-        try {
-            cell.setCellValue(Double.parseDouble(v));
-        } catch (Exception ignore) {
-            cell.setCellValue(v);
-        }
-    }
-
     private java.awt.Color hexToAwtColor(String hex) {
         if (hex == null)
             return new java.awt.Color(0, 112, 192); // azul por defecto
@@ -568,6 +608,144 @@ public class ReporteTimbresUsuariosService {
         } catch (Exception e) {
             return new java.awt.Color(0, 112, 192);
         }
+    }
+
+
+    private PdfPCell crearCeldaUbicacionPDF(
+            String latitud,
+            String longitud,
+            Color fondo) {
+
+        String lat = safe(latitud);
+        String lon = safe(longitud);
+
+        PdfPCell celda = ReporteUtil.crearCelda(
+                "",
+                ReporteUtil.fuenteTablaData(),
+                fondo
+        );
+
+        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+
+        if (lat.isBlank() || lon.isBlank()) {
+            return celda;
+        }
+
+        String url = "https://www.google.com/maps/search/?api=1&query="
+                + lat + "," + lon;
+
+        org.openpdf.text.Font fuenteBase =
+                ReporteUtil.fuenteTablaData();
+
+        org.openpdf.text.Font fuenteLink =
+                new org.openpdf.text.Font(
+                        fuenteBase.getFamily(),
+                        fuenteBase.getSize(),
+                        org.openpdf.text.Font.UNDERLINE,
+                        Color.BLUE
+                );
+
+        Chunk enlace = new Chunk(
+                "Ubicación",
+                fuenteLink
+        );
+
+        enlace.setAnchor(url);
+
+        celda.setPhrase(new Phrase(enlace));
+
+        return celda;
+    }
+
+    private PdfPCell crearCeldaImagenPDF(
+            String imagenUrl,
+            Color fondo) {
+
+        PdfPCell celda = ReporteUtil.crearCelda(
+                "",
+                ReporteUtil.fuenteTablaData(),
+                fondo
+        );
+
+        celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+
+        String url = safe(imagenUrl);
+
+        if (url.isBlank()) {
+            return celda;
+        }
+
+        org.openpdf.text.Font fuenteBase =
+                ReporteUtil.fuenteTablaData();
+
+        org.openpdf.text.Font fuenteLink =
+                new org.openpdf.text.Font(
+                        fuenteBase.getFamily(),
+                        fuenteBase.getSize(),
+                        org.openpdf.text.Font.UNDERLINE,
+                        Color.BLUE
+                );
+
+        Chunk enlace = new Chunk(
+                "Imagen",
+                fuenteLink
+        );
+
+        enlace.setAnchor(url);
+
+        celda.setPhrase(new Phrase(enlace));
+
+        return celda;
+    }
+        
+
+    private void establecerUbicacionExcel(
+            Workbook workbook,
+            Cell celda,
+            String latitud,
+            String longitud) {
+
+        String lat = safe(latitud);
+        String lon = safe(longitud);
+
+        if (lat.isBlank() || lon.isBlank()) {
+            celda.setCellValue("");
+            return;
+        }
+
+        String url = "https://www.google.com/maps/search/?api=1&query="
+                + lat + "," + lon;
+
+        CreationHelper helper = workbook.getCreationHelper();
+
+        Hyperlink hyperlink = helper.createHyperlink(HyperlinkType.URL);
+        hyperlink.setAddress(url);
+
+        celda.setCellValue("Ubicación");
+        celda.setHyperlink(hyperlink);
+    }
+
+    private void establecerImagenExcel(
+            Workbook workbook,
+            Cell celda,
+            String imagenUrl) {
+
+        String url = safe(imagenUrl);
+
+        if (url.isBlank()) {
+            celda.setCellValue("");
+            return;
+        }
+
+        CreationHelper helper = workbook.getCreationHelper();
+
+        Hyperlink hyperlink = helper.createHyperlink(HyperlinkType.URL);
+        hyperlink.setAddress(url);
+
+        celda.setCellValue("Imagen");
+        celda.setHyperlink(hyperlink);
     }
 
 }

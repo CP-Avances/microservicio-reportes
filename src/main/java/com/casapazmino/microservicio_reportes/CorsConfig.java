@@ -14,7 +14,7 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins(
-                                "http://localhost:49468",
+                                "http://localhost:4200",
                                 "http://192.168.0.145:49468", // ejemplo: agrega el segundo puerto aquí
                                 "https://nuevofulltime.fulltime.com.ec",
                                 "https://aqhora.fulltime.com.ec",
