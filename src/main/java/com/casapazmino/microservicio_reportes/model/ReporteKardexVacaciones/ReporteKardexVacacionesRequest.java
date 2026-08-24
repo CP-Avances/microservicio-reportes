@@ -35,6 +35,8 @@ public class ReporteKardexVacacionesRequest {
     // seleccion puede traer cualquiera de estos arreglos de ids
     private SeleccionDTO seleccion;
 
+    private Boolean tabulado;
+
     // ===== Contenido principal ya consultado =====
     private List<KardexEmpleadoDTO> empleados;
 }

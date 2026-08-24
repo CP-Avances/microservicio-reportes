@@ -51,6 +51,14 @@ public class ReporteKardexVacacionesService {
   // =========================================================================================
   public byte[] generarReporteKardexVacacionesPDF(ReporteKardexVacacionesRequest request) {
 
+    // ==========================================================
+    // REPORTE TABULADO
+    // ==========================================================
+    if (Boolean.TRUE.equals(request.getTabulado())) {
+        return generarReporteKardexVacacionesPDFTabulado(request);
+    }
+
+
     // anchos
     final float[] W_EMP_INFO = { 4f, 4f, 2f };
     final float[] W_PERIODO_FILA = { 2.4f, 2.4f, 2.4f, 2.0f, 1.8f };
@@ -519,10 +527,295 @@ public class ReporteKardexVacacionesService {
     }
   }
 
+
+  // =========================================================================================
+  // PDF TABULADO
+  // =========================================================================================
+  private byte[] generarReporteKardexVacacionesPDFTabulado(ReporteKardexVacacionesRequest request) {
+
+      Document document = null;
+      PdfWriter writer = null;
+      ByteArrayOutputStream baos = null;
+
+      try {
+          baos = new ByteArrayOutputStream();
+
+          // Horizontal porque tenemos 10 columnas
+          document = new Document(PageSize.A4.rotate(), 30, 30, 30, 50);
+          writer = PdfWriter.getInstance(document, baos);
+
+          writer.setPageEvent(new ConfiguracionPaginaPDF(
+              safe(request.getUsuario()),
+              safe(request.getFraseMarcaAgua()),
+              safe(request.getColorPrincipal())
+          ));
+
+          document.open();
+
+          // ==========================
+          // LOGO
+          // ==========================
+          Image logo = ReporteUtil.obtenerLogo(request.getLogoBase64());
+
+          if (logo != null) {
+              document.add(logo);
+          }
+
+          // ==========================
+          // TÍTULOS
+          // ==========================
+          document.add(ReporteUtil.crearTituloEmpresa(
+              safe(request.getEmpresa())
+          ));
+
+          document.add(ReporteUtil.crearTituloReporte(
+              "KARDEX VACACIONES - TABULADO"
+          ));
+
+          document.add(ReporteUtil.crearTituloPeriodo(
+              "FECHA DE CORTE: " + safe(request.getFechaCorte())
+          ));
+
+          // ==========================
+          // DATOS
+          // ==========================
+          List<KardexEmpleadoDTO> empleadosIn = request.getEmpleados();
+
+          if (empleadosIn == null || empleadosIn.isEmpty()) {
+              Paragraph p = new Paragraph(
+                  "Sin datos para mostrar",
+                  ReporteUtil.fuenteTexto()
+              );
+
+              p.setAlignment(Element.ALIGN_CENTER);
+              p.setSpacingBefore(20f);
+              document.add(p);
+
+              document.close();
+              return baos.toByteArray();
+          }
+
+          // ==========================
+          // ORDEN
+          // ==========================
+          final String criterio = safe(request.getCriterio()).toLowerCase();
+
+          List<KardexEmpleadoDTO> listaOrdenada = empleadosIn.stream()
+              .filter(Objects::nonNull)
+              .sorted(Comparator
+                  .comparing((KardexEmpleadoDTO e) -> safe(grupoNombre(criterio, e)))
+                  .thenComparing(e -> safe(e.getApellido()))
+                  .thenComparing(e -> safe(e.getNombre())))
+              .collect(Collectors.toList());
+
+          Color colorPrincipal = ReporteUtil.convertirHexAColor(
+              request.getColorPrincipal()
+          );
+
+          Color zebra = ReporteUtil.colorZebraClaro();
+
+          // ==========================
+          // TABLA
+          // ==========================
+          PdfPTable tabla = new PdfPTable(10);
+          tabla.setWidthPercentage(100);
+
+          tabla.setWidths(new float[] {
+              1.1f, // Código
+              1.8f, // Identificación
+              3.5f, // Empleado
+              1.7f, // Estado periodo
+              1.6f, // F. Inicio
+              1.6f, // F. Fin
+              2.0f, // Proporcional
+              2.0f, // Liquidación
+              1.8f, // Sábados
+              1.8f  // Domingos
+          });
+
+          tabla.setSpacingBefore(10f);
+
+          // Repetir cabecera si el reporte tiene más de una página
+          tabla.setHeaderRows(1);
+
+          // ==========================
+          // CABECERA
+          // ==========================
+          tabla.addCell(hCell("Código", colorPrincipal));
+          tabla.addCell(hCell("Identificación", colorPrincipal));
+          tabla.addCell(hCell("Empleado", colorPrincipal));
+          tabla.addCell(hCell("Estado período", colorPrincipal));
+          tabla.addCell(hCell("F. Inicio", colorPrincipal));
+          tabla.addCell(hCell("F. Fin", colorPrincipal));
+          tabla.addCell(hCell("Proporcional", colorPrincipal));
+          tabla.addCell(hCell("Liquidación", colorPrincipal));
+          tabla.addCell(hCell("Sábados", colorPrincipal));
+          tabla.addCell(hCell("Domingos", colorPrincipal));
+
+          // ==========================
+          // FILAS
+          // ==========================
+          int numeroFila = 1;
+
+          for (KardexEmpleadoDTO emp : listaOrdenada) {
+
+              if (emp == null) {
+                  continue;
+              }
+
+              String nombreCompleto = (
+                  safe(emp.getApellido()) + " " + safe(emp.getNombre())
+              ).trim();
+
+              List<KardexPeriodoDTO> periodosOrdenados = ordenarPeriodos(
+                  emp.getPeriodos()
+              );
+
+              for (KardexPeriodoDTO per : periodosOrdenados) {
+
+                  if (per == null) {
+                      continue;
+                  }
+
+                  Color fondo = (numeroFila % 2 == 0)
+                      ? zebra
+                      : Color.WHITE;
+
+                  String estado = "ACTIVO".equalsIgnoreCase(
+                      safe(per.getEstado_periodo())
+                  ) ? "Activo" : "Inactivo";
+
+                  // Reutilizamos exactamente la misma distribución
+                  // que usa actualmente el Kardex detallado.
+                  SemanaDHMDTO distribucion = sumarSemanaPeriodo(
+                      per,
+                      int0(emp.getMin_por_dia())
+                  );
+
+                  DHMDTO sabado = distribucion != null
+                      ? distribucion.getSabado()
+                      : null;
+
+                  DHMDTO domingo = distribucion != null
+                      ? distribucion.getDomingo()
+                      : null;
+
+                  // Código
+                  tabla.addCell(cellCenter(
+                      safe(emp.getCodigo()),
+                      fondo
+                  ));
+
+                  // Identificación
+                  tabla.addCell(cellCenter(
+                      safe(emp.getIdentificacion()),
+                      fondo
+                  ));
+
+                  // Empleado
+                  tabla.addCell(cellLeft(
+                      nombreCompleto,
+                      fondo
+                  ));
+
+                  // Estado período
+                  tabla.addCell(cellCenter(
+                      estado,
+                      fondo
+                  ));
+
+                  // Fecha inicio
+                  tabla.addCell(cellCenter(
+                      formatearFechaTabulado(per.getFecha_inicio()),
+                      fondo
+                  ));
+
+                  // Fecha fin
+                  tabla.addCell(cellCenter(
+                      formatearFechaTabulado(per.getFecha_final()),
+                      fondo
+                  ));
+
+                  // Proporcional
+                  tabla.addCell(cellCenter(
+                      fmtDHMTabulado(per.getProporcional_dhm()),
+                      fondo
+                  ));
+
+                  // Liquidación
+                  tabla.addCell(cellCenter(
+                      fmtDHMTabulado(per.getLiquidacion_dhm()),
+                      fondo
+                  ));
+
+                  // Sábado
+                  tabla.addCell(cellCenter(
+                      fmtDHMTabulado(sabado),
+                      fondo
+                  ));
+
+                  // Domingo
+                  tabla.addCell(cellCenter(
+                      fmtDHMTabulado(domingo),
+                      fondo
+                  ));
+
+                  numeroFila++;
+              }
+          }
+
+          document.add(tabla);
+
+          document.close();
+          return baos.toByteArray();
+
+      } catch (IllegalArgumentException e) {
+          throw e;
+
+      } catch (Exception e) {
+          throw new ReportBuildException(
+              "No se pudo generar KardexVacacionesTabulado.pdf",
+              e
+          );
+
+      } finally {
+
+          if (document != null && document.isOpen()) {
+              try {
+                  document.close();
+              } catch (Exception ignore) {
+              }
+          }
+
+          if (writer != null) {
+              try {
+                  writer.close();
+              } catch (Exception ignore) {
+              }
+          }
+
+          if (baos != null) {
+              try {
+                  baos.close();
+              } catch (Exception ignore) {
+              }
+          }
+      }
+  }
+
+
   // =========================================================================================
   // EXCEL
   // =========================================================================================
   public byte[] generarReporteKardexVacacionesExcel(ReporteKardexVacacionesRequest request) {
+
+    // ==========================================================
+    // REPORTE TABULADO
+    // ==========================================================
+    if (Boolean.TRUE.equals(request.getTabulado())) {
+        return generarReporteKardexVacacionesExcelTabulado(request);
+    }
+
 
     try (XSSFWorkbook libro = new XSSFWorkbook();
         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -907,6 +1200,340 @@ public class ReporteKardexVacacionesService {
     }
   }
 
+
+  // =========================================================================================
+  // EXCEL TABULADO
+  // =========================================================================================
+  private byte[] generarReporteKardexVacacionesExcelTabulado(
+      ReporteKardexVacacionesRequest request) {
+
+    try (XSSFWorkbook libro = new XSSFWorkbook();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+      final String HOJA = "Kardex_Tabulado";
+      XSSFSheet hoja = libro.createSheet(HOJA);
+
+      // ==========================
+      // ESTILOS
+      // ==========================
+      CellStyle stTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
+      CellStyle stHeader = ConfiguracionExcel.crearEstiloHeaderAzul(libro);
+      CellStyle stCentro = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
+      CellStyle stIzquierda = ConfiguracionExcel.crearEstiloIzquierdaConBorde(libro);
+
+      // ==========================
+      // COLUMNAS
+      // ==========================
+      final int COL_INICIO = 0;
+      final int COL_FINAL = 9;
+
+      hoja.setColumnWidth(0, 3500);  // Código
+      hoja.setColumnWidth(1, 5000);  // Identificación
+      hoja.setColumnWidth(2, 10500); // Empleado
+      hoja.setColumnWidth(3, 5000);  // Estado período
+      hoja.setColumnWidth(4, 4500);  // F. Inicio
+      hoja.setColumnWidth(5, 4500);  // F. Fin
+      hoja.setColumnWidth(6, 6200);  // Proporcional
+      hoja.setColumnWidth(7, 6200);  // Liquidación
+      hoja.setColumnWidth(8, 5200);  // Sábados
+      hoja.setColumnWidth(9, 5200);  // Domingos
+
+      // ==========================
+      // LOGO
+      // ==========================
+      byte[] logo = UtilExcel.decodificarImagenBase64(
+          request.getLogoBase64()
+      );
+
+      if (logo != null && logo.length > 0) {
+        insertarLogoKardexA1A4(
+            libro,
+            hoja,
+            logo
+        );
+      }
+
+      int row = 0;
+
+      // ==========================
+      // TÍTULOS
+      // ==========================
+      mergeSafeNoBorder(
+          hoja,
+          row,
+          row,
+          COL_INICIO,
+          COL_FINAL,
+          stTitulo
+      );
+
+      UtilExcel.establecerTexto(
+          hoja,
+          row++,
+          COL_INICIO,
+          UtilExcel.aMayusculasSeguras(
+              safe(request.getEmpresa())
+          ),
+          stTitulo
+      );
+
+      mergeSafeNoBorder(
+          hoja,
+          row,
+          row,
+          COL_INICIO,
+          COL_FINAL,
+          stTitulo
+      );
+
+      UtilExcel.establecerTexto(
+          hoja,
+          row++,
+          COL_INICIO,
+          "KARDEX VACACIONES - TABULADO",
+          stTitulo
+      );
+
+      mergeSafeNoBorder(
+          hoja,
+          row,
+          row,
+          COL_INICIO,
+          COL_FINAL,
+          stTitulo
+      );
+
+      UtilExcel.establecerTexto(
+          hoja,
+          row++,
+          COL_INICIO,
+          "FECHA DE CORTE: " + safe(request.getFechaCorte()),
+          stTitulo
+      );
+
+      row++;
+
+      // ==========================
+      // CABECERA DE LA TABLA
+      // ==========================
+      final int FILA_CABECERA = row;
+
+      Row encabezado = UtilExcel.asegurarFila(
+          hoja,
+          row++
+      );
+
+      UtilExcel.establecerTexto(encabezado, 0, "Código", stHeader);
+      UtilExcel.establecerTexto(encabezado, 1, "Identificación", stHeader);
+      UtilExcel.establecerTexto(encabezado, 2, "Empleado", stHeader);
+      UtilExcel.establecerTexto(encabezado, 3, "Estado período", stHeader);
+      UtilExcel.establecerTexto(encabezado, 4, "F. Inicio", stHeader);
+      UtilExcel.establecerTexto(encabezado, 5, "F. Fin", stHeader);
+      UtilExcel.establecerTexto(encabezado, 6, "Proporcional", stHeader);
+      UtilExcel.establecerTexto(encabezado, 7, "Liquidación", stHeader);
+      UtilExcel.establecerTexto(encabezado, 8, "Sábados", stHeader);
+      UtilExcel.establecerTexto(encabezado, 9, "Domingos", stHeader);
+
+      // ==========================
+      // EMPLEADOS
+      // ==========================
+      List<KardexEmpleadoDTO> empleadosIn = request.getEmpleados();
+
+      if (empleadosIn == null) {
+        empleadosIn = new ArrayList<>();
+      }
+
+      final String criterio = safe(
+          request.getCriterio()
+      ).toLowerCase();
+
+      List<KardexEmpleadoDTO> listaOrdenada = empleadosIn.stream()
+          .filter(Objects::nonNull)
+          .sorted(Comparator
+              .comparing(
+                  (KardexEmpleadoDTO e) ->
+                      safe(grupoNombre(criterio, e))
+              )
+              .thenComparing(e -> safe(e.getApellido()))
+              .thenComparing(e -> safe(e.getNombre())))
+          .collect(Collectors.toList());
+
+      // ==========================
+      // FILAS
+      // ==========================
+      for (KardexEmpleadoDTO emp : listaOrdenada) {
+
+        if (emp == null) {
+          continue;
+        }
+
+        String nombreCompleto = (
+            safe(emp.getApellido())
+            + " "
+            + safe(emp.getNombre())
+        ).trim();
+
+        List<KardexPeriodoDTO> periodosOrdenados = ordenarPeriodos(
+            emp.getPeriodos()
+        );
+
+        for (KardexPeriodoDTO per : periodosOrdenados) {
+
+          if (per == null) {
+            continue;
+          }
+
+          String estado = "ACTIVO".equalsIgnoreCase(
+              safe(per.getEstado_periodo())
+          ) ? "Activo" : "Inactivo";
+
+          // Reutilizamos exactamente la misma lógica
+          // de distribución del Kardex detallado.
+          SemanaDHMDTO distribucion = sumarSemanaPeriodo(
+              per,
+              int0(emp.getMin_por_dia())
+          );
+
+          DHMDTO sabado = distribucion != null
+              ? distribucion.getSabado()
+              : null;
+
+          DHMDTO domingo = distribucion != null
+              ? distribucion.getDomingo()
+              : null;
+
+          Row fila = UtilExcel.asegurarFila(
+              hoja,
+              row++
+          );
+
+          // Código
+          UtilExcel.establecerTexto(
+              fila,
+              0,
+              safe(emp.getCodigo()),
+              stCentro
+          );
+
+          // Identificación como texto para conservarla íntegra
+          UtilExcel.establecerTexto(
+              fila,
+              1,
+              safe(emp.getIdentificacion()),
+              stCentro
+          );
+
+          // Empleado
+          UtilExcel.establecerTexto(
+              fila,
+              2,
+              nombreCompleto,
+              stIzquierda
+          );
+
+          // Estado período
+          UtilExcel.establecerTexto(
+              fila,
+              3,
+              estado,
+              stCentro
+          );
+
+          // Fecha inicio
+          UtilExcel.establecerTexto(
+              fila,
+              4,
+              formatearFechaTabulado(
+                  per.getFecha_inicio()
+              ),
+              stCentro
+          );
+
+          // Fecha fin
+          UtilExcel.establecerTexto(
+              fila,
+              5,
+              formatearFechaTabulado(
+                  per.getFecha_final()
+              ),
+              stCentro
+          );
+
+          // Proporcional
+          UtilExcel.establecerTexto(
+              fila,
+              6,
+              fmtDHMTabulado(
+                  per.getProporcional_dhm()
+              ),
+              stCentro
+          );
+
+          // Liquidación
+          UtilExcel.establecerTexto(
+              fila,
+              7,
+              fmtDHMTabulado(
+                  per.getLiquidacion_dhm()
+              ),
+              stCentro
+          );
+
+          // Sábados
+          UtilExcel.establecerTexto(
+              fila,
+              8,
+              fmtDHMTabulado(sabado),
+              stCentro
+          );
+
+          // Domingos
+          UtilExcel.establecerTexto(
+              fila,
+              9,
+              fmtDHMTabulado(domingo),
+              stCentro
+          );
+        }
+      }
+
+      // ==========================
+      // CONFIGURACIÓN FINAL
+      // ==========================
+
+      // Mantiene títulos y cabecera visibles al desplazarse
+      hoja.createFreezePane(
+          0,
+          FILA_CABECERA + 1
+      );
+
+      // Filtro en toda la tabla
+      if (row > FILA_CABECERA + 1) {
+        hoja.setAutoFilter(
+            new CellRangeAddress(
+                FILA_CABECERA,
+                row - 1,
+                COL_INICIO,
+                COL_FINAL
+            )
+        );
+      }
+
+      libro.write(baos);
+      return baos.toByteArray();
+
+    } catch (IllegalArgumentException e) {
+      throw e;
+
+    } catch (Exception e) {
+      throw new ReportBuildException(
+          "No se pudo generar KardexVacacionesTabulado.xlsx",
+          e
+      );
+    }
+  }
+
+
   // =========================================================================================
   // Helpers PDF (celdas)
   // =========================================================================================
@@ -960,6 +1587,33 @@ public class ReporteKardexVacacionesService {
     celda.setBorder(Rectangle.NO_BORDER);
     return celda;
   }
+
+  private String fmtDHMTabulado(DHMDTO dhm) {
+      if (dhm == null) {
+          return "0d 0h 0m";
+      }
+
+      return int0(dhm.getDias()) + "d "
+          + int0(dhm.getHoras()) + "h "
+          + int0(dhm.getMinutos()) + "m";
+  }
+
+  private String formatearFechaTabulado(String fecha) {
+      String valor = safe(fecha);
+
+      if (valor.isBlank()) {
+          return "";
+      }
+
+      String[] partes = valor.split("-");
+
+      if (partes.length != 3) {
+          return valor;
+      }
+
+      return partes[2] + "/" + partes[1] + "/" + partes[0];
+  }
+
 
   // =========================================================================================
   // Helpers negocio (pendientes DHM igual que frontend)
