@@ -1,6 +1,7 @@
 package com.casapazmino.microservicio_reportes.service;
 
 import com.casapazmino.microservicio_reportes.model.reporteSolicitudesVacaciones.ReporteSolicitudVacacionRequest;
+import com.casapazmino.microservicio_reportes.model.reporteSolicitudesVacaciones.SolicitudVacacionAprobacionDTO;
 import com.casapazmino.microservicio_reportes.model.reporteSolicitudesVacaciones.SolicitudVacacionEmpleadoDTO;
 import com.casapazmino.microservicio_reportes.model.reporteSolicitudesVacaciones.SolicitudVacacionReporteDTO;
 import com.casapazmino.microservicio_reportes.util.ConfiguracionExcel;
@@ -20,7 +21,6 @@ import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
-
 import org.openpdf.text.Document;
 import org.openpdf.text.Element;
 import org.openpdf.text.Image;
@@ -50,9 +50,25 @@ public class ReporteConsolidadoSolicitudVacacionService {
     // =========================================================================================
 
     public byte[] generarReporteSolicitudesVacacionesPDF(ReporteSolicitudVacacionRequest request) {
-        final float[] W_EMP_INFO = {4f, 4f, 2f};
-        final float[] W_EMP_INFO_2 = {4f, 4f, 3f};
-        final float[] W_SOL = {1.2f, 1.8f, 1.8f, 1.2f, 1.2f, 1.5f, 1.8f, 2.6f, 2.2f};
+        final float[] W_EMP_INFO = { 4f, 4f, 2f };
+        final float[] W_EMP_INFO_2 = { 4f, 4f, 3f };
+        final float[] W_SOL = {
+                1.4f, // Solicitud
+                1.8f, // Desde
+                1.8f, // Hasta
+                1.2f, // Días L-V
+                1.2f, // Días S-D
+                1.5f, // Autorizado
+                2.0f // Estado
+        };
+        final float[] W_APR = {
+                0.8f, // Paso
+                2.2f, // Departamento
+                3.0f, // Autoriza
+                1.6f, // Estado Flujo
+                2.0f, // Fecha Autorización
+                2.2f // Observación
+        };
 
         Document document = null;
         PdfWriter writer = null;
@@ -66,8 +82,7 @@ public class ReporteConsolidadoSolicitudVacacionService {
             writer.setPageEvent(new ConfiguracionPaginaPDF(
                     safe(request.getUsuario()),
                     safe(request.getFraseMarcaAgua()),
-                    safe(request.getColorPrincipal())
-            ));
+                    safe(request.getColorPrincipal())));
 
             document.open();
 
@@ -77,8 +92,7 @@ public class ReporteConsolidadoSolicitudVacacionService {
             document.add(ReporteUtil.crearTituloEmpresa(safe(request.getEmpresa())));
             document.add(ReporteUtil.crearTituloReporte("REPORTE - SOLICITUDES DE VACACIONES"));
             document.add(ReporteUtil.crearTituloPeriodo(
-                    "RANGO DE FECHAS: " + safe(request.getFechaDesde()) + " - " + safe(request.getFechaHasta())
-            ));
+                    "RANGO DE FECHAS: " + safe(request.getFechaDesde()) + " - " + safe(request.getFechaHasta())));
 
             Color colorPrincipal = ReporteUtil.convertirHexAColor(request.getColorPrincipal());
             Color zebra = ReporteUtil.colorZebraClaro();
@@ -95,7 +109,8 @@ public class ReporteConsolidadoSolicitudVacacionService {
             }
 
             for (SolicitudVacacionEmpleadoDTO emp : empleados) {
-                if (emp == null) continue;
+                if (emp == null)
+                    continue;
 
                 // =============================================================================
                 // Información del empleado
@@ -144,91 +159,241 @@ public class ReporteConsolidadoSolicitudVacacionService {
 
                 document.add(contInfo);
 
-                // =============================================================================
-                // Tabla de solicitudes
-                // Se conservan exactamente las mismas nueve columnas.
-                // =============================================================================
+PdfPTable tabla = new PdfPTable(7);
+tabla.setWidthPercentage(100);
+tabla.setWidths(W_SOL);
 
-                PdfPTable tabla = new PdfPTable(9);
-                tabla.setWidthPercentage(100);
-                tabla.setWidths(W_SOL);
-                tabla.setSpacingBefore(0f);
+tabla.addCell(hCell("Solicitud", colorPrincipal));
+tabla.addCell(hCell("Desde", colorPrincipal));
+tabla.addCell(hCell("Hasta", colorPrincipal));
+tabla.addCell(hCell("Días L-V", colorPrincipal));
+tabla.addCell(hCell("Días S-D", colorPrincipal));
+tabla.addCell(hCell("Autorizado", colorPrincipal));
+tabla.addCell(hCell("Estado", colorPrincipal));
 
-                tabla.addCell(hCell("SOLICITUD", colorPrincipal));
-                tabla.addCell(hCell("DESDE", colorPrincipal));
-                tabla.addCell(hCell("HASTA", colorPrincipal));
-                tabla.addCell(hCell("DÍAS L-V", colorPrincipal));
-                tabla.addCell(hCell("DÍAS S-D", colorPrincipal));
-                tabla.addCell(hCell("AUTORIZADO", colorPrincipal));
-                tabla.addCell(hCell("ESTADO", colorPrincipal));
-                tabla.addCell(hCell("AUTORIZA", colorPrincipal));
-                tabla.addCell(hCell("FECHA DE AUTORIZACIÓN", colorPrincipal));
+List<SolicitudVacacionReporteDTO> solicitudes =
+        ordenarSolicitudes(emp.getSolicitudes());
 
-                List<SolicitudVacacionReporteDTO> solicitudes = ordenarSolicitudes(emp.getSolicitudes());
+if (solicitudes.isEmpty()) {
 
-                if (solicitudes.isEmpty()) {
-                    PdfPCell sin = new PdfPCell(new Phrase(
-                            "Sin solicitudes en el rango seleccionado",
-                            ReporteUtil.fuenteTablaData()
-                    ));
-                    sin.setColspan(9);
-                    sin.setHorizontalAlignment(Element.ALIGN_CENTER);
-                    sin.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                    sin.setPadding(6f);
-                    tabla.addCell(sin);
-                } else {
-                    int i = 1;
+    PdfPCell sin = new PdfPCell(
+            new Phrase(
+                    "Sin solicitudes en el rango seleccionado",
+                    ReporteUtil.fuenteTablaData()
+            )
+    );
 
-                    for (SolicitudVacacionReporteDTO s : solicitudes) {
-                        Color fondo = i % 2 == 0 ? zebra : Color.WHITE;
+    sin.setColspan(7);
+    sin.setHorizontalAlignment(Element.ALIGN_CENTER);
+    sin.setPadding(6f);
 
-                        tabla.addCell(cellCenter(String.valueOf(long0(s.getSolicitud())), fondo));
-                        tabla.addCell(cellCenter(formatearFecha(s.getDesde()), fondo));
-                        tabla.addCell(cellCenter(formatearFecha(s.getHasta()), fondo));
-                        tabla.addCell(cellCenter(String.valueOf(num0(s.getDias_l_v())), fondo));
-                        tabla.addCell(cellCenter(String.valueOf(num0(s.getDias_s_d())), fondo));
-                        tabla.addCell(cellCenter(safe(s.getAutorizado()), fondo));
-                        tabla.addCell(cellCenter(safe(s.getEstado_texto()), fondo));
-                        tabla.addCell(cellLeft(safe(s.getAutoriza()), fondo));
-                        tabla.addCell(cellCenter(formatearFechaHora(s.getFecha_autorizacion()), fondo));
+    tabla.addCell(sin);
 
-                        i++;
-                    }
+} else {
+
+    int i = 1;
+
+    for (SolicitudVacacionReporteDTO s : solicitudes) {
+
+        Color fondo = (i % 2 == 0)
+                ? zebra
+                : Color.WHITE;
+
+        // =====================================================
+        // DATOS DE LA SOLICITUD
+        // =====================================================
+
+        tabla.addCell(
+                cellCenter(
+                        String.valueOf(long0(s.getSolicitud())),
+                        fondo
+                )
+        );
+
+        tabla.addCell(
+                cellCenter(
+                        formatearFecha(s.getDesde()),
+                        fondo
+                )
+        );
+
+        tabla.addCell(
+                cellCenter(
+                        formatearFecha(s.getHasta()),
+                        fondo
+                )
+        );
+
+        tabla.addCell(
+                cellCenter(
+                        String.valueOf(num0(s.getDias_l_v())),
+                        fondo
+                )
+        );
+
+        tabla.addCell(
+                cellCenter(
+                        String.valueOf(num0(s.getDias_s_d())),
+                        fondo
+                )
+        );
+
+        tabla.addCell(
+                cellCenter(
+                        safe(s.getAutorizado()),
+                        fondo
+                )
+        );
+
+        tabla.addCell(
+                cellCenter(
+                        safe(s.getEstado_texto()),
+                        fondo
+                )
+        );
+
+        // =====================================================
+        // HISTORIAL DE APROBACIONES
+        // Solo se muestra cuando existe historial
+        // =====================================================
+
+        List<SolicitudVacacionAprobacionDTO> aprobaciones =
+                s.getAprobaciones();
+
+        if (aprobaciones != null && !aprobaciones.isEmpty()) {
+
+            PdfPTable tablaAprobaciones = new PdfPTable(6);
+            tablaAprobaciones.setWidthPercentage(100);
+            tablaAprobaciones.setWidths(W_APR);
+
+            tablaAprobaciones.addCell(
+                    hCell("Paso", colorPrincipal)
+            );
+
+            tablaAprobaciones.addCell(
+                    hCell("Departamento", colorPrincipal)
+            );
+
+            tablaAprobaciones.addCell(
+                    hCell("Autoriza", colorPrincipal)
+            );
+
+            tablaAprobaciones.addCell(
+                    hCell("Estado Flujo", colorPrincipal)
+            );
+
+            tablaAprobaciones.addCell(
+                    hCell("Fecha Autorización", colorPrincipal)
+            );
+
+            tablaAprobaciones.addCell(
+                    hCell("Observación", colorPrincipal)
+            );
+
+            for (SolicitudVacacionAprobacionDTO a : aprobaciones) {
+
+                if (a == null) {
+                    continue;
                 }
 
-                tabla.setSpacingAfter(10f);
+                tablaAprobaciones.addCell(
+                        cellCenter(
+                                a.getOrden_paso() == null
+                                        ? ""
+                                        : String.valueOf(a.getOrden_paso()),
+                                Color.WHITE
+                        )
+                );
+
+                tablaAprobaciones.addCell(
+                        cellLeft(
+                                safe(a.getDepartamento_aprobacion()),
+                                Color.WHITE
+                        )
+                );
+
+                tablaAprobaciones.addCell(
+                        cellLeft(
+                                safe(a.getAutoriza()),
+                                Color.WHITE
+                        )
+                );
+
+                tablaAprobaciones.addCell(
+                        cellCenter(
+                                safe(a.getEstado_flujo()),
+                                Color.WHITE
+                        )
+                );
+
+                tablaAprobaciones.addCell(
+                        cellCenter(
+                                formatearFechaHora(
+                                        a.getFecha_autorizacion()
+                                ),
+                                Color.WHITE
+                        )
+                );
+
+                tablaAprobaciones.addCell(
+                        cellLeft(
+                                safe(a.getObservacion()).isBlank()
+                                        ? "—"
+                                        : safe(a.getObservacion()),
+                                Color.WHITE
+                        )
+                );
+            }
+
+            PdfPCell historialCell =
+                    new PdfPCell(tablaAprobaciones);
+
+            historialCell.setColspan(7);
+            historialCell.setPadding(0f);
+            historialCell.setBorder(Rectangle.NO_BORDER);
+
+            tabla.addCell(historialCell);
+        }
+
+        i++;
+    }
+}
                 document.add(tabla);
             }
 
             document.close();
             return baos.toByteArray();
 
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ReportBuildException("No se pudo generar ReporteSolicitudesVacaciones.pdf", e);
-        } finally {
-            if (document != null && document.isOpen()) {
-                try {
-                    document.close();
-                } catch (Exception ignore) {
-                }
-            }
+        }catch(
 
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ignore) {
-                }
-            }
-
-            if (baos != null) {
-                try {
-                    baos.close();
-                } catch (Exception ignore) {
-                }
+    IllegalArgumentException e)
+    {
+        throw e;
+    }catch(
+    Exception e)
+    {
+        throw new ReportBuildException("No se pudo generar ReporteSolicitudesVacaciones.pdf", e);
+    }finally
+    {
+        if (document != null && document.isOpen()) {
+            try {
+                document.close();
+            } catch (Exception ignore) {
             }
         }
+        if (writer != null) {
+            try {
+                writer.close();
+            } catch (Exception ignore) {
+            }
+        }
+        if (baos != null) {
+            try {
+                baos.close();
+            } catch (Exception ignore) {
+            }
+        }
+    }
     }
 
     // =========================================================================================
@@ -237,7 +402,7 @@ public class ReporteConsolidadoSolicitudVacacionService {
 
     public byte[] generarReporteSolicitudesVacacionesExcel(ReporteSolicitudVacacionRequest request) {
         try (XSSFWorkbook libro = new XSSFWorkbook();
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             CellStyle estiloTitulo = ConfiguracionExcel.crearEstiloTitulo(libro);
             CellStyle estiloCentroBorde = ConfiguracionExcel.crearEstiloCentroConBorde(libro);
@@ -251,7 +416,7 @@ public class ReporteConsolidadoSolicitudVacacionService {
             byte[] logo = UtilExcel.decodificarImagenBase64(request.getLogoBase64());
             if (logo != null && logo.length > 0) UtilExcel.insertarLogoEstandar(libro, hoja, logo);
 
-            hoja.setColumnWidth(0, 5500);
+            hoja.setColumnWidth(0, 5500); // empleado / solicitud
             hoja.setColumnWidth(1, 4500);
             hoja.setColumnWidth(2, 4500);
             hoja.setColumnWidth(3, 3500);
@@ -263,9 +428,9 @@ public class ReporteConsolidadoSolicitudVacacionService {
 
             int row = 0;
 
-            for (int fila = 0; fila <= 4; fila++) {
-                UtilExcel.combinarCeldas(hoja, fila, fila, 1, 8);
-            }
+            mergeSafeNoBorder(hoja, row, row, 0, 8, estiloTitulo);
+            UtilExcel.establecerTexto(hoja, row++, 0, UtilExcel.aMayusculasSeguras(safe(request.getEmpresa())),
+                    estiloTitulo);
 
             UtilExcel.establecerTexto(
                     hoja,
@@ -303,7 +468,8 @@ public class ReporteConsolidadoSolicitudVacacionService {
             }
 
             for (SolicitudVacacionEmpleadoDTO emp : empleados) {
-                if (emp == null) continue;
+                if (emp == null)
+                    continue;
 
                 // =============================================================================
                 // Cabecera del empleado
@@ -352,13 +518,8 @@ public class ReporteConsolidadoSolicitudVacacionService {
 
                 if (solicitudes.isEmpty()) {
                     mergeSafe(hoja, row, row, 0, 8, estiloCentroBorde);
-                    UtilExcel.establecerTexto(
-                            hoja,
-                            row++,
-                            0,
-                            "Sin solicitudes en el rango seleccionado",
-                            estiloCentroBorde
-                    );
+                    UtilExcel.establecerTexto(hoja, row++, 0, "Sin solicitudes en el rango seleccionado",
+                            estiloCentroBorde);
                 } else {
                     for (SolicitudVacacionReporteDTO s : solicitudes) {
                         Row rr = UtilExcel.asegurarFila(hoja, row++);
@@ -371,12 +532,8 @@ public class ReporteConsolidadoSolicitudVacacionService {
                         UtilExcel.establecerTexto(rr, 5, safe(s.getAutorizado()), estiloCentroBorde);
                         UtilExcel.establecerTexto(rr, 6, safe(s.getEstado_texto()), estiloCentroBorde);
                         UtilExcel.establecerTexto(rr, 7, safe(s.getAutoriza()), estiloIzqBorde);
-                        UtilExcel.establecerTexto(
-                                rr,
-                                8,
-                                formatearFechaHora(s.getFecha_autorizacion()),
-                                estiloCentroBorde
-                        );
+                        UtilExcel.establecerTexto(rr, 8, formatearFechaHora(s.getFecha_autorizacion()),
+                                estiloCentroBorde);
                     }
                 }
 
@@ -402,17 +559,22 @@ public class ReporteConsolidadoSolicitudVacacionService {
     private List<SolicitudVacacionEmpleadoDTO> agruparPorEmpleado(List<SolicitudVacacionReporteDTO> filas) {
         if (filas == null || filas.isEmpty()) return new ArrayList<>();
 
-        Map<Long, SolicitudVacacionEmpleadoDTO> map = new LinkedHashMap<>();
+        Map<Long, SolicitudVacacionEmpleadoDTO> empleadosMap = new LinkedHashMap<>();
 
         for (SolicitudVacacionReporteDTO row : filas) {
-            if (row == null) continue;
+            if (row == null)
+                continue;
 
-            Long id = row.getId_empleado() == null ? 0L : row.getId_empleado();
+            Long idEmpleado = row.getId_empleado() == null
+                    ? 0L
+                    : row.getId_empleado();
 
-            if (!map.containsKey(id)) {
+            // =========================================================
+            // AGRUPAR POR EMPLEADO
+            // =========================================================
+            if (!empleadosMap.containsKey(idEmpleado)) {
                 SolicitudVacacionEmpleadoDTO emp = new SolicitudVacacionEmpleadoDTO();
-
-                emp.setId_empleado(id);
+                emp.setId_empleado(idEmpleado);
                 emp.setIdentificacion(row.getIdentificacion());
                 emp.setCodigo(row.getCodigo());
                 emp.setNombre(row.getNombre());
@@ -428,22 +590,130 @@ public class ReporteConsolidadoSolicitudVacacionService {
                 emp.setDepartamento(row.getDepartamento());
                 emp.setCargo(row.getCargo());
                 emp.setRol(row.getRol());
-                emp.setSolicitudes(new ArrayList<>());
 
-                map.put(id, emp);
+                emp.setSolicitudes(new ArrayList<>());
+                empleadosMap.put(idEmpleado, emp);
             }
 
-            map.get(id).getSolicitudes().add(row);
+            SolicitudVacacionEmpleadoDTO empleado = empleadosMap.get(idEmpleado);
+
+            // =========================================================
+            // AGRUPAR POR SOLICITUD
+            // =========================================================
+            SolicitudVacacionReporteDTO solicitud = empleado.getSolicitudes()
+                    .stream()
+                    .filter(s -> Objects.equals(s.getSolicitud(), row.getSolicitud()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (solicitud == null) {
+                solicitud = row;
+                solicitud.setAprobaciones(new ArrayList<>());
+                empleado.getSolicitudes().add(solicitud);
+            }
+
+            // =========================================================
+            // AGREGAR HISTORIAL DE APROBACIÓN
+            // =========================================================
+            if (row.getId_historial() != null) {
+
+                boolean yaExiste = solicitud.getAprobaciones()
+                        .stream()
+                        .anyMatch(a -> Objects.equals(
+                                a.getId_historial(),
+                                row.getId_historial()));
+
+                if (!yaExiste) {
+                    SolicitudVacacionAprobacionDTO aprobacion = new SolicitudVacacionAprobacionDTO();
+
+                    aprobacion.setId_historial(row.getId_historial());
+                    aprobacion.setOrden_paso(row.getOrden_paso());
+
+                    aprobacion.setId_departamento_destino(
+                            row.getId_departamento_destino());
+
+                    aprobacion.setDepartamento_aprobacion(
+                            row.getDepartamento_aprobacion());
+
+                    aprobacion.setDepartamento_nombre(
+                            row.getDepartamento_nombre());
+
+                    aprobacion.setId_empleado_aprobador(
+                            row.getId_empleado_aprobador());
+
+                    aprobacion.setAutoriza(row.getAutoriza());
+                    aprobacion.setEmpleado_nombre(row.getEmpleado_nombre());
+
+                    aprobacion.setAccion(row.getAccion());
+                    aprobacion.setEstado_flujo(row.getEstado_flujo());
+
+                    aprobacion.setFecha_autorizacion(
+                            row.getFecha_autorizacion());
+
+                    aprobacion.setFecha_hora_accion(
+                            row.getFecha_hora_accion());
+
+                    aprobacion.setObservacion(row.getObservacion());
+                    aprobacion.setTipo_paso(row.getTipo_paso());
+                    aprobacion.setObligatorio(row.getObligatorio());
+                    aprobacion.setModo_aprobador(row.getModo_aprobador());
+                    aprobacion.setCargo_en_momento(row.getCargo_en_momento());
+
+                    aprobacion.setEs_jefe_en_momento(
+                            row.getEs_jefe_en_momento());
+
+                    aprobacion.setHistorial_activo(
+                            row.getHistorial_activo());
+
+                    solicitud.getAprobaciones().add(aprobacion);
+                }
+            }
         }
 
-        return map.values().stream()
-                .sorted(Comparator.comparing((SolicitudVacacionEmpleadoDTO e) -> safe(e.getApellido()))
-                        .thenComparing(e -> safe(e.getNombre())))
-                .collect(Collectors.toList());
+        List<SolicitudVacacionEmpleadoDTO> empleados = new ArrayList<>(empleadosMap.values());
+
+        // =========================================================
+        // ORDENAR EMPLEADOS, SOLICITUDES Y APROBACIONES
+        // =========================================================
+        empleados.sort(
+                Comparator
+                        .comparing(
+                                (SolicitudVacacionEmpleadoDTO e) -> safe(e.getApellido()))
+                        .thenComparing(e -> safe(e.getNombre())));
+
+        for (SolicitudVacacionEmpleadoDTO emp : empleados) {
+
+            emp.getSolicitudes().sort(
+                    Comparator
+                            .comparing(
+                                    (SolicitudVacacionReporteDTO s) -> safe(s.getDesde()))
+                            .thenComparing(
+                                    s -> long0(s.getSolicitud())));
+
+            for (SolicitudVacacionReporteDTO solicitud : emp.getSolicitudes()) {
+
+                if (solicitud.getAprobaciones() == null) {
+                    solicitud.setAprobaciones(new ArrayList<>());
+                    continue;
+                }
+
+                solicitud.getAprobaciones().sort(
+                        Comparator
+                                .comparingInt(
+                                        (SolicitudVacacionAprobacionDTO a) -> a.getOrden_paso() == null
+                                                ? 999
+                                                : a.getOrden_paso())
+                                .thenComparing(
+                                        (SolicitudVacacionAprobacionDTO a) -> safe(a.getFecha_autorizacion())));
+            }
+        }
+
+        return empleados;
     }
 
     private List<SolicitudVacacionReporteDTO> ordenarSolicitudes(List<SolicitudVacacionReporteDTO> solicitudes) {
-        if (solicitudes == null) return new ArrayList<>();
+        if (solicitudes == null)
+            return new ArrayList<>();
 
         return solicitudes.stream()
                 .filter(Objects::nonNull)
@@ -477,13 +747,14 @@ public class ReporteConsolidadoSolicitudVacacionService {
     // =========================================================================================
     // Helpers Excel
     // =========================================================================================
-
     private void mergeSafe(XSSFSheet sh, int r1, int r2, int c1, int c2, CellStyle estilo) {
         if (r1 == r2 && c1 == c2) {
             Row row = UtilExcel.asegurarFila(sh, r1);
             Cell cell = row.getCell(c1);
-            if (cell == null) cell = row.createCell(c1);
-            if (estilo != null) cell.setCellStyle(estilo);
+            if (cell == null)
+                cell = row.createCell(c1);
+            if (estilo != null)
+                cell.setCellStyle(estilo);
             return;
         }
 
@@ -513,8 +784,10 @@ public class ReporteConsolidadoSolicitudVacacionService {
         if (r1 == r2 && c1 == c2) {
             Row row = UtilExcel.asegurarFila(sh, r1);
             Cell cell = row.getCell(c1);
-            if (cell == null) cell = row.createCell(c1);
-            if (estilo != null) cell.setCellStyle(estilo);
+            if (cell == null)
+                cell = row.createCell(c1);
+            if (estilo != null)
+                cell.setCellStyle(estilo);
             return;
         }
 
@@ -553,8 +826,7 @@ public class ReporteConsolidadoSolicitudVacacionService {
 
         org.apache.poi.xssf.usermodel.XSSFColor color = new org.apache.poi.xssf.usermodel.XSSFColor(
                 ReporteUtil.convertirHexAColor(colorHex),
-                null
-        );
+                null);
 
         ((org.apache.poi.xssf.usermodel.XSSFCellStyle) estilo).setFillForegroundColor(color);
         estilo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -567,8 +839,8 @@ public class ReporteConsolidadoSolicitudVacacionService {
     // =========================================================================================
 
     private String safe(Object v) {
-        if (v == null) return "";
-
+        if (v == null)
+            return "";
         String s = String.valueOf(v).trim();
         return "null".equalsIgnoreCase(s) ? "" : s;
     }
@@ -583,7 +855,8 @@ public class ReporteConsolidadoSolicitudVacacionService {
 
     private String formatearFecha(String fecha) {
         String f = safe(fecha);
-        if (f.isBlank()) return "";
+        if (f.isBlank())
+            return "";
 
         try {
             if (f.contains("T")) {
@@ -607,7 +880,8 @@ public class ReporteConsolidadoSolicitudVacacionService {
 
     private String formatearFechaHora(String fecha) {
         String f = safe(fecha);
-        if (f.isBlank()) return "";
+        if (f.isBlank())
+            return "";
 
         try {
             if (f.contains("T")) {
